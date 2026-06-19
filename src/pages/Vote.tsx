@@ -24,12 +24,16 @@ import {
 import { getCategories, getCandidates, verifyVoterByCardId, submitVote, submitMultipleVotes, getVoterSubmittedVotes, finalizeVotingStatus, getDapils, getVotingCompletionStatus } from '../lib/votingService';
 import { Category, Candidate, Profile, Vote, Dapil } from '../types';
 
+import { getUserAccessSettings, UserAccessSettings } from '../lib/userAccessService';
+
 export default function VotePage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
 
-  // Screen state: 'scan' | 'profile' | 'categories' | 'candidates' | 'success' | 'thankyou'
-  const [screen, setScreen] = useState<'scan' | 'profile' | 'categories' | 'candidates' | 'success' | 'thankyou'>('scan');
+  const [accessSettings, setAccessSettings] = useState<UserAccessSettings | null>(null);
+
+  // Screen state: 'scan' | 'profile' | 'categories' | 'candidates' | 'success' | 'thankyou' | 'forbidden'
+  const [screen, setScreen] = useState<'scan' | 'profile' | 'categories' | 'candidates' | 'success' | 'thankyou' | 'forbidden'>('scan');
 
   // Input states
   const [cardIdInput, setCardIdInput] = useState('');
@@ -71,12 +75,21 @@ export default function VotePage() {
   useEffect(() => {
     const init = async () => {
       try {
-        const cats = await getCategories();
+        const [cats, ds, settings] = await Promise.all([
+          getCategories(),
+          getDapils(),
+          getUserAccessSettings()
+        ]);
+        
+        setAccessSettings(settings);
         setCategories(cats);
-        const ds = await getDapils();
         setDapils(ds || []);
+
+        if (settings && !settings.voting_global_enabled) {
+          setScreen('forbidden');
+        }
       } catch (err) {
-        console.error('Failed to init categories/dapils', err);
+        console.error('Failed to init categories/dapils/settings', err);
       }
     };
     init();
@@ -175,6 +188,13 @@ export default function VotePage() {
   // Voter identification logic
   const handleVerifyCardId = async (enteredId: string) => {
     if (!enteredId || enteredId.trim() === '') return;
+    
+    // Safety check again
+    if (accessSettings && !accessSettings.voting_global_enabled) {
+      setScreen('forbidden');
+      return;
+    }
+
     setSearchLoading(true);
     setErrorMessage(null);
 
@@ -400,6 +420,28 @@ export default function VotePage() {
   return (
     <div className="min-h-screen bg-[#0d0f14] text-[#e8ecf5] flex flex-col font-sans select-none antialiased">
       
+      {/* ────────────────────────────────────────────────
+           SCREEN 0: FORBIDDEN / DISABLED
+         ──────────────────────────────────────────────── */}
+      {screen === 'forbidden' && (
+        <main className="flex-1 flex flex-col items-center justify-center p-6 w-full max-w-md mx-auto text-center">
+          <div className="w-20 h-20 bg-rose-500/10 rounded-full flex items-center justify-center mb-8 border border-rose-500/20 text-rose-500 shadow-xl shadow-rose-500/5 animate-pulse">
+            <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-shield-off"><path d="m2 2 20 20"/><path d="M5 5a1 1 0 0 0-1 1v7c0 5 3.5 7.5 7 10"/><path d="M11 11a1 1 0 0 0 1 1h.17"/><path d="M12 21c3.5-2.5 7-5 7-10V6a1 1 0 0 0-1-1h-2.17"/><path d="M14.5 9.5c.9.2 1.5.7 1.5 1.5v1"/><path d="M12 2v2"/><path d="M17 2v1"/><path d="M2 13c0 5.6 4.1 9 10 11"/><path d="M7 2v4"/></svg>
+          </div>
+          <h1 className="text-3xl font-black text-white tracking-tight mb-2 uppercase">Bilik Suara Ditutup</h1>
+          <p className="text-slate-400 font-medium text-sm mb-8 leading-relaxed">
+            Mohon maaf, saat ini akses ke bilik suara elektronik sedang dinonaktifkan oleh panitia Administrator. 
+            Silakan hubungi panitia KPPS untuk informasi lebih lanjut mengenai jadwal pemungutan suara.
+          </p>
+          <button 
+            onClick={() => navigate('/')}
+            className="w-full py-4 bg-[#1c2030] hover:bg-[#232840] text-slate-200 border border-[#2a3050] rounded-2xl text-xs font-bold transition-all shadow-lg"
+          >
+            Kembali ke Halaman Depan
+          </button>
+        </main>
+      )}
+
       {/* ────────────────────────────────────────────────
            SCREEN 1: SCAN OR INPUT CARD ID
          ──────────────────────────────────────────────── */}

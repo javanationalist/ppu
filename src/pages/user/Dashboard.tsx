@@ -27,6 +27,8 @@ export default function UserDashboard() {
     edit_profil_enabled: true,
     download_kartu_enabled: true,
     visibilitas_kartu_enabled: true,
+    maintenance_enabled: false,
+    voting_global_enabled: true,
   });
 
   const informasiList = [
@@ -313,7 +315,7 @@ export default function UserDashboard() {
                 <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">Status PU</p>
                 <div className="flex items-center gap-2">
                   <div className={`w-2 h-2 rounded-full ${(profile.voting_status === 'sudah' || isAllCompleted) ? 'bg-emerald-500' : 'bg-amber-500'}`}></div>
-                  <span className={`text-sm font-bold truncate ${(profile.voting_status === 'sudah' || isAllCompleted) ? 'text-emerald-700' : 'text-amber-700'}`}>{(profile.voting_status === 'sudah' || isAllCompleted) ? 'Sudah Memilih' : 'Belum Memilih'}</span>
+                  <span className={`text-sm font-bold truncate ${(!accessSettings.voting_global_enabled) ? 'text-rose-700' : (profile.voting_status === 'sudah' || isAllCompleted) ? 'text-emerald-700' : 'text-amber-700'}`}>{!accessSettings.voting_global_enabled ? 'Bilik Nonaktif' : (profile.voting_status === 'sudah' || isAllCompleted) ? 'Sudah Memilih' : 'Belum Memilih'}</span>
                 </div>
               </div>
             </div>
@@ -324,7 +326,24 @@ export default function UserDashboard() {
                 <h3 className="text-sm font-bold text-slate-700">Panel Pemungutan Suara</h3>
               </div>
               <div className="p-8 flex flex-col items-center justify-center text-center h-[320px]">
-                {profile.voting_status === 'sudah' || isAllCompleted ? (
+                {!accessSettings.voting_global_enabled ? (
+                  <>
+                    <div className="w-16 h-16 bg-rose-50 rounded-full flex items-center justify-center mb-4 border border-rose-100 text-rose-600 shadow-sm">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-alert-circle"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg>
+                    </div>
+                    <h4 className="text-base font-extrabold text-rose-800 mb-2">Bilik Suara Nonaktif</h4>
+                    <p className="text-xs text-slate-500 px-0 sm:px-6 mb-5 max-w-sm leading-relaxed">
+                      Saat ini akses bilik suara elektronik sedang ditutup oleh panitia. Silakan tunggu informasi lebih lanjut.
+                    </p>
+                    
+                    <button 
+                      disabled={true}
+                      className="inline-flex items-center gap-2 px-5 py-2.5 bg-slate-300 border border-slate-300 text-slate-500 rounded-xl text-xs font-bold cursor-not-allowed select-none opacity-60 shadow-none"
+                    >
+                      Bilik suara nonaktif
+                    </button>
+                  </>
+                ) : profile.voting_status === 'sudah' || isAllCompleted ? (
                   <>
                     <div className="w-16 h-16 bg-emerald-50 rounded-full flex items-center justify-center mb-4 border border-indigo-100 text-slate-400 shadow-sm shadow-emerald-500/5">
                       <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-check-circle-2 text-slate-400"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>

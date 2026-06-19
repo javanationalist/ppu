@@ -4,7 +4,7 @@ export default function Tentang() {
   const features = [
     {
       title: 'Digitalisasi Pemilu',
-      description: 'Alih-alih menggunakan kertas suara fisik, PPU memanfaatkan kemajuan teknologi untuk mengganti sistem PEMILU di lingkungan sekolah menggunakan sistem berbasis web, yang dapat digunakan secara online dengan mudah.',
+      description: 'Mentransformasi sistem pemungutan suara konvensional ke platform digital yang modern dan efisien.',
       icon: <Zap className="w-6 h-6 text-indigo-400" />
     },
     {
@@ -29,7 +29,7 @@ export default function Tentang() {
           Tentang PPU
         </h1>
         <p className="text-indigo-200 font-medium sm:text-lg max-w-2xl mx-auto text-center">
-          Portal Pemilihan Umum Digital
+          Membangun iklim demokrasi digital yang transparan dan dapat diandalkan.
         </p>
       </div>
 
@@ -65,9 +65,9 @@ export default function Tentang() {
           </div>
 
           <div className="border-t border-white/10 pt-8 mt-4 text-center pb-4">
-             <p className="text-xs font-semibold text-slate-500 uppercase tracking-widest mb-2">Pengembang</p>
-             <h3 className="text-xl font-black text-white tracking-widest uppercase">TIM IT SMA NEGERI 1</h3>
-             <p className="text-sm text-slate-400 mt-2 font-medium">© 2026 | PORTAL PEMILIHAN UMUM DIGITAL</p>
+             <p className="text-xs font-semibold text-slate-500 uppercase tracking-widest mb-2">Penyeleggara / Pengembang</p>
+             <h3 className="text-xl font-black text-white tracking-widest uppercase">SMAN 1 BANGSAL</h3>
+             <p className="text-sm text-slate-400 mt-2 font-medium">Tim Pengembang Teknologi Informasi PPU</p>
           </div>
         </div>
       </div>

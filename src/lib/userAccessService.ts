@@ -7,6 +7,7 @@ export interface UserAccessSettings {
   download_kartu_enabled: boolean;
   visibilitas_kartu_enabled: boolean;
   maintenance_enabled: boolean;
+  voting_global_enabled: boolean;
 }
 
 const DEFAULT_SETTINGS: UserAccessSettings = {
@@ -16,6 +17,7 @@ const DEFAULT_SETTINGS: UserAccessSettings = {
   download_kartu_enabled: true,
   visibilitas_kartu_enabled: true,
   maintenance_enabled: false,
+  voting_global_enabled: true,
 };
 
 const STORAGE_KEY = 'ppu_user_access_settings';
@@ -78,6 +80,7 @@ export const getUserAccessSettings = async (): Promise<UserAccessSettings> => {
       download_kartu_enabled: data.download_kartu_enabled !== false,
       visibilitas_kartu_enabled: data.visibilitas_kartu_enabled !== false,
       maintenance_enabled: data.maintenance_enabled === true,
+      voting_global_enabled: data.voting_global_enabled !== false,
     };
   } catch (err) {
     console.error('Error fetching user access settings, falling back to local storage:', err);
@@ -110,6 +113,7 @@ export const saveUserAccessSettings = async (settings: UserAccessSettings): Prom
         download_kartu_enabled: settings.download_kartu_enabled,
         visibilitas_kartu_enabled: settings.visibilitas_kartu_enabled,
         maintenance_enabled: settings.maintenance_enabled,
+        voting_global_enabled: settings.voting_global_enabled,
       });
 
     if (error) {

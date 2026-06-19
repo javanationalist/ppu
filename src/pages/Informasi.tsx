@@ -6,17 +6,17 @@ export default function Informasi() {
       id: 1,
       type: 'pengumuman',
       icon: <AlertCircle className="w-5 h-5 text-indigo-400" />,
-      title: 'Updated App',
-      date: '10 Juni 2026',
-      content: 'PPU diperbarui. Sekarang stabil di device apapun!'
+      title: 'Selamat Datang di Portal Baru',
+      date: '10 Oktober 2026',
+      content: 'PPU kini hadir dengan tampilan yang lebih fresh dan sistem yang lebih stabil. Pastikan Anda telah terdaftar sebelum masa pemilihan dimulai. '
     },
     {
       id: 2,
       type: 'jadwal',
       icon: <CalendarDays className="w-5 h-5 text-emerald-400" />,
       title: 'Jadwal Pemilihan Umum',
-      date: 'Belum Dijadwalkan',
-      content: 'Masa pemungutan suara belum dijadwalkan.'
+      date: '15 - 20 Oktober 2026',
+      content: 'Masa pemungutan suara akan dibuka mulai tanggal 15 Oktober pukul 08:00 hingga tanggal 20 Oktober pukul 15:00. Gunakan hak pilih Anda dengan bijak.'
     },
     {
       id: 3,
@@ -24,7 +24,7 @@ export default function Informasi() {
       icon: <FileText className="w-5 h-5 text-amber-400" />,
       title: 'Tata Cara Penggunaan PPU',
       date: 'Terus Berlaku',
-      content: '1. Login menggunakan akun email yang sudah didaftarkan.\n2. Masuk ke halaman Bilik Suara.\n3. Periksa data Kamu apakah sudah benar.\n4. Pilih kandidat berdasarkan kategori.\n5. Pilih kandidat lalu konfirmasi suara.'
+      content: '1. Login menggunakan akun/nisn yang terdaftar.\n2. Masuk ke halaman Bilik Suara.\n3. Pilih kandidat berdasarkan Kategori/Dapil.\n4. Konfirmasi dan kirim hak suara Anda.'
     }
   ];
 

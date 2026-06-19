@@ -20,7 +20,6 @@ export default function PengaturanLanjutan() {
   
   // Combine both setting sets
   const [settings, setSettings] = useState<UserAccessSettings & { 
-    voting_active: boolean;
     login_enabled: boolean;
   }>({
     signup_enabled: true,
@@ -29,7 +28,7 @@ export default function PengaturanLanjutan() {
     download_kartu_enabled: true,
     visibilitas_kartu_enabled: true,
     maintenance_enabled: false,
-    voting_active: false,
+    voting_global_enabled: true,
     login_enabled: true
   });
 
@@ -52,7 +51,7 @@ export default function PengaturanLanjutan() {
           signup_enabled: sEnabled ?? accessData.signup_enabled,
           lihat_hasil_enabled: hEnabled ?? accessData.lihat_hasil_enabled,
           maintenance_enabled: mMode ?? accessData.maintenance_enabled,
-          voting_active: vActive,
+          voting_global_enabled: vActive ?? accessData.voting_global_enabled,
           login_enabled: lEnabled ?? true
         });
       } catch (err) {
@@ -88,8 +87,9 @@ export default function PengaturanLanjutan() {
           download_kartu_enabled: settings.download_kartu_enabled,
           visibilitas_kartu_enabled: settings.visibilitas_kartu_enabled,
           maintenance_enabled: settings.maintenance_enabled,
+          voting_global_enabled: settings.voting_global_enabled,
         }),
-        setVotingStatus(settings.voting_active),
+        setVotingStatus(settings.voting_global_enabled),
         setMaintenanceMode(settings.maintenance_enabled),
         setCriticalSetting('login_enabled', settings.login_enabled),
         setCriticalSetting('signup_enabled', settings.signup_enabled),
@@ -130,7 +130,7 @@ export default function PengaturanLanjutan() {
       description: 'Kontrol gerbang utama sistem voting dan aksesibilitas publik.',
       items: [
         {
-          key: 'voting_active',
+          key: 'voting_global_enabled',
           label: 'Status Bilik Suara (Voting)',
           description: 'Membuka atau menutup akses voting bagi seluruh pemilih secara global.',
           icon: Power,
