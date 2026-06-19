@@ -34,10 +34,12 @@ import ExportData from './pages/admin/ExportData';
 import Maintenance from './pages/admin/Maintenance';
 import PengaturanLanjutan from './pages/admin/PengaturanLanjutan';
 import WafoManager from './pages/admin/WafoManager';
+import NetworkStatus from './components/NetworkStatus';
 
 function AppContent() {
   return (
     <MaintenanceGuard>
+      <NetworkStatus />
       <Routes>
         <Route element={<PortalLayout />}>
           <Route path="/" element={<Landing />} />
