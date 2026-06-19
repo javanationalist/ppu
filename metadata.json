@@ -1,0 +1,10 @@
+{
+  "name": "Portal Pemilihan Umum (PPU)",
+  "description": "Sistem Portal Pemilihan Umum (PPU) cerdas, modern, cepat, serta berintegritas tinggi dengan fitur E-Voting Kiosk bertenaga QR Code Scanner.",
+  "requestFramePermissions": [
+    "camera"
+  ],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
