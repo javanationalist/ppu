@@ -32,7 +32,6 @@ import PengaturanVoting from './pages/admin/PengaturanVoting';
 import HasilAdmin from './pages/admin/HasilAdmin';
 import ExportData from './pages/admin/ExportData';
 import Maintenance from './pages/admin/Maintenance';
-import PengaturanLanjutan from './pages/admin/PengaturanLanjutan';
 import WafoManager from './pages/admin/WafoManager';
 import NetworkStatus from './components/NetworkStatus';
 
@@ -79,7 +78,6 @@ function AppContent() {
           <Route path="wafo" element={<WafoManager />} />
           <Route path="helpdesk" element={<HelpdeskManager />} />
           <Route path="pengaturan" element={<PengaturanVoting />} />
-          <Route path="visibilitas" element={<PengaturanLanjutan />} />
           <Route path="maintenance" element={<Maintenance />} />
           <Route path="hasil" element={<HasilAdmin />} />
           <Route path="audit" element={<AuditLog />} />

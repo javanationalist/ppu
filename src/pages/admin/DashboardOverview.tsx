@@ -2,11 +2,13 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   Users, CheckCircle2, Award, ClipboardCheck, 
-  ChevronRight, ArrowUpRight, LifeBuoy, Database, History 
+  ChevronRight, ArrowUpRight, LifeBuoy, Database, History,
+  Settings, Layers, FileText, ShieldAlert, BarChart3, RefreshCw, Lock, Unlock, ShieldCheck
 } from 'lucide-react';
 import { getAllProfiles } from '../../lib/adminService';
 import { getCategories, getAllVotes } from '../../lib/votingService';
 import { getHelpdeskButtons } from '../../lib/helpdesk';
+import { getAdminButtonSettings, saveAdminButtonSettings, AdminButtonSettings } from '../../lib/adminButtonService';
 import { Profile, Category, Vote } from '../../types';
 
 export default function DashboardOverview() {
@@ -16,20 +18,36 @@ export default function DashboardOverview() {
   const [votes, setVotes] = useState<Vote[]>([]);
   const [ticketsCount, setTicketsCount] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [savingSettings, setSavingSettings] = useState(false);
+  const [btnSettings, setBtnSettings] = useState<AdminButtonSettings>({
+    kelola_kategori: true,
+    kelola_kandidat: true,
+    konfirmasi_pemilih: true,
+    kelola_pemilih: true,
+    wafo: true,
+    kelola_helpdesk: true,
+    visibilitas_user: true,
+    hasil_voting: true,
+    audit_log: true,
+    export_data: true,
+    maintenance: true,
+  });
 
   useEffect(() => {
     async function loadData() {
       try {
-        const [pList, cList, vList, hList] = await Promise.all([
+        const [pList, cList, vList, hList, bSettings] = await Promise.all([
           getAllProfiles(),
           getCategories(),
           getAllVotes(),
-          getHelpdeskButtons()
+          getHelpdeskButtons(),
+          getAdminButtonSettings()
         ]);
         setProfiles(pList || []);
         setCategories(cList || []);
         setVotes(vList || []);
         setTicketsCount(hList ? hList.length : 0);
+        if (bSettings) setBtnSettings(bSettings);
       } catch (err) {
         console.error('Failed to load dashboard data', err);
       } finally {
@@ -38,6 +56,19 @@ export default function DashboardOverview() {
     }
     loadData();
   }, []);
+
+  const toggleSetting = async (key: keyof AdminButtonSettings) => {
+    const newSettings = { ...btnSettings, [key]: !btnSettings[key] };
+    setBtnSettings(newSettings);
+    setSavingSettings(true);
+    try {
+      await saveAdminButtonSettings(newSettings);
+    } catch (err) {
+      console.error('Failed to save settings', err);
+    } finally {
+      setSavingSettings(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -148,7 +179,7 @@ export default function DashboardOverview() {
         </div>
       </div>
 
-      {/* Visual Analytics Grid */}
+      {/* Visual Analytics & Access Control Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Chart representation & stats */}
         <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm lg:col-span-2 space-y-6">
@@ -187,13 +218,57 @@ export default function DashboardOverview() {
             })}
           </div>
 
-          <div className="bg-slate-50 p-4 rounded-xl flex items-center gap-3">
-            <div className="bg-indigo-100 p-2.5 rounded-lg text-indigo-700">
-              <History className="w-4 h-4 animate-spin-slow" />
+          <div className="pt-4 border-t border-slate-50">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h3 className="text-lg font-bold text-slate-900">Kontrol Akses Menu Admin</h3>
+                <p className="text-xs text-slate-400">Aktifkan atau nonaktifkan akses tombol menu secara real-time.</p>
+              </div>
+              {savingSettings && (
+                <div className="flex items-center gap-2 text-indigo-600 text-[10px] font-bold animate-pulse">
+                  <RefreshCw className="w-3 h-3 animate-spin" />
+                  <span>SINKRONISASI...</span>
+                </div>
+              )}
             </div>
-            <div>
-              <h4 className="text-xs font-bold text-slate-700">Tips Operasional</h4>
-              <p className="text-xs text-slate-500">Adakan sosialisasi berkala jika persentase suara masuk masih di bawah target kehadiran 90%.</p>
+
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              {[
+                { key: 'kelola_kategori', label: 'Kelola Kategori', icon: Settings },
+                { key: 'kelola_kandidat', label: 'Kelola Kandidat', icon: Layers },
+                { key: 'konfirmasi_pemilih', label: 'Konfirmasi', icon: ShieldCheck },
+                { key: 'kelola_pemilih', label: 'Kelola Pemilih', icon: Users },
+                { key: 'wafo', label: 'WAFO', icon: FileText },
+                { key: 'kelola_helpdesk', label: 'Helpdesk', icon: LifeBuoy },
+                { key: 'visibilitas_user', label: 'Visibilitas', icon: ShieldAlert },
+                { key: 'hasil_voting', label: 'Hasil Voting', icon: BarChart3 },
+                { key: 'audit_log', label: 'Audit Log', icon: FileText },
+                { key: 'export_data', label: 'Export Data', icon: FileText },
+                { key: 'maintenance', label: 'Maintenance', icon: Settings },
+              ].map((item) => {
+                const isEnabled = (btnSettings as any)[item.key];
+                return (
+                  <button
+                    key={item.key}
+                    onClick={() => toggleSetting(item.key as keyof AdminButtonSettings)}
+                    className={`flex items-center gap-2 p-2 rounded-xl border transition-all text-left ${
+                      isEnabled 
+                        ? 'bg-white border-slate-200 text-slate-700 hover:border-indigo-300' 
+                        : 'bg-slate-50 border-slate-100 text-slate-400 grayscale opacity-60'
+                    }`}
+                  >
+                    <div className={`p-1.5 rounded-lg shrink-0 ${isEnabled ? 'bg-indigo-50 text-indigo-600' : 'bg-slate-200 text-slate-400'}`}>
+                      <item.icon className="w-3.5 h-3.5" />
+                    </div>
+                    <div className="overflow-hidden">
+                      <span className="block text-[11px] font-bold truncate">{item.label}</span>
+                      <span className={`text-[9px] font-medium ${isEnabled ? 'text-indigo-500' : 'text-slate-400'}`}>
+                        {isEnabled ? 'AKTIF' : 'NON-AKTIF'}
+                      </span>
+                    </div>
+                  </button>
+                );
+              })}
             </div>
           </div>
         </div>
@@ -205,50 +280,65 @@ export default function DashboardOverview() {
           <div className="grid grid-cols-1 gap-3">
             <button 
               onClick={() => navigate('/admin/konfirmasi')}
-              className="flex items-center justify-between p-4 rounded-xl border border-slate-100 bg-slate-50 hover:bg-indigo-50 hover:border-indigo-100 transition-all font-medium text-sm text-slate-700 group text-left"
+              disabled={!btnSettings.konfirmasi_pemilih}
+              className={`flex items-center justify-between p-4 rounded-xl border transition-all font-medium text-sm group text-left ${
+                !btnSettings.konfirmasi_pemilih 
+                  ? 'bg-slate-50 border-slate-100 opacity-60 grayscale cursor-not-allowed text-slate-400' 
+                  : 'border-slate-100 bg-slate-50 hover:bg-indigo-50 hover:border-indigo-100 text-slate-700'
+              }`}
             >
               <div className="flex items-center gap-3">
-                <div className="p-2 bg-indigo-100 text-indigo-700 rounded-lg group-hover:bg-indigo-200 transition-colors">
-                  <CheckCircle2 className="w-4 h-4" />
+                <div className={`p-2 rounded-lg transition-colors ${!btnSettings.konfirmasi_pemilih ? 'bg-slate-200 text-slate-400' : 'bg-indigo-100 text-indigo-700 group-hover:bg-indigo-200'}`}>
+                  {btnSettings.konfirmasi_pemilih ? <CheckCircle2 className="w-4 h-4" /> : <Lock className="w-4 h-4" />}
                 </div>
                 <div>
-                  <span className="block font-bold text-slate-800">Verifikasi Barcode</span>
-                  <span className="text-xs text-slate-400 font-normal">Konfirmasi pendaftaran siswa</span>
+                  <span className={`block font-bold truncate ${!btnSettings.konfirmasi_pemilih ? 'text-slate-400' : 'text-slate-800'}`}>Verifikasi Barcode</span>
+                  <span className="text-[10px] text-slate-400 font-normal">Konfirmasi pendaftaran siswa</span>
                 </div>
               </div>
-              <ChevronRight className="w-4 h-4 text-slate-400 group-hover:translate-x-1 transition-transform" />
+              {btnSettings.konfirmasi_pemilih && <ChevronRight className="w-4 h-4 text-slate-400 group-hover:translate-x-1 transition-transform" />}
             </button>
 
             <button 
               onClick={() => navigate('/admin/pemilih')}
-              className="flex items-center justify-between p-4 rounded-xl border border-slate-100 bg-slate-50 hover:bg-emerald-50 hover:border-emerald-100 transition-all font-medium text-sm text-slate-700 group text-left"
+              disabled={!btnSettings.kelola_pemilih}
+              className={`flex items-center justify-between p-4 rounded-xl border transition-all font-medium text-sm group text-left ${
+                !btnSettings.kelola_pemilih 
+                  ? 'bg-slate-50 border-slate-100 opacity-60 grayscale cursor-not-allowed text-slate-400' 
+                  : 'border-slate-100 bg-slate-50 hover:bg-emerald-50 hover:border-emerald-100 text-slate-700'
+              }`}
             >
               <div className="flex items-center gap-3">
-                <div className="p-2 bg-emerald-100 text-emerald-700 rounded-lg group-hover:bg-emerald-200 transition-colors">
-                  <Users className="w-4 h-4" />
+                <div className={`p-2 rounded-lg transition-colors ${!btnSettings.kelola_pemilih ? 'bg-slate-200 text-slate-400' : 'bg-emerald-100 text-emerald-700 group-hover:bg-emerald-200'}`}>
+                  {btnSettings.kelola_pemilih ? <Users className="w-4 h-4" /> : <Lock className="w-4 h-4" />}
                 </div>
                 <div>
-                  <span className="block font-bold text-slate-800">Kelola Daftar Pemilih</span>
-                  <span className="text-xs text-slate-400 font-normal">Tambah / hapus pemilih</span>
+                  <span className={`block font-bold truncate ${!btnSettings.kelola_pemilih ? 'text-slate-400' : 'text-slate-800'}`}>Kelola Daftar Pemilih</span>
+                  <span className="text-[10px] text-slate-400 font-normal">Tambah / hapus pemilih</span>
                 </div>
               </div>
-              <ChevronRight className="w-4 h-4 text-slate-400 group-hover:translate-x-1 transition-transform" />
+              {btnSettings.kelola_pemilih && <ChevronRight className="w-4 h-4 text-slate-400 group-hover:translate-x-1 transition-transform" />}
             </button>
 
             <button 
               onClick={() => navigate('/admin/helpdesk')}
-              className="flex items-center justify-between p-4 rounded-xl border border-slate-100 bg-slate-50 hover:bg-amber-50 hover:border-amber-100 transition-all font-medium text-sm text-slate-700 group text-left"
+              disabled={!btnSettings.kelola_helpdesk}
+              className={`flex items-center justify-between p-4 rounded-xl border transition-all font-medium text-sm group text-left ${
+                !btnSettings.kelola_helpdesk 
+                  ? 'bg-slate-50 border-slate-100 opacity-60 grayscale cursor-not-allowed text-slate-400' 
+                  : 'border-slate-100 bg-slate-50 hover:bg-amber-50 hover:border-amber-100 text-slate-700'
+              }`}
             >
               <div className="flex items-center gap-3">
-                <div className="p-2 bg-amber-100 text-amber-700 rounded-lg group-hover:bg-amber-200 transition-colors">
-                  <LifeBuoy className="w-4 h-4" />
+                <div className={`p-2 rounded-lg transition-colors ${!btnSettings.kelola_helpdesk ? 'bg-slate-200 text-slate-400' : 'bg-amber-100 text-amber-700 group-hover:bg-amber-200'}`}>
+                  {btnSettings.kelola_helpdesk ? <LifeBuoy className="w-4 h-4" /> : <Lock className="w-4 h-4" />}
                 </div>
                 <div>
-                  <span className="block font-bold text-slate-800">Saluran Helpdesk</span>
-                  <span className="text-xs text-slate-400 font-normal">{ticketsCount} Tombol panduan keluhan aktif</span>
+                  <span className={`block font-bold truncate ${!btnSettings.kelola_helpdesk ? 'text-slate-400' : 'text-slate-800'}`}>Saluran Helpdesk</span>
+                  <span className="text-[10px] text-slate-400 font-normal">{ticketsCount} Tombol panduan keluhan aktif</span>
                 </div>
               </div>
-              <ChevronRight className="w-4 h-4 text-slate-400 group-hover:translate-x-1 transition-transform" />
+              {btnSettings.kelola_helpdesk && <ChevronRight className="w-4 h-4 text-slate-400 group-hover:translate-x-1 transition-transform" />}
             </button>
           </div>
 

@@ -1,13 +1,29 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { LogOut, Home, Users, Settings, BarChart, FileText, LifeBuoy, Menu, X, ShieldCheck, Layers, Eye, ShieldAlert } from 'lucide-react';
+import { LogOut, Home, Users, Settings, BarChart, FileText, LifeBuoy, Menu, X, ShieldCheck, Layers, Eye, ShieldAlert, Lock } from 'lucide-react';
+import { getAdminButtonSettings, AdminButtonSettings } from '../lib/adminButtonService';
 
 export const AdminLayout = () => {
   const { signOut } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [isMobileOpen, setIsMobileOpen] = useState(false);
+  const [btnSettings, setBtnSettings] = useState<AdminButtonSettings | null>(null);
+
+  useEffect(() => {
+    const loadBtnSettings = async () => {
+      try {
+        const s = await getAdminButtonSettings();
+        setBtnSettings(s);
+      } catch (err) {
+        console.error('Failed to load admin button settings', err);
+      }
+    };
+    loadBtnSettings();
+    const interval = setInterval(loadBtnSettings, 4000);
+    return () => clearInterval(interval);
+  }, []);
 
   const handleLogout = async () => {
     await signOut();
@@ -16,18 +32,23 @@ export const AdminLayout = () => {
 
   const navLinks = [
     { to: '/admin', icon: Home, label: 'Dashboard' },
-    { to: '/admin/pengaturan', icon: Settings, label: 'Kelola Kategori' },
-    { to: '/admin/kandidat', icon: Layers, label: 'Kelola Kandidat' },
-    { to: '/admin/konfirmasi', icon: ShieldCheck, label: 'Konfirmasi Pemilih' },
-    { to: '/admin/pemilih', icon: Users, label: 'Kelola Pemilih' },
-    { to: '/admin/wafo', icon: FileText, label: 'WAFO (Warung Informasi)' },
-    { to: '/admin/helpdesk', icon: LifeBuoy, label: 'Kelola Helpdesk' },
-    { to: '/admin/visibilitas', icon: ShieldAlert, label: 'Visibilitas User' },
-    { to: '/admin/hasil', icon: BarChart, label: 'Hasil Voting' },
-    { to: '/admin/audit', icon: FileText, label: 'Audit Log' },
-    { to: '/admin/export', icon: FileText, label: 'Export Data' },
-    { to: '/admin/maintenance', icon: Settings, label: 'Maintenance' },
+    { to: '/admin/pengaturan', icon: Settings, label: 'Kelola Kategori', key: 'kelola_kategori' },
+    { to: '/admin/kandidat', icon: Layers, label: 'Kelola Kandidat', key: 'kelola_kandidat' },
+    { to: '/admin/konfirmasi', icon: ShieldCheck, label: 'Konfirmasi Pemilih', key: 'konfirmasi_pemilih' },
+    { to: '/admin/pemilih', icon: Users, label: 'Kelola Pemilih', key: 'kelola_pemilih' },
+    { to: '/admin/wafo', icon: FileText, label: 'WAFO (Warung Informasi)', key: 'wafo' },
+    { to: '/admin/helpdesk', icon: LifeBuoy, label: 'Kelola Helpdesk', key: 'kelola_helpdesk' },
+    { to: '/admin/hasil', icon: BarChart, label: 'Hasil Voting', key: 'hasil_voting' },
+    { to: '/admin/audit', icon: FileText, label: 'Audit Log', key: 'audit_log' },
+    { to: '/admin/export', icon: FileText, label: 'Export Data', key: 'export_data' },
+    { to: '/admin/maintenance', icon: Settings, label: 'Maintenance', key: 'maintenance' },
   ];
+
+  const isLinkEnabled = (key?: string): boolean => {
+    if (!key) return true;
+    if (!btnSettings) return true; // Default to allow access until loaded
+    return (btnSettings as any)[key] !== false;
+  };
 
   const closeSidebar = () => setIsMobileOpen(false);
 
@@ -80,19 +101,31 @@ export const AdminLayout = () => {
         <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
           {navLinks.map((link) => {
             const isActive = location.pathname === link.to;
+            const enabled = isLinkEnabled(link.key);
             return (
               <Link
                 key={link.to}
-                to={link.to}
-                onClick={closeSidebar}
-                className={`flex items-center gap-3 px-3 py-2 text-sm font-semibold rounded-lg transition-colors ${
-                  isActive
+                to={enabled ? link.to : '#'}
+                onClick={(e) => {
+                  if (!enabled) {
+                    e.preventDefault();
+                    return;
+                  }
+                  closeSidebar();
+                }}
+                className={`flex items-center justify-between px-3 py-2 text-sm font-semibold rounded-lg transition-colors ${
+                  !enabled
+                    ? 'opacity-40 grayscale cursor-not-allowed text-gray-400 bg-gray-50/55'
+                    : isActive
                     ? 'bg-indigo-50 text-indigo-700'
                     : 'text-gray-700 hover:bg-gray-100'
                 }`}
               >
-                <link.icon className={`w-5 h-5 ${isActive ? 'text-indigo-600' : 'text-gray-500'}`} />
-                {link.label}
+                <div className="flex items-center gap-3">
+                  <link.icon className={`w-5 h-5 ${!enabled ? 'text-gray-400' : isActive ? 'text-indigo-600' : 'text-gray-500'}`} />
+                  <span>{link.label}</span>
+                </div>
+                {!enabled && <Lock className="w-3.5 h-3.5 text-gray-400 shrink-0" />}
               </Link>
             );
           })}
@@ -121,18 +154,30 @@ export const AdminLayout = () => {
         <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
           {navLinks.map((link) => {
             const isActive = location.pathname === link.to;
+            const enabled = isLinkEnabled(link.key);
             return (
               <Link
                 key={link.to}
-                to={link.to}
-                className={`flex items-center gap-3 px-3 py-2 text-sm font-semibold rounded-lg transition-colors ${
-                  isActive
+                to={enabled ? link.to : '#'}
+                onClick={(e) => {
+                  if (!enabled) {
+                    e.preventDefault();
+                    return;
+                  }
+                }}
+                className={`flex items-center justify-between px-3 py-2 text-sm font-semibold rounded-lg transition-colors ${
+                  !enabled
+                    ? 'opacity-40 grayscale cursor-not-allowed text-gray-400 bg-gray-50/55 animate-pulse-subtle'
+                    : isActive
                     ? 'bg-indigo-50 text-indigo-700'
                     : 'text-gray-700 hover:bg-gray-100'
                 }`}
               >
-                <link.icon className={`w-5 h-5 ${isActive ? 'text-indigo-600' : 'text-gray-500'}`} />
-                {link.label}
+                <div className="flex items-center gap-3">
+                  <link.icon className={`w-5 h-5 ${!enabled ? 'text-gray-400' : isActive ? 'text-indigo-600' : 'text-gray-500'}`} />
+                  <span>{link.label}</span>
+                </div>
+                {!enabled && <Lock className="w-3.5 h-3.5 text-gray-400 shrink-0" />}
               </Link>
             );
           })}

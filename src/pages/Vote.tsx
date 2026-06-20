@@ -19,7 +19,9 @@ import {
   Sparkles,
   Loader2,
   Check,
-  HelpCircle
+  HelpCircle,
+  Lock,
+  ShieldAlert
 } from 'lucide-react';
 import { getCategories, getCandidates, verifyVoterByCardId, submitVote, submitMultipleVotes, getVoterSubmittedVotes, finalizeVotingStatus, getDapils, getVotingCompletionStatus } from '../lib/votingService';
 import { Category, Candidate, Profile, Vote, Dapil } from '../types';
@@ -425,17 +427,36 @@ export default function VotePage() {
          ──────────────────────────────────────────────── */}
       {screen === 'forbidden' && (
         <main className="flex-1 flex flex-col items-center justify-center p-6 w-full max-w-md mx-auto text-center">
-          <div className="w-20 h-20 bg-rose-500/10 rounded-full flex items-center justify-center mb-8 border border-rose-500/20 text-rose-500 shadow-xl shadow-rose-500/5 animate-pulse">
-            <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-shield-off"><path d="m2 2 20 20"/><path d="M5 5a1 1 0 0 0-1 1v7c0 5 3.5 7.5 7 10"/><path d="M11 11a1 1 0 0 0 1 1h.17"/><path d="M12 21c3.5-2.5 7-5 7-10V6a1 1 0 0 0-1-1h-2.17"/><path d="M14.5 9.5c.9.2 1.5.7 1.5 1.5v1"/><path d="M12 2v2"/><path d="M17 2v1"/><path d="M2 13c0 5.6 4.1 9 10 11"/><path d="M7 2v4"/></svg>
+          {/* Stunning Layered Closed-State Illustration */}
+          <div className="relative mb-8 flex items-center justify-center">
+            {/* Outer pulsating glow ring */}
+            <div className="absolute w-28 h-28 bg-rose-500/10 rounded-full blur-xl animate-pulse"></div>
+            {/* Secondary thin dashed rotating ring */}
+            <div className="absolute w-24 h-24 border border-rose-500/20 rounded-full animate-[spin_20s_linear_infinite] border-dashed"></div>
+            {/* Outer border ring */}
+            <div className="relative w-20 h-20 bg-[#151821] border border-rose-500/30 rounded-2xl flex items-center justify-center shadow-2xl shadow-rose-950/50">
+              <Lock className="w-9 h-9 text-rose-500" />
+              {/* Corner mini warning badge */}
+              <div className="absolute -bottom-1 -right-1 bg-rose-600 text-white rounded-full p-1 border border-[#0d0f14] shadow-md">
+                <ShieldAlert className="w-3.5 h-3.5" />
+              </div>
+            </div>
           </div>
-          <h1 className="text-3xl font-black text-white tracking-tight mb-2 uppercase">Bilik Suara Ditutup</h1>
-          <p className="text-slate-400 font-medium text-sm mb-8 leading-relaxed">
-            Mohon maaf, saat ini akses ke bilik suara elektronik sedang dinonaktifkan oleh panitia Administrator. 
-            Silakan hubungi panitia KPPS untuk informasi lebih lanjut mengenai jadwal pemungutan suara.
+
+          {/* Status Badge */}
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-rose-500/10 border border-rose-500/20 text-rose-400 text-[10px] font-black tracking-widest uppercase mb-4">
+            <span className="w-1.5 h-1.5 bg-rose-500 rounded-full animate-ping"></span>
+            <span>Bilik Suara Ditutup</span>
+          </div>
+
+          <h1 className="text-3xl font-black text-white tracking-tight mb-2 uppercase">Akses Ditutup</h1>
+          <p className="text-slate-400 font-medium text-xs sm:text-sm mb-8 leading-relaxed max-w-sm">
+            Mohon maaf, saat ini bilik suara elektronik sedang dinonaktifkan oleh panitia Administrator. 
+            Silakan hubungi panitia penyelenggara untuk informasi lebih lanjut mengenai jadwal pemungutan suara resmi.
           </p>
           <button 
             onClick={() => navigate('/')}
-            className="w-full py-4 bg-[#1c2030] hover:bg-[#232840] text-slate-200 border border-[#2a3050] rounded-2xl text-xs font-bold transition-all shadow-lg"
+            className="w-full py-4 bg-[#1c2030] hover:bg-[#232840] text-slate-200 border border-[#2a3050] rounded-2xl text-xs font-bold transition-all shadow-lg cursor-pointer"
           >
             Kembali ke Halaman Depan
           </button>
@@ -618,11 +639,11 @@ export default function VotePage() {
                 <span className="text-slate-500 font-bold uppercase tracking-wider">Status Akun</span>
                 {voter.account_status === 'dikonfirmasi' ? (
                   <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[10px] font-black uppercase tracking-wider shadow-sm">
-                    ✅
+                    ✓ Terverifikasi
                   </span>
                 ) : (
                   <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20 text-[10px] font-black uppercase tracking-wider shadow-sm">
-                    ⚠️ Perlu Konfirmasi
+                    ⚠️ Pending
                   </span>
                 )}
               </div>
@@ -664,7 +685,7 @@ export default function VotePage() {
                 disabled={true}
                 className="w-full py-4 bg-slate-800 border border-slate-750 text-slate-500 rounded-xl text-xs font-bold cursor-not-allowed flex items-center justify-center gap-2"
               >
-                Terkunci
+                Hak Pilih Sudah Digunakan (Terkunci)
               </button>
             )}
 
@@ -672,7 +693,7 @@ export default function VotePage() {
               onClick={resetSessionToKiosk}
               className="w-full py-3.5 bg-[#1c2030] hover:bg-[#232840] text-slate-400 hover:text-white border border-[#2a3050] rounded-xl text-xs font-bold flex items-center justify-center gap-2"
             >
-              ← Kembali
+              ← Kembali ke Layar Awal
             </button>
           </div>
         </main>
@@ -791,7 +812,7 @@ export default function VotePage() {
                 onClick={resetSessionToKiosk}
                 className="py-3 px-6 bg-red-600/10 hover:bg-red-600/20 border border-red-500/20 text-red-400 rounded-xl text-xs font-bold"
               >
-                Kembali
+                Batalkan Voting
               </button>
 
               <button 
@@ -799,7 +820,7 @@ export default function VotePage() {
                 disabled={!allCompleted}
                 className="flex-1 py-4 bg-emerald-600 hover:bg-emerald-700 disabled:bg-[#1a2e26] disabled:border-emerald-500/10 disabled:opacity-40 disabled:text-emerald-500/70 border border-emerald-500/20 text-white rounded-xl text-sm font-black shadow-xl shadow-emerald-600/10 flex items-center justify-center gap-2"
               >
-                Simpan & Kirim Suara
+                Simpan & Kirim Hak Suara Akhir ✓
               </button>
             </div>
           </main>
@@ -856,7 +877,7 @@ export default function VotePage() {
                     <CheckCircle2 className="w-5 h-5 shrink-0 text-indigo-400" />
                     <div>
                       <p className="font-bold mb-1">Daerah Pemilihan (MPK SMABA)</p>
-                      <p className="text-indigo-400/80 font-semibold">Kelas Anda ({voter.class}) masuk dalam Daerah Pemilihan: <strong className="text-white bg-indigo-650 px-2.5 py-0.5 rounded ml-0.5">{voterDapil.name}</strong><br/>Silakan pilih masing-masing tepat 1 perwakilan per kelas di bawah ini.</p>
+                      <p className="text-indigo-400/80 font-semibold">Kelas Anda ({voter.class}) masuk dalam Daerah Pemilihan: <strong className="text-white bg-indigo-650 px-2.5 py-0.5 rounded ml-0.5">{voterDapil.name}</strong>. Silakan pilih masing-masing tepat 1 perwakilan per kelompok kelas di bawah ini.</p>
                     </div>
                   </div>
                 )}
@@ -1158,10 +1179,10 @@ export default function VotePage() {
             ✅
           </div>
           <h1 className="text-2xl font-black text-white tracking-tight leading-tight mb-2">
-            Suara Dikirim!
+            Pilihan Suara Tercatat!
           </h1>
           <p className="text-xs text-slate-400 max-w-xs leading-relaxed mb-8">
-            Pilihan Anda untuk kategori ini berhasil dienkripsi oleh sistem.
+            Pilihan Anda untuk kategori ini berhasil diamankan dan dienkripsi oleh sistem database. Kembali otomatis dalam:
           </p>
 
           <div className="w-24 h-24 rounded-full border-4 border-indigo-500 bg-[#151821] flex flex-col items-center justify-center shadow-2xl relative shadow-indigo-500/10">
@@ -1183,7 +1204,7 @@ export default function VotePage() {
             Terima Kasih!
           </h1>
           <p className="text-sm text-slate-400 max-w-sm leading-relaxed mb-10">
-            Suara Anda sangat berharga untuk kemajuan sekolah. Silakan tinggalkan bilik suara.
+            Hak suara Anda sangat berharga untuk kemajuan sekolah kita. Silakan tinggalkan bilik suara digital secara aman.
           </p>
 
           <div className="w-28 h-28 rounded-full border-4 border-indigo-500 bg-[#151821] flex flex-col items-center justify-center shadow-2xl shadow-indigo-500/20 mb-8 relative">
