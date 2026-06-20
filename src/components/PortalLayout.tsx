@@ -13,6 +13,7 @@ export default function PortalLayout() {
     { name: 'Beranda', path: '/' },
     { name: 'Informasi', path: '/informasi' },
     { name: 'Tentang', path: '/tentang' },
+    { name: 'Cara Menggunakan', path: '/cara-menggunakan' },
     { name: 'Login', path: '/login' },
     { name: 'Sign Up', path: '/signup' },
   ];
@@ -67,6 +68,7 @@ export default function PortalLayout() {
               <nav className="hidden md:flex gap-6 items-center mr-6">
                 <Link to="/informasi" className={`text-sm font-semibold transition-colors ${location.pathname === '/informasi' ? 'text-ppu-blue font-bold' : 'text-slate-600 hover:text-ppu-blue'}`}>Informasi</Link>
                 <Link to="/tentang" className={`text-sm font-semibold transition-colors ${location.pathname === '/tentang' ? 'text-ppu-blue font-bold' : 'text-slate-600 hover:text-ppu-blue'}`}>Tentang</Link>
+                <Link to="/cara-menggunakan" className={`text-sm font-semibold transition-colors ${location.pathname === '/cara-menggunakan' ? 'text-ppu-blue font-bold' : 'text-slate-600 hover:text-ppu-blue'}`}>Cara Menggunakan</Link>
               </nav>
               
               <button

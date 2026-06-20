@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import { isSupabaseConfigured } from '../lib/supabase';
-import { LogIn, UserPlus, Vote, BarChart3, ShieldAlert } from 'lucide-react';
+import { LogIn, UserPlus, Vote, BarChart3, ShieldAlert, BookOpen } from 'lucide-react';
 
 export default function Landing() {
   return (
@@ -53,6 +53,15 @@ export default function Landing() {
           >
             <UserPlus className="w-5 h-5" />
             <span>Registrasi Baru</span>
+          </Link>
+
+          {/* Group 3: How to Use (Full-width bridge) */}
+          <Link
+            to="/cara-menggunakan"
+            className="sm:col-span-2 w-full flex items-center justify-center gap-3 py-4 px-4 rounded-xl text-sm font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 transition-all duration-300 shadow-sm"
+          >
+            <BookOpen className="w-5 h-5" />
+            <span>Cara Menggunakan</span>
           </Link>
         </div>
 

@@ -15,6 +15,7 @@ import PortalLayout from './components/PortalLayout';
 import Landing from './pages/Landing';
 import Informasi from './pages/Informasi';
 import Tentang from './pages/Tentang';
+import CaraMenggunakan from './pages/CaraMenggunakan';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
 import HasilPemilihan from './pages/HasilPemilihan';
@@ -44,6 +45,7 @@ function AppContent() {
           <Route path="/" element={<Landing />} />
           <Route path="/informasi" element={<Informasi />} />
           <Route path="/tentang" element={<Tentang />} />
+          <Route path="/cara-menggunakan" element={<CaraMenggunakan />} />
         </Route>
         
         <Route path="/login" element={<Login />} />
