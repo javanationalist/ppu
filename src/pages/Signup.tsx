@@ -165,30 +165,30 @@ export default function Signup() {
 
   if (checkingAccess) {
     return (
-      <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-6">
-        <div className="w-8 h-8 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
-        <p className="text-slate-500 font-medium text-xs mt-3">Memeriksa hak akses pendaftaran...</p>
+      <div className="min-h-screen bg-ppu-surface flex flex-col items-center justify-center p-6">
+        <div className="w-8 h-8 border-4 border-ppu-blue border-t-transparent rounded-full animate-spin"></div>
+        <p className="text-slate-600 font-bold text-xs mt-3">Memeriksa hak akses pendaftaran...</p>
       </div>
     );
   }
 
   if (!signupEnabled) {
     return (
-      <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-md w-full space-y-6 text-center bg-white p-8 rounded-2xl shadow-sm border border-slate-200">
-          <div className="w-16 h-16 bg-rose-50 text-rose-500 border border-rose-100 rounded-full flex items-center justify-center mx-auto shadow-sm">
+      <div className="min-h-screen bg-ppu-surface flex flex-col items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-md w-full space-y-6 text-center bg-white p-8 rounded-2xl shadow-xl border border-ppu-border">
+          <div className="w-16 h-16 bg-ppu-red/10 text-ppu-red border border-ppu-red/20 rounded-full flex items-center justify-center mx-auto shadow-sm">
             <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-shield-alert"><path d="M20 13c0 5-3.5 7.5-7.66 9.7a1 1 0 0 1-.68 0C7.5 20.5 4 18 4 13V6a1 1 0 0 1 .76-.97l8-2a1 1 0 0 1 .48 0l8 2a1 1 0 0 1 .76.97Z"/><line x1="12" x2="12" y1="9" y2="13"/><line x1="12" x2="12.01" y1="17" y2="17"/></svg>
           </div>
           <div className="space-y-2">
-            <h2 className="text-xl font-black text-slate-800 tracking-tight">Ditutup</h2>
-            <p className="text-slate-500 text-xs sm:text-sm leading-relaxed">
-              Pendaftaran akun sudah ditutup. Silakan hubungi Panitia PEMILOS jika ini adalah kesalahan.
+            <h2 className="text-xl font-black text-[#0B1220] tracking-tight">Pendaftaran Ditutup</h2>
+            <p className="text-slate-600 text-xs sm:text-sm leading-relaxed font-semibold">
+              Pendaftaran akun sudah ditutup. Silakan hubungi Panitia jika ini adalah kesalahan.
             </p>
           </div>
-          <div className="pt-4 border-t border-slate-100">
+          <div className="pt-4 border-t border-ppu-border">
             <Link
               to="/login"
-              className="w-full inline-flex items-center justify-center py-2.5 px-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition-colors shadow-md shadow-indigo-600/10"
+              className="w-full inline-flex items-center justify-center py-2.5 px-4 bg-ppu-blue hover:bg-ppu-blue-dark text-white rounded-xl text-xs font-bold transition-all shadow-md shadow-ppu-blue/15"
             >
               Kembali ke Login
             </Link>
@@ -199,63 +199,68 @@ export default function Signup() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full space-y-8 bg-white p-8 rounded-xl shadow">
+    <div className="min-h-screen bg-ppu-surface flex flex-col items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-md w-full space-y-8 bg-white p-8 rounded-xl border border-ppu-border shadow-xl">
         <div>
-          <h2 className="text-center text-3xl font-extrabold text-gray-900">
+          <img
+            src="https://bfuuuzmcrkfjblancewz.supabase.co/storage/v1/object/public/official%20logo/PPU.webp"
+            alt="PPU Logo"
+            className="mx-auto w-24 h-auto mb-6 animate-pulse-subtle"
+          />
+          <h2 className="text-center text-3xl font-extrabold text-ppu-blue">
             Daftar Akun PPU
           </h2>
         </div>
         <form className="mt-8 space-y-6" onSubmit={handleSignup}>
           {error && (
-            <div className="bg-red-50 text-red-500 p-3 rounded text-sm">
+            <div className="bg-ppu-red/5 text-ppu-red border border-ppu-red/20 p-3 rounded text-sm text-center font-semibold">
               {error}
             </div>
           )}
-          <div className="rounded-md shadow-sm space-y-4">
+          <div className="rounded-md space-y-4">
             <div>
-              <label htmlFor="fullName" className="sr-only">Nama</label>
+              <label htmlFor="fullName" className="block text-xs font-bold uppercase text-slate-500 mb-1 tracking-wider">Nama Lengkap</label>
               <input
                 id="fullName"
                 name="fullName"
                 type="text"
                 required
-                className="appearance-none rounded relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
-                placeholder="Nama"
+                className="appearance-none rounded-xl relative block w-full px-3.5 py-2.5 border border-ppu-border placeholder-slate-400 text-slate-800 focus:outline-none focus:ring-2 focus:ring-ppu-blue/20 focus:border-ppu-blue sm:text-sm font-medium"
+                placeholder="Nama Lengkap"
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
               />
             </div>
             <div>
-              <label htmlFor="email" className="sr-only">Email</label>
+              <label htmlFor="email" className="block text-xs font-bold uppercase text-slate-500 mb-1 tracking-wider">Alamat Email</label>
               <input
                 id="email"
                 name="email"
                 type="email"
                 required
-                className="appearance-none rounded relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
-                placeholder="Email"
+                className="appearance-none rounded-xl relative block w-full px-3.5 py-2.5 border border-ppu-border placeholder-slate-400 text-slate-800 focus:outline-none focus:ring-2 focus:ring-ppu-blue/20 focus:border-ppu-blue sm:text-sm font-medium"
+                placeholder="Contoh: pemilih@domain.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
               />
             </div>
             <div className="relative">
-              <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5 text-left">Kelas</label>
+              <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Kelas / Unit</label>
               <button
                 type="button"
                 id="signup-class-dropdown"
                 onClick={() => setDropdownOpen(!dropdownOpen)}
-                className="appearance-none rounded relative block w-full px-3 py-2.5 border border-gray-300 bg-white placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-left text-sm font-semibold cursor-pointer select-none transition-all flex items-center justify-between"
+                className="appearance-none rounded-xl relative block w-full px-3.5 py-2.5 border border-ppu-border bg-white placeholder-slate-400 text-slate-800 focus:outline-none focus:ring-2 focus:ring-ppu-blue/20 focus:border-ppu-blue text-left text-sm font-semibold cursor-pointer select-none transition-all flex items-center justify-between"
               >
                 <span>{classField || 'Pilih Kelas (e.g. XI-2)'}</span>
-                <span className="text-gray-400 text-xs">▼</span>
+                <span className="text-slate-400 text-xs">▼</span>
               </button>
               
               {dropdownOpen && (
-                <div className="absolute left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-xl z-50 p-3 max-h-72 overflow-y-auto">
+                <div className="absolute left-0 right-0 mt-1 bg-white border border-ppu-border rounded-xl shadow-2xl z-50 p-3 max-h-72 overflow-y-auto">
                   {/* Special Classes (GTK) */}
                   {specialClasses.length > 0 && (
-                    <div className="mb-3 pb-2 border-b border-gray-100 grid grid-cols-2 gap-2">
+                    <div className="mb-3 pb-2 border-b border-ppu-border grid grid-cols-2 gap-2">
                       {specialClasses.map(cls => (
                         <button
                           key={cls}
@@ -264,8 +269,8 @@ export default function Signup() {
                             setClassField(cls);
                             setDropdownOpen(false);
                           }}
-                          className={`w-full py-2 text-xs text-center rounded hover:bg-slate-50 font-black transition-all border ${
-                            classField === cls ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm' : 'text-slate-800 border-slate-200'
+                          className={`w-full py-2 text-xs text-center rounded-lg hover:bg-slate-50 font-black transition-all border ${
+                            classField === cls ? 'bg-ppu-blue text-white border-ppu-blue shadow-sm' : 'text-slate-800 border-ppu-border'
                           }`}
                         >
                           {cls}
@@ -277,7 +282,7 @@ export default function Signup() {
                   <div className="grid grid-cols-3 gap-2">
                     {/* Kelas X */}
                     <div className="space-y-1">
-                      <div className="text-[9px] uppercase font-bold text-gray-400 border-b border-gray-100 pb-1 mb-1 text-center font-mono">Kelas X</div>
+                      <div className="text-[9px] uppercase font-bold text-slate-400 border-b border-ppu-border pb-1 mb-1 text-center font-mono">Kelas X</div>
                       {col1.map(cls => (
                         <button
                           key={cls}
@@ -286,8 +291,8 @@ export default function Signup() {
                             setClassField(cls);
                             setDropdownOpen(false);
                           }}
-                          className={`w-full py-1 text-[11px] text-center rounded hover:bg-indigo-50 hover:text-indigo-650 font-bold transition-all ${
-                            classField === cls ? 'bg-indigo-600 text-white hover:bg-indigo-600 hover:text-white' : 'text-gray-600'
+                          className={`w-full py-1 text-[11px] text-center rounded-lg hover:bg-ppu-blue-light hover:text-ppu-blue font-bold transition-all ${
+                            classField === cls ? 'bg-ppu-blue text-white hover:bg-ppu-blue hover:text-white' : 'text-slate-600'
                           }`}
                         >
                           {cls}
@@ -297,7 +302,7 @@ export default function Signup() {
 
                     {/* Kelas XI */}
                     <div className="space-y-1">
-                      <div className="text-[9px] uppercase font-bold text-gray-400 border-b border-gray-100 pb-1 mb-1 text-center font-mono">Kelas XI</div>
+                      <div className="text-[9px] uppercase font-bold text-slate-400 border-b border-ppu-border pb-1 mb-1 text-center font-mono">Kelas XI</div>
                       {col2.map(cls => (
                         <button
                           key={cls}
@@ -306,8 +311,8 @@ export default function Signup() {
                             setClassField(cls);
                             setDropdownOpen(false);
                           }}
-                          className={`w-full py-1 text-[11px] text-center rounded hover:bg-indigo-50 hover:text-indigo-650 font-bold transition-all ${
-                            classField === cls ? 'bg-indigo-600 text-white hover:bg-indigo-600 hover:text-white' : 'text-gray-600'
+                          className={`w-full py-1 text-[11px] text-center rounded-lg hover:bg-ppu-blue-light hover:text-ppu-blue font-bold transition-all ${
+                            classField === cls ? 'bg-ppu-blue text-white hover:bg-ppu-blue hover:text-white' : 'text-slate-600'
                           }`}
                         >
                           {cls}
@@ -317,7 +322,7 @@ export default function Signup() {
 
                     {/* Kelas XII */}
                     <div className="space-y-1">
-                      <div className="text-[9px] uppercase font-bold text-gray-400 border-b border-gray-100 pb-1 mb-1 text-center font-mono">Kelas XII</div>
+                      <div className="text-[9px] uppercase font-bold text-slate-400 border-b border-ppu-border pb-1 mb-1 text-center font-mono">Kelas XII</div>
                       {col3.map(cls => (
                         <button
                           key={cls}
@@ -326,8 +331,8 @@ export default function Signup() {
                             setClassField(cls);
                             setDropdownOpen(false);
                           }}
-                          className={`w-full py-1 text-[11px] text-center rounded hover:bg-indigo-50 hover:text-indigo-650 font-bold transition-all ${
-                            classField === cls ? 'bg-indigo-600 text-white hover:bg-indigo-600 hover:text-white' : 'text-gray-600'
+                          className={`w-full py-1 text-[11px] text-center rounded-lg hover:bg-ppu-blue-light hover:text-ppu-blue font-bold transition-all ${
+                            classField === cls ? 'bg-ppu-blue text-white hover:bg-ppu-blue hover:text-white' : 'text-slate-600'
                           }`}
                         >
                           {cls}
@@ -341,42 +346,42 @@ export default function Signup() {
               <input type="hidden" name="classField" required value={classField} />
             </div>
             <div>
-              <label htmlFor="password" className="sr-only">Password</label>
+              <label htmlFor="password" className="block text-xs font-bold uppercase text-slate-500 mb-1 tracking-wider">Kata Sandi (Minimum 6 Karakter)</label>
               <input
                 id="password"
                 name="password"
                 type="password"
                 required
-                className="appearance-none rounded relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
+                className="appearance-none rounded-xl relative block w-full px-3.5 py-2.5 border border-ppu-border placeholder-slate-400 text-slate-800 focus:outline-none focus:ring-2 focus:ring-ppu-blue/20 focus:border-ppu-blue sm:text-sm font-medium"
                 placeholder="Masukkan password minimal 6 karakter"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
               />
             </div>
             <div>
-              <label htmlFor="confirmPassword" className="sr-only">Confirm Password</label>
+              <label htmlFor="confirmPassword" className="block text-xs font-bold uppercase text-slate-500 mb-1 tracking-wider">Konfirmasi Kata Sandi</label>
               <input
                 id="confirmPassword"
                 name="confirmPassword"
                 type="password"
                 required
-                className="appearance-none rounded relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
-                placeholder="Confirm Password"
+                className="appearance-none rounded-xl relative block w-full px-3.5 py-2.5 border border-ppu-border placeholder-slate-400 text-slate-800 focus:outline-none focus:ring-2 focus:ring-ppu-blue/20 focus:border-ppu-blue sm:text-sm font-medium"
+                placeholder="Konfirmasi password Anda"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
               />
             </div>
             <div>
-              <label htmlFor="captcha" className="block text-sm font-medium text-gray-700 mb-1 select-none">
-                [{num1} + {num2} =]
+              <label htmlFor="captcha" className="block text-xs font-bold uppercase text-slate-500 mb-1 tracking-wider">
+                Verifikasi Keamanan: Berapakah hasil dari [{num1} + {num2} =]
               </label>
               <input
                 id="captcha"
                 name="captcha"
                 type="number"
                 required
-                className="appearance-none rounded relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
-                placeholder="Jawaban"
+                className="appearance-none rounded-xl relative block w-full px-3.5 py-2.5 border border-ppu-border placeholder-slate-400 text-slate-800 focus:outline-none focus:ring-2 focus:ring-ppu-blue/20 focus:border-ppu-blue sm:text-sm font-medium"
+                placeholder="Masukkan hasil penjumlahan"
                 value={captchaInput}
                 onChange={(e) => setCaptchaInput(e.target.value)}
               />
@@ -387,16 +392,16 @@ export default function Signup() {
             <button
               type="submit"
               disabled={loading}
-              className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
+              className="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-bold rounded-xl text-white bg-ppu-blue hover:bg-ppu-blue-dark active:scale-[0.98] transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-ppu-blue disabled:opacity-50 cursor-pointer shadow-md shadow-ppu-blue/15"
             >
               {loading ? 'Mendaftar...' : 'Daftarkan Akun'}
             </button>
           </div>
         </form>
-        <div className="text-center mt-4">
-          <span className="text-xs text-gray-500">
+        <div className="text-center mt-4 border-t border-ppu-border pt-4">
+          <span className="text-xs font-semibold text-slate-500">
             Sudah punya akun?{' '}
-            <Link to="/login" className="text-blue-600 hover:text-blue-500">
+            <Link to="/login" className="text-ppu-blue hover:text-ppu-blue-dark font-bold">
               Login
             </Link>
           </span>

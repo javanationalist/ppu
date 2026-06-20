@@ -1014,7 +1014,7 @@ export default function VotePage() {
                                         {/* Misi */}
                                         {cand.misi && cand.misi.length > 0 && (
                                           <div className="font-semibold mb-2">
-                                            <span className="block text-[9px] uppercase font-bold text-indigo-400 tracking-wider mb-1 font-mono">Misi Utama</span>
+                                            <span className="block text-[9px] uppercase font-bold text-indigo-400 tracking-wider mb-1 font-mono">Misi</span>
                                             <ul className="space-y-1">
                                               {cand.misi.slice(0, 3).map((m, mIdx) => (
                                                 <li key={mIdx} className="text-slate-400 text-xs leading-normal flex gap-1.5 items-start text-justify">

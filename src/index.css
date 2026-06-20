@@ -1,1 +1,13 @@
 @import "tailwindcss";
+
+@theme {
+  --color-ppu-blue: #123E8A;
+  --color-ppu-blue-dark: #0b295c;
+  --color-ppu-blue-light: rgba(18, 62, 138, 0.08);
+  --color-ppu-red: #E31B23;
+  --color-ppu-white: #FFFFFF;
+  --color-ppu-dark: #0B1220;
+  --color-ppu-dark-card: #141c2c;
+  --color-ppu-surface: #F5F7FA;
+  --color-ppu-border: #DCE3EA;
+}

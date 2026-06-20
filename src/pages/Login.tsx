@@ -104,54 +104,54 @@ export default function Login() {
 
   if (authLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-650"></div>
+      <div className="min-h-screen flex items-center justify-center bg-ppu-surface">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-ppu-blue"></div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full space-y-8 bg-white p-8 rounded-xl shadow">
+    <div className="min-h-screen bg-ppu-surface flex flex-col items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-md w-full space-y-8 bg-white p-8 rounded-xl border border-ppu-border shadow-xl">
         <div>
           <img
             src="https://bfuuuzmcrkfjblancewz.supabase.co/storage/v1/object/public/official%20logo/PPU.webp"
             alt="PPU Logo"
             className="mx-auto w-24 h-auto mb-6"
           />
-          <h2 className="text-center text-3xl font-extrabold text-gray-900">
+          <h2 className="text-center text-3xl font-extrabold text-ppu-blue">
             Login ke PPU
           </h2>
         </div>
         <form className="mt-8 space-y-6" onSubmit={handleLogin}>
           {error && (
-            <div className="bg-red-50 text-red-500 p-3 rounded text-sm">
+            <div className="bg-ppu-red/5 text-ppu-red border border-ppu-red/20 p-3 rounded text-sm font-semibold text-center">
               {error}
             </div>
           )}
-          <div className="rounded-md shadow-sm space-y-4">
+          <div className="rounded-md space-y-4">
             <div>
-              <label htmlFor="email" className="sr-only">Email address</label>
+              <label htmlFor="email" className="block text-xs font-bold uppercase text-slate-500 mb-1 tracking-wider">Email Admin / Pemilih</label>
               <input
                 id="email"
                 name="email"
                 type="email"
                 required
-                className="appearance-none rounded relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
-                placeholder="Email address"
+                className="appearance-none rounded-xl relative block w-full px-3.5 py-2.5 border border-ppu-border placeholder-slate-400 text-slate-800 focus:outline-none focus:ring-2 focus:ring-ppu-blue/20 focus:border-ppu-blue sm:text-sm font-medium"
+                placeholder="Disarankan user@ppu.demo"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
               />
             </div>
             <div>
-              <label htmlFor="password" className="sr-only">Password</label>
+              <label htmlFor="password" className="block text-xs font-bold uppercase text-slate-500 mb-1 tracking-wider">Password / Kata Sandi</label>
               <input
                 id="password"
                 name="password"
                 type="password"
                 required
-                className="appearance-none rounded relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
-                placeholder="Password"
+                className="appearance-none rounded-xl relative block w-full px-3.5 py-2.5 border border-ppu-border placeholder-slate-400 text-slate-800 focus:outline-none focus:ring-2 focus:ring-ppu-blue/20 focus:border-ppu-blue sm:text-sm font-medium"
+                placeholder="Masukkan kata sandi"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
               />
@@ -162,16 +162,16 @@ export default function Login() {
             <button
               type="submit"
               disabled={loading}
-              className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
+              className="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-bold rounded-xl text-white bg-ppu-blue hover:bg-ppu-blue-dark active:scale-[0.98] transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-ppu-blue disabled:opacity-50 cursor-pointer shadow-md shadow-ppu-blue/10"
             >
               {loading ? 'Logging in...' : 'Login'}
             </button>
           </div>
         </form>
-        <div className="text-center mt-4">
-          <span className="text-xs text-gray-500">
+        <div className="text-center mt-4 border-t border-ppu-border pt-4">
+          <span className="text-xs font-semibold text-slate-500">
             Belum punya akun?{' '}
-            <Link to="/signup" className="text-blue-600 hover:text-blue-500">
+            <Link to="/signup" className="text-ppu-blue hover:text-ppu-blue-dark font-bold">
               Sign Up
             </Link>
           </span>

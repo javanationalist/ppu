@@ -63,7 +63,7 @@ export const AdminLayout = () => {
         />
         <button
           onClick={() => setIsMobileOpen(true)}
-          className="p-2 text-gray-600 hover:text-indigo-600 hover:bg-gray-100 rounded-lg transition-colors focus:outline-none"
+          className="p-2 text-gray-600 hover:text-ppu-blue hover:bg-gray-100 rounded-lg transition-colors focus:outline-none"
           aria-label="Open sidebar"
         >
           <Menu className="w-6 h-6" />
@@ -106,7 +106,7 @@ export const AdminLayout = () => {
             const content = (
               <>
                 <div className="flex items-center gap-3">
-                  <link.icon className={`w-5 h-5 ${!enabled ? 'text-gray-400' : isActive ? 'text-indigo-600' : 'text-gray-500'}`} />
+                  <link.icon className={`w-5 h-5 ${!enabled ? 'text-gray-400' : isActive ? 'text-ppu-blue' : 'text-gray-500'}`} />
                   <span>{link.label}</span>
                 </div>
                 {!enabled && <Lock className="w-3.5 h-3.5 text-gray-400 shrink-0" />}
@@ -117,7 +117,14 @@ export const AdminLayout = () => {
               return (
                 <div
                   key={link.to}
-                  className="flex items-center justify-between px-3 py-2 text-sm font-semibold rounded-lg bg-gray-50/50 text-gray-400 cursor-not-allowed select-none blur-[1.5px] opacity-50 pointer-events-none"
+                  className="flex items-center justify-between px-3 py-2 text-sm font-semibold rounded-lg bg-[#F5F7FA] text-gray-400 select-none pb-2"
+                  style={{
+                    filter: "blur(1.5px)",
+                    opacity: 0.5,
+                    cursor: "not-allowed",
+                    userSelect: "none",
+                    pointerEvents: "none"
+                  }}
                 >
                   {content}
                 </div>
@@ -131,7 +138,7 @@ export const AdminLayout = () => {
                 onClick={closeSidebar}
                 className={`flex items-center justify-between px-3 py-2 text-sm font-semibold rounded-lg transition-colors ${
                   isActive
-                    ? 'bg-indigo-50 text-indigo-700'
+                    ? 'bg-ppu-blue-light text-ppu-blue font-bold'
                     : 'text-gray-700 hover:bg-gray-100'
                 }`}
               >
@@ -144,7 +151,7 @@ export const AdminLayout = () => {
               closeSidebar();
               handleLogout();
             }}
-            className="w-full mt-4 flex items-center gap-3 px-3 py-2 text-sm font-semibold text-red-600 rounded-lg hover:bg-red-50 transition-colors"
+            className="w-full mt-4 flex items-center gap-3 px-3 py-2 text-sm font-semibold text-red-600 rounded-lg hover:bg-[#E31B23]/10 transition-colors"
           >
             <LogOut className="w-5 h-5" />
             Logout
@@ -169,7 +176,7 @@ export const AdminLayout = () => {
             const content = (
               <>
                 <div className="flex items-center gap-3">
-                  <link.icon className={`w-5 h-5 ${!enabled ? 'text-gray-400' : isActive ? 'text-indigo-600' : 'text-gray-500'}`} />
+                  <link.icon className={`w-5 h-5 ${!enabled ? 'text-gray-400' : isActive ? 'text-ppu-blue' : 'text-gray-500'}`} />
                   <span>{link.label}</span>
                 </div>
                 {!enabled && <Lock className="w-3.5 h-3.5 text-gray-400 shrink-0" />}
@@ -180,7 +187,14 @@ export const AdminLayout = () => {
               return (
                 <div
                   key={link.to}
-                  className="flex items-center justify-between px-3 py-2 text-sm font-semibold rounded-lg bg-gray-50/50 text-gray-400 cursor-not-allowed select-none blur-[1.5px] opacity-50 pointer-events-none"
+                  className="flex items-center justify-between px-3 py-2 text-sm font-semibold rounded-lg bg-[#F5F7FA] text-gray-400 select-none pb-2"
+                  style={{
+                    filter: "blur(1.5px)",
+                    opacity: 0.5,
+                    cursor: "not-allowed",
+                    userSelect: "none",
+                    pointerEvents: "none"
+                  }}
                 >
                   {content}
                 </div>
@@ -193,7 +207,7 @@ export const AdminLayout = () => {
                 to={link.to}
                 className={`flex items-center justify-between px-3 py-2 text-sm font-semibold rounded-lg transition-colors ${
                   isActive
-                    ? 'bg-indigo-50 text-indigo-700'
+                    ? 'bg-ppu-blue-light text-ppu-blue font-bold'
                     : 'text-gray-700 hover:bg-gray-100'
                 }`}
               >
@@ -203,7 +217,7 @@ export const AdminLayout = () => {
           })}
           <button
             onClick={handleLogout}
-            className="w-full mt-4 flex items-center gap-3 px-3 py-2 text-sm font-semibold text-red-600 rounded-lg hover:bg-red-50 transition-colors"
+            className="w-full mt-4 flex items-center gap-3 px-3 py-2 text-sm font-semibold text-red-600 rounded-lg hover:bg-[#E31B23]/10 transition-colors"
           >
             <LogOut className="w-5 h-5" />
             Logout

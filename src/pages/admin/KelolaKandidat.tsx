@@ -1472,7 +1472,7 @@ export default function KelolaPemilihan() {
 
               {!isMpk && (
                 <div>
-                  <label className="block text-xs font-black text-slate-700 uppercase tracking-wider mb-1 font-mono">Misi & Rencana Kerja (Satu Misi Per Baris) *</label>
+                  <label className="block text-xs font-black text-slate-700 uppercase tracking-wider mb-1 font-mono">Misi (Satu Misi Per Baris) *</label>
                   <textarea 
                     rows={4}
                     value={candMisi} 
@@ -1561,7 +1561,7 @@ export default function KelolaPemilihan() {
 
               {/* Visi */}
               <div className="border-t border-slate-100 pt-3">
-                <h5 className="text-[10px] uppercase tracking-wider font-extrabold text-slate-400 font-mono mb-1">Visi Utama:</h5>
+                <h5 className="text-[10px] uppercase tracking-wider font-extrabold text-slate-400 font-mono mb-1">Visi:</h5>
                 <p className="text-slate-650 text-xs sm:text-sm leading-relaxed italic bg-slate-50 p-3.5 rounded-2xl border border-slate-100 text-justify">
                   "{detailCandidate.visi || 'Visi belum diformulasikan.'}"
                 </p>
@@ -1570,7 +1570,7 @@ export default function KelolaPemilihan() {
               {/* Misi */}
               {detailCandidate.misi && detailCandidate.misi.length > 0 && (
                 <div className="space-y-1 pb-1">
-                  <h5 className="text-[10px] uppercase tracking-wider font-extrabold text-slate-400 font-mono mb-1.5">Misi & Rencana Kerja:</h5>
+                  <h5 className="text-[10px] uppercase tracking-wider font-extrabold text-slate-400 font-mono mb-1.5">Misi:</h5>
                   <ol className="list-decimal pl-4 space-y-1.5 text-xs text-slate-600 leading-relaxed font-semibold">
                     {detailCandidate.misi.map((m, idx) => (
                       <li key={idx} className="pl-0.5">

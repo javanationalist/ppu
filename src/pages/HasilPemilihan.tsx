@@ -123,10 +123,10 @@ export default function HasilPemilihan() {
 
   if (loading || checkingAccess) {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+      <div className="min-h-screen bg-ppu-surface flex items-center justify-center">
         <div className="flex flex-col items-center gap-3">
-          <div className="w-10 h-10 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
-          <p className="text-slate-500 font-medium text-sm animate-pulse">Menghitung perolehan suara...</p>
+          <div className="w-10 h-10 border-4 border-ppu-blue border-t-transparent rounded-full animate-spin"></div>
+          <p className="text-slate-600 font-bold text-sm animate-pulse">Menghitung perolehan suara...</p>
         </div>
       </div>
     );
@@ -135,21 +135,21 @@ export default function HasilPemilihan() {
   // Check custom visibility block
   if (!lihatHasilEnabled && currentUser?.role !== 'admin') {
     return (
-      <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-md w-full space-y-6 text-center bg-white p-8 rounded-2xl shadow-sm border border-slate-200">
-          <div className="w-16 h-16 bg-amber-50 text-amber-500 border border-amber-100 rounded-full flex items-center justify-center mx-auto shadow-sm">
+      <div className="min-h-screen bg-ppu-surface flex flex-col items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-md w-full space-y-6 text-center bg-white p-8 rounded-2xl shadow-xl border border-ppu-border">
+          <div className="w-16 h-16 bg-ppu-red/10 text-ppu-red border border-ppu-red/20 rounded-full flex items-center justify-center mx-auto shadow-sm">
             <ShieldAlert className="w-8 h-8" />
           </div>
           <div className="space-y-2">
             <h2 className="text-xl font-black text-slate-800 tracking-tight">Forbidden</h2>
-            <p className="text-slate-500 text-xs sm:text-sm leading-relaxed">
+            <p className="text-slate-600 text-xs sm:text-sm leading-relaxed font-semibold">
               Perolehan suara dinonaktifkan.
             </p>
           </div>
-          <div className="pt-4 border-t border-slate-100">
+          <div className="pt-4 border-t border-ppu-border">
             <Link
               to="/"
-              className="w-full inline-flex items-center justify-center py-2.5 px-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition-colors shadow-md shadow-indigo-600/10"
+              className="w-full inline-flex items-center justify-center py-2.5 px-4 bg-ppu-blue hover:bg-ppu-blue-dark text-white rounded-xl text-xs font-bold transition-all shadow-md shadow-ppu-blue/15"
             >
               Kembali ke Beranda
             </Link>
@@ -169,13 +169,13 @@ export default function HasilPemilihan() {
   const isMpkType = activeCategory?.type === 'mpk_smaba';
 
   return (
-    <div className="min-h-screen bg-slate-50 py-12 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-ppu-surface py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-7xl mx-auto space-y-8 select-none">
         {/* Navigation Bar */}
-        <div className="flex justify-between items-center bg-white p-4 rounded-2xl border border-slate-100 shadow-sm sm:px-6">
+        <div className="flex justify-between items-center bg-white p-4 rounded-2xl border border-ppu-border shadow-md sm:px-6">
           <Link 
             to="/" 
-            className="inline-flex items-center gap-2 text-xs sm:text-sm font-bold text-slate-600 hover:text-indigo-600 transition-colors"
+            className="inline-flex items-center gap-2 text-xs sm:text-sm font-bold text-slate-600 hover:text-ppu-blue transition-colors"
           >
             <ArrowLeft className="w-4 h-4" />
             <span>Kembali ke Beranda</span>
@@ -183,7 +183,7 @@ export default function HasilPemilihan() {
           <button 
             onClick={handleRefresh}
             disabled={refreshing}
-            className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 shadow-sm transition-all disabled:opacity-50 cursor-pointer"
+            className="bg-ppu-blue hover:bg-ppu-blue-dark text-white px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 shadow-sm transition-all disabled:opacity-50 cursor-pointer"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? 'animate-spin' : ''}`} />
             <span>{refreshing ? 'Memperbarui...' : 'Segarkan Data'}</span>
@@ -191,10 +191,10 @@ export default function HasilPemilihan() {
         </div>
 
         {/* Header */}
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white p-6 sm:p-8 rounded-2xl border border-slate-100 shadow-sm">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white p-6 sm:p-8 rounded-2xl border border-ppu-border shadow-sm">
           <div>
             <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight flex items-center gap-2">
-              <BarChart className="w-6 h-6 text-indigo-600" />
+              <BarChart className="w-6 h-6 text-ppu-blue" />
               <span>Hasil Perolehan Suara Utama</span>
             </h1>
             <p className="text-slate-500 text-sm mt-1">
@@ -205,53 +205,53 @@ export default function HasilPemilihan() {
 
         {/* Metrics Board */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="bg-gradient-to-br from-indigo-50 to-white p-6 rounded-2xl border border-indigo-100/50 shadow-sm flex items-start justify-between">
+          <div className="bg-white p-6 rounded-2xl border border-ppu-border shadow-sm flex items-start justify-between">
             <div>
-              <span className="text-xs font-bold text-indigo-500 uppercase tracking-widest block font-mono">Suara Selesai</span>
+              <span className="text-xs font-bold text-ppu-blue uppercase tracking-widest block font-mono">Suara Selesai</span>
               <h2 className="text-4xl font-black text-slate-800 mt-2">{votedVoters}</h2>
               <p className="text-xs text-slate-500 mt-1">Siswa telah meluangkan suaranya</p>
             </div>
-            <div className="p-3 bg-indigo-100 text-indigo-700 rounded-xl">
+            <div className="p-3 bg-ppu-blue-light text-ppu-blue rounded-xl">
               <Award className="w-6 h-6" />
             </div>
           </div>
 
-          <div className="bg-gradient-to-br from-indigo-50 to-white p-6 rounded-2xl border border-indigo-100/50 shadow-sm flex items-start justify-between">
+          <div className="bg-white p-6 rounded-2xl border border-ppu-border shadow-sm flex items-start justify-between">
             <div>
-              <span className="text-xs font-bold text-indigo-500 uppercase tracking-widest block font-mono">Tingkat Partisipasi</span>
+              <span className="text-xs font-bold text-ppu-blue uppercase tracking-widest block font-mono">Tingkat Partisipasi</span>
               <h2 className="text-4xl font-black text-slate-800 mt-2">{participationRate}%</h2>
               <div className="w-32 bg-slate-100 h-2 rounded-full mt-2 overflow-hidden">
-                <div className="bg-indigo-600 h-full rounded-full" style={{ width: `${participationRate}%` }}></div>
+                <div className="bg-ppu-blue h-full rounded-full animate-pulse" style={{ width: `${participationRate}%` }}></div>
               </div>
             </div>
-            <div className="p-3 bg-indigo-100 text-indigo-700 rounded-xl">
+            <div className="p-3 bg-ppu-blue-light text-ppu-blue rounded-xl">
               <Users className="w-6 h-6" />
             </div>
           </div>
 
-          <div className="bg-gradient-to-br from-indigo-50 to-white p-6 rounded-2xl border border-indigo-100/50 shadow-sm flex items-start justify-between">
+          <div className="bg-white p-6 rounded-2xl border border-ppu-border shadow-sm flex items-start justify-between">
             <div>
-              <span className="text-xs font-bold text-indigo-500 uppercase tracking-widest block font-mono">DPT Terdaftar</span>
+              <span className="text-xs font-bold text-ppu-blue uppercase tracking-widest block font-mono">DPT Terdaftar</span>
               <h2 className="text-4xl font-black text-slate-800 mt-2">{totalVoters}</h2>
               <p className="text-xs text-slate-500 mt-1">Target potensial DPT kesiswaan</p>
             </div>
-            <div className="p-3 bg-indigo-100 text-indigo-700 rounded-xl">
+            <div className="p-3 bg-ppu-blue-light text-ppu-blue rounded-xl">
               <ShieldCheck className="w-6 h-6" />
             </div>
           </div>
         </div>
 
         {/* 1. Category Dropdown Selector at Top */}
-        <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="bg-white p-6 rounded-2xl border border-ppu-border shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="space-y-1">
-            <span className="text-[10px] font-black uppercase tracking-widest text-indigo-600 block font-mono">PEMILIHAN AKTIF</span>
-            <h3 className="text-base font-extrabold text-slate-800">Pilih Kategori Pemilu</h3>
+            <span className="text-[10px] font-black uppercase tracking-widest text-ppu-blue block font-mono">PEMILIHAN AKTIF</span>
+            <h3 className="text-base font-extrabold text-[#0B1220]">Pilih Kategori Pemilu</h3>
           </div>
           <div className="relative">
             <select
               value={selectedCatId}
               onChange={(e) => setSelectedCatId(e.target.value)}
-              className="w-full sm:w-80 bg-slate-50 border-2 border-slate-200 hover:border-indigo-400 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 text-slate-800 rounded-xl px-4 py-3 font-extrabold text-sm outline-none transition-all cursor-pointer shadow-sm appearance-none pr-10"
+              className="w-full sm:w-80 bg-[#F5F7FA] border-2 border-[#DCE3EA] hover:border-ppu-blue focus:border-ppu-blue focus:ring-4 focus:ring-ppu-blue/10 text-slate-800 rounded-xl px-4 py-3 font-extrabold text-sm outline-none transition-all cursor-pointer shadow-sm appearance-none pr-10"
             >
               {categories.map(cat => (
                 <option key={cat.id} value={cat.id}>
@@ -269,16 +269,16 @@ export default function HasilPemilihan() {
 
         {/* 3. Selective MPK State: Choose Dapil Dropdown if type === 'mpk_smaba' */}
         {isMpkType && (
-          <div className="bg-gradient-to-r from-indigo-50/70 to-blue-50/50 border border-indigo-100 p-6 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-sm animate-fade-in">
+          <div className="bg-gradient-to-r from-ppu-blue/5 to-white border border-ppu-border p-6 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-sm animate-fade-in">
             <div className="space-y-1">
-              <span className="text-[10px] font-black uppercase tracking-widest text-indigo-600 block font-mono">REKAPITULASI DAERAH PEMILIHAN</span>
-              <h3 className="text-base font-extrabold text-slate-850">Pilih Daerah Pemilihan (Dapil)</h3>
+              <span className="text-[10px] font-black uppercase tracking-widest text-ppu-blue block font-mono">REKAPITULASI DAERAH PEMILIHAN</span>
+              <h3 className="text-base font-extrabold text-[#0B1220]">Pilih Daerah Pemilihan (Dapil)</h3>
             </div>
             <div className="relative">
               <select
                 value={selectedDapilId}
                 onChange={(e) => setSelectedDapilId(e.target.value)}
-                className="w-full sm:w-80 bg-white border-2 border-indigo-200 hover:border-indigo-450 focus:border-indigo-600 focus:ring-4 focus:ring-indigo-100 text-slate-900 rounded-xl px-4 py-3 font-extrabold text-sm outline-none transition-all cursor-pointer shadow-sm appearance-none pr-10"
+                className="w-full sm:w-80 bg-white border-2 border-[#DCE3EA] hover:border-ppu-blue focus:border-ppu-blue focus:ring-4 focus:ring-ppu-blue/10 text-slate-900 rounded-xl px-4 py-3 font-extrabold text-sm outline-none transition-all cursor-pointer shadow-sm appearance-none pr-10"
               >
                 <option value="">-- Pilih Dapil --</option>
                 {dapils.filter(d => d.category_id === selectedCatId).map(d => (
@@ -287,8 +287,8 @@ export default function HasilPemilihan() {
                   </option>
                 ))}
               </select>
-              <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-slate-500 border-l border-indigo-150-100 ml-1">
-                <MapPin className="w-4 h-4 text-indigo-500" />
+              <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-slate-500 border-l border-ppu-border ml-1">
+                <MapPin className="w-4 h-4 text-ppu-blue" />
               </div>
             </div>
           </div>
@@ -297,8 +297,8 @@ export default function HasilPemilihan() {
         {/* Main Results Board Section Layout Split */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Main Scoring Card Panel */}
-          <div className="bg-white p-6 sm:p-8 rounded-2xl border border-slate-100 shadow-sm lg:col-span-2 space-y-6">
-            <div className="border-b border-slate-50 pb-4">
+          <div className="bg-white p-6 sm:p-8 rounded-2xl border border-ppu-border shadow-sm lg:col-span-2 space-y-6">
+            <div className="border-b border-[#F5F7FA] pb-4">
               <h3 className="text-lg font-extrabold text-slate-800">
                 Status Perolehan Hasil Suara Terkini
               </h3>
@@ -329,7 +329,7 @@ export default function HasilPemilihan() {
 
                 if (cScores.length === 0) {
                   return (
-                    <div className="text-center py-16 text-slate-400 border border-dashed border-slate-150 rounded-2xl">
+                    <div className="text-center py-16 text-slate-400 border border-dashed border-[#DCE3EA] rounded-2xl">
                       <AlertTriangle className="w-10 h-10 mx-auto text-amber-500 mb-2 animate-bounce" />
                       <p className="text-xs font-bold uppercase tracking-wider">Belum Ada Kandidat</p>
                       <p className="text-[11px] text-slate-400 mt-1">Sistem belum mendeteksi konfigurasi kandidat untuk kategori ini.</p>
@@ -348,31 +348,31 @@ export default function HasilPemilihan() {
                       const fallbackColor = 'bg-slate-50 text-slate-600 border-slate-100';
 
                       return (
-                        <div key={cand.id} className="space-y-3 p-4 rounded-xl border border-slate-50 bg-slate-50/20 hover:bg-slate-50/50 transition-colors">
+                        <div key={cand.id} className="space-y-3 p-4 rounded-xl border border-ppu-border bg-[#F5F7FA]/30 hover:bg-[#F5F7FA]/75 transition-colors">
                           <div className="flex items-center justify-between gap-3 flex-wrap sm:flex-nowrap">
                             <div className="flex items-center gap-3">
                               <div className={`w-6 h-6 rounded-full border flex items-center justify-center font-mono font-bold text-xs ${index < 3 ? placeColors[index] : fallbackColor}`}>
                                 {index + 1}
                               </div>
                               <div>
-                                <span className="text-slate-550 text-[10px] font-mono font-black block">
+                                <span className="text-slate-500 text-[10px] font-mono font-black block">
                                   NO URUT {String(cand.number).padStart(2, '0')}
                                 </span>
-                                <span className="font-extrabold text-slate-850">{cand.chairman}</span>
+                                <span className="font-extrabold text-[#0B1220]">{cand.chairman}</span>
                                 {cand.vice && <span className="text-xs text-slate-500 font-medium"> & {cand.vice}</span>}
                               </div>
                             </div>
 
                             <div className="text-right shrink-0">
-                              <span className="text-lg font-black text-slate-900 block">{cand.votesCount} Suara</span>
-                              <span className="text-xs font-black text-indigo-600 font-mono bg-indigo-50 px-2.5 py-0.5 rounded-full">{cand.percentage}%</span>
+                              <span className="text-lg font-black text-[#0B1220] block">{cand.votesCount} Suara</span>
+                              <span className="text-xs font-black text-ppu-blue font-mono bg-ppu-blue-light px-2.5 py-0.5 rounded-full">{cand.percentage}%</span>
                             </div>
                           </div>
 
                           {/* Percentage Progress Bar */}
                           <div className="w-full bg-slate-100 h-3 rounded-full overflow-hidden">
                             <div 
-                              className="bg-indigo-600 h-full rounded-full transition-all duration-1000 ease-out shadow-inner"
+                              className="bg-ppu-blue h-full rounded-full transition-all duration-1000 ease-out shadow-inner"
                               style={{ width: `${cand.percentage}%` }}
                             ></div>
                           </div>
@@ -387,10 +387,10 @@ export default function HasilPemilihan() {
               (() => {
                 if (!selectedDapilId) {
                   return (
-                    <div className="text-center py-16 text-slate-400 border border-dashed border-slate-200 rounded-2xl bg-slate-50/20">
-                      <MapPin className="w-10 h-10 mx-auto text-indigo-500 mb-2 animate-pulse" />
-                      <p className="text-xs font-bold uppercase tracking-wider text-slate-650">Dapil Belum Ditentukan</p>
-                      <p className="text-[11px] text-slate-455 mt-1 max-w-sm mx-auto leading-relaxed">Silakan tentukan Daerah Pemilihan (Dapil) pada dropdown di atas untuk memulai kalkulasi.</p>
+                    <div className="text-center py-16 text-slate-400 border border-dashed border-ppu-border rounded-2xl bg-[#F5F7FA]/20">
+                      <MapPin className="w-10 h-10 mx-auto text-ppu-blue mb-2 animate-pulse" />
+                      <p className="text-xs font-bold uppercase tracking-wider text-slate-600">Dapil Belum Ditentukan</p>
+                      <p className="text-[11px] text-slate-500 mt-1 max-w-sm mx-auto leading-relaxed">Silakan tentukan Daerah Pemilihan (Dapil) pada dropdown di atas untuk memulai kalkulasi.</p>
                     </div>
                   );
                 }
@@ -400,7 +400,7 @@ export default function HasilPemilihan() {
                 
                 if (dapilCandidates.length === 0) {
                   return (
-                    <div className="text-center py-16 text-slate-400 border border-dashed border-slate-200 rounded-2xl">
+                    <div className="text-center py-16 text-slate-400 border border-dashed border-ppu-border rounded-2xl">
                       <AlertTriangle className="w-10 h-10 mx-auto text-amber-500 mb-2" />
                       <p className="text-xs font-bold uppercase tracking-wider">Kandidat Dapil Kosong</p>
                       <p className="text-[11px] text-slate-400 mt-1">Tidak ditemukan konfigurasi perwakilan MPK terdaftar di Dapil ini.</p>
@@ -447,10 +447,10 @@ export default function HasilPemilihan() {
                       return (
                         <div key={clsName} className="space-y-4">
                           {/* Class title section */}
-                          <div className="flex items-center gap-2 border-b border-slate-100 pb-2">
-                            <span className="w-2.5 h-5 bg-indigo-600 rounded"></span>
+                          <div className="flex items-center gap-2 border-b border-ppu-border pb-2">
+                            <span className="w-2.5 h-5 bg-ppu-blue rounded"></span>
                             <span className="text-sm font-black text-slate-800 uppercase tracking-tight">Perwakilan Kelas {clsName}</span>
-                            <span className="text-[10px] font-bold text-slate-500 bg-slate-100 border border-slate-200/50 px-2.5 py-0.5 rounded-full ml-auto">
+                            <span className="text-[10px] font-bold text-slate-500 bg-[#F5F7FA] border border-ppu-border px-2.5 py-0.5 rounded-full ml-auto">
                               DPT Kelas Memilih: {classVotesCount} suara
                             </span>
                           </div>
@@ -463,12 +463,12 @@ export default function HasilPemilihan() {
                                 <div key={cand.id} className={`p-4 rounded-xl border transition-all ${
                                   isWinner 
                                     ? 'border-emerald-100 bg-emerald-50/20' 
-                                    : 'border-slate-50 bg-slate-50/20'
+                                    : 'border-ppu-border bg-[#F5F7FA]/20'
                                 }`}>
                                   <div className="flex items-center justify-between gap-3 flex-wrap sm:flex-nowrap">
                                     <div className="flex items-center gap-2.5">
                                       <div className={`w-5 h-5 font-mono text-[10px] font-bold rounded-lg flex items-center justify-center ${
-                                        isWinner ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-200 text-slate-650'
+                                        isWinner ? 'bg-emerald-100 text-emerald-800' : 'bg-[#DCE3EA] text-slate-650'
                                       }`}>
                                         {index + 1}
                                       </div>
@@ -483,7 +483,7 @@ export default function HasilPemilihan() {
                                     <div className="text-right shrink-0">
                                       <span className="text-sm font-black text-slate-900 block leading-tight">{cand.votesCount} Suara</span>
                                       <span className={`text-[11px] font-black font-mono px-2 py-0.5 rounded-lg inline-block mt-0.5 ${
-                                        isWinner ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-indigo-600'
+                                        isWinner ? 'bg-emerald-100 text-emerald-700' : 'bg-ppu-blue-light text-ppu-blue'
                                       }`}>
                                         {cand.percentage}%
                                       </span>
@@ -491,10 +491,10 @@ export default function HasilPemilihan() {
                                   </div>
 
                                   {/* Progress Indicator */}
-                                  <div className="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden mt-3">
+                                  <div className="w-full bg-[#F5F7FA] h-2.5 rounded-full overflow-hidden mt-3">
                                     <div 
                                       className={`h-full rounded-full transition-all duration-1000 ${
-                                        isWinner ? 'bg-emerald-500' : 'bg-indigo-600/80'
+                                        isWinner ? 'bg-emerald-500' : 'bg-ppu-blue/80'
                                       }`}
                                       style={{ width: `${cand.percentage}%` }}
                                     ></div>
@@ -515,7 +515,7 @@ export default function HasilPemilihan() {
           {/* Right Split Column Panel: Class Attendance & Contribution metrics */}
           <div className="space-y-6 self-start">
             {/* 1. Kehadiran Kelas (Partisipasi) */}
-            <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm space-y-6">
+            <div className="bg-white p-6 rounded-2xl border border-ppu-border shadow-sm space-y-6">
               <div>
                 <h3 className="text-lg font-extrabold text-slate-850">Kehadiran Kelas (Partisipasi)</h3>
                 <p className="text-xs text-slate-400">Persentase tingkat partisipasi kehadiran per kelas</p>
@@ -535,10 +535,10 @@ export default function HasilPemilihan() {
                             {item.completedCount}/{item.totalCount} <span className="font-bold text-slate-700">({pct}%)</span>
                           </span>
                         </div>
-                        <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
+                        <div className="w-full bg-[#F5F7FA] h-2 rounded-full overflow-hidden">
                           <div 
                             className={`h-full rounded-full transition-all duration-700 ${
-                              pct >= 90 ? 'bg-emerald-500' : pct >= 70 ? 'bg-indigo-500' : pct >= 50 ? 'bg-amber-500' : 'bg-rose-500'
+                              pct >= 90 ? 'bg-emerald-500' : pct >= 70 ? 'bg-ppu-blue' : pct >= 50 ? 'bg-amber-500' : 'bg-ppu-red'
                             }`}
                             style={{ width: `${pct}%` }}
                           ></div>
@@ -549,9 +549,9 @@ export default function HasilPemilihan() {
                 )}
               </div>
 
-              <div className="bg-slate-50 p-4 rounded-xl space-y-2">
+              <div className="bg-[#F5F7FA] p-4 rounded-xl space-y-2 border border-ppu-border">
                 <h4 className="text-xs font-bold text-slate-850 flex items-center gap-1.5">
-                  <Clock className="w-3.5 h-3.5 text-indigo-600" />
+                  <Clock className="w-3.5 h-3.5 text-ppu-blue" />
                   <span>Indikator Warna Partisipasi</span>
                 </h4>
                 <div className="grid grid-cols-2 gap-2 text-[10px] text-slate-500 pt-1">
@@ -560,7 +560,7 @@ export default function HasilPemilihan() {
                     <span>Luar Biasa (&gt;=90%)</span>
                   </div>
                   <div className="flex items-center gap-1">
-                    <span className="w-2.5 h-2.5 rounded-full bg-indigo-500 inline-block"></span>
+                    <span className="w-2.5 h-2.5 rounded-full bg-ppu-blue inline-block"></span>
                     <span>Optimal (&gt;=70%)</span>
                   </div>
                   <div className="flex items-center gap-1">
@@ -568,7 +568,7 @@ export default function HasilPemilihan() {
                     <span>Sedang (&gt;=50%)</span>
                   </div>
                   <div className="flex items-center gap-1">
-                    <span className="w-2.5 h-2.5 rounded-full bg-rose-500 inline-block"></span>
+                    <span className="w-2.5 h-2.5 rounded-full bg-ppu-red inline-block"></span>
                     <span>Kritis (&lt;50%)</span>
                   </div>
                 </div>
@@ -576,7 +576,7 @@ export default function HasilPemilihan() {
             </div>
 
             {/* 2. Tingkat Kontribusi Suara Berdasarkan Kelas */}
-            <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm space-y-6">
+            <div className="bg-white p-6 rounded-2xl border border-ppu-border shadow-sm space-y-6">
               <div>
                 <h3 className="text-lg font-extrabold text-slate-850">Tingkat Kontribusi Suara Berdasarkan Kelas</h3>
                 <p className="text-xs text-slate-400">Porsi sumbangan suara selesai masing-masing kelas</p>
@@ -591,14 +591,14 @@ export default function HasilPemilihan() {
                     return (
                       <div key={item.className} className="space-y-1">
                         <div className="flex justify-between items-center text-xs">
-                          <span className="font-bold text-slate-705">{item.className}</span>
+                          <span className="font-bold text-slate-700">{item.className}</span>
                           <span className="font-mono text-slate-500">
-                            {item.completedCount} Suara <span className="font-bold text-indigo-600">({pct}%)</span>
+                            {item.completedCount} Suara <span className="font-bold text-ppu-blue">({pct}%)</span>
                           </span>
                         </div>
-                        <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
+                        <div className="w-full bg-[#F5F7FA] h-2 rounded-full overflow-hidden">
                           <div 
-                            className="h-full bg-indigo-600 rounded-full transition-all duration-700"
+                            className="h-full bg-ppu-blue rounded-full transition-all duration-700"
                             style={{ width: `${item.percentage}%` }}
                           ></div>
                         </div>
