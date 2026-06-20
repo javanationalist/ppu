@@ -18,7 +18,6 @@ export default function DashboardOverview() {
   const [votes, setVotes] = useState<Vote[]>([]);
   const [ticketsCount, setTicketsCount] = useState(0);
   const [loading, setLoading] = useState(true);
-  const [savingSettings, setSavingSettings] = useState(false);
   const [btnSettings, setBtnSettings] = useState<AdminButtonSettings>({
     kelola_kategori: true,
     kelola_kandidat: true,
@@ -56,19 +55,6 @@ export default function DashboardOverview() {
     }
     loadData();
   }, []);
-
-  const toggleSetting = async (key: keyof AdminButtonSettings) => {
-    const newSettings = { ...btnSettings, [key]: !btnSettings[key] };
-    setBtnSettings(newSettings);
-    setSavingSettings(true);
-    try {
-      await saveAdminButtonSettings(newSettings);
-    } catch (err) {
-      console.error('Failed to save settings', err);
-    } finally {
-      setSavingSettings(false);
-    }
-  };
 
   if (loading) {
     return (
@@ -222,14 +208,8 @@ export default function DashboardOverview() {
             <div className="flex items-center justify-between mb-4">
               <div>
                 <h3 className="text-lg font-bold text-slate-900">Kontrol Akses Menu Admin</h3>
-                <p className="text-xs text-slate-400">Aktifkan atau nonaktifkan akses tombol menu secara real-time.</p>
+                <p className="text-xs text-slate-400">Status fitur admin saat ini (Dikelola sistem).</p>
               </div>
-              {savingSettings && (
-                <div className="flex items-center gap-2 text-indigo-600 text-[10px] font-bold animate-pulse">
-                  <RefreshCw className="w-3 h-3 animate-spin" />
-                  <span>SINKRONISASI...</span>
-                </div>
-              )}
             </div>
 
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
@@ -248,12 +228,11 @@ export default function DashboardOverview() {
               ].map((item) => {
                 const isEnabled = (btnSettings as any)[item.key];
                 return (
-                  <button
+                  <div
                     key={item.key}
-                    onClick={() => toggleSetting(item.key as keyof AdminButtonSettings)}
-                    className={`flex items-center gap-2 p-2 rounded-xl border transition-all text-left ${
+                    className={`flex items-center gap-2 p-2 rounded-xl border select-none transition-all ${
                       isEnabled 
-                        ? 'bg-white border-slate-200 text-slate-700 hover:border-indigo-300' 
+                        ? 'bg-white border-slate-200 text-slate-700' 
                         : 'bg-slate-50 border-slate-100 text-slate-400 grayscale opacity-60'
                     }`}
                   >
@@ -262,11 +241,11 @@ export default function DashboardOverview() {
                     </div>
                     <div className="overflow-hidden">
                       <span className="block text-[11px] font-bold truncate">{item.label}</span>
-                      <span className={`text-[9px] font-medium ${isEnabled ? 'text-indigo-500' : 'text-slate-400'}`}>
-                        {isEnabled ? 'AKTIF' : 'NON-AKTIF'}
+                      <span className={`text-[9px] font-black uppercase tracking-tight ${isEnabled ? 'text-emerald-600' : 'text-rose-500'}`}>
+                        {isEnabled ? 'Tersedia' : 'Tidak Tersedia'}
                       </span>
                     </div>
-                  </button>
+                  </div>
                 );
               })}
             </div>
