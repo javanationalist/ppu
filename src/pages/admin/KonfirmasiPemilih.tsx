@@ -41,28 +41,56 @@ export default function KonfirmasiPemilih() {
   const html5QrcodeRef = useRef<Html5Qrcode | null>(null);
   const isMobile = /Mobi|Android/i.test(navigator.userAgent);
 
-  // Audio utility for scanner feedback
+  // Audio & Haptic utility for scanner feedback
   const playBeep = () => {
     try {
-      const audioPath = `${import.meta.env.BASE_URL}assets/sounds/beep.mp3`.replace(/\/+/g, '/');
-      const audio = new Audio(audioPath);
-      audio.volume = 0.5;
-      audio.play().catch(e => console.warn('Audio playback inhibited by browser:', e));
+      // Create audio context
+      const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+      if (!AudioContextClass) return;
+      
+      const audioCtx = new AudioContextClass();
+      const oscillator = audioCtx.createOscillator();
+      const gainNode = audioCtx.createGain();
+
+      // Configure Beep: 1000Hz (Sine wave)
+      oscillator.type = 'sine';
+      oscillator.frequency.setValueAtTime(1000, audioCtx.currentTime);
+      
+      // Volume Envelope: Start at moderate volume and fade fast
+      gainNode.gain.setValueAtTime(0.2, audioCtx.currentTime);
+      gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.15);
+
+      oscillator.connect(gainNode);
+      gainNode.connect(audioCtx.destination);
+
+      oscillator.start();
+      oscillator.stop(audioCtx.currentTime + 0.15);
+      
+      console.log('[Feedback] Synthetic beep played');
     } catch (err) {
-      console.warn('Error playing beep sound:', err);
+      console.warn('[Feedback] Audio failed:', err);
     }
   };
+
+  const triggerHaptic = () => {
+    if (typeof navigator !== 'undefined' && navigator.vibrate) {
+      navigator.vibrate(70); // Short pulse
+      console.log('[Feedback] Haptic triggered');
+    }
+  };
+
+  // Auto-start scanner on mount
+  useEffect(() => {
+    startCamera();
+    return () => {
+      stopScanner();
+    };
+  }, []);
 
   // Modal State
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   useScrollLock(showConfirmModal);
   const [isSubmitting, setIsSubmitting] = useState(false);
-
-  useEffect(() => {
-    return () => {
-      stopScanner();
-    };
-  }, []);
 
   // QR Scanner Logic
   const startCamera = async () => {
@@ -104,7 +132,9 @@ export default function KonfirmasiPemilih() {
     try {
       if (html5QrcodeRef.current) {
         try {
-          await html5QrcodeRef.current.stop();
+          if (html5QrcodeRef.current.isScanning) {
+            await html5QrcodeRef.current.stop();
+          }
         } catch (e) {}
       }
 
@@ -126,11 +156,19 @@ export default function KonfirmasiPemilih() {
           }
         },
         (decodedText) => {
-          // Scanned successfully!
+          // Guard: Don't trigger if we are already viewing a voter or submitting
+          const isBusy = !!foundVoter || isSubmitting || showConfirmModal;
+          if (isBusy) return;
+
+          // Haptic feedback immediately on detection
+          triggerHaptic();
+
           const cleanCardId = decodedText.trim();
+          console.log('[Scanner] Data detected:', cleanCardId);
           setCardIdInput(cleanCardId);
           handleSearchCardId(cleanCardId, true);
-          stopScanner();
+          
+          // WE NO LONGER STOP SCANNER HERE - KEEP IT RUNNING
         },
         () => {
           // error callback (silent)
@@ -155,7 +193,9 @@ export default function KonfirmasiPemilih() {
         if (html5QrcodeRef.current.isScanning) {
           await html5QrcodeRef.current.stop();
         }
-      } catch (e) {}
+      } catch (e) {
+        console.warn("Scanner stop error:", e);
+      }
       html5QrcodeRef.current = null;
     }
     setIsScanning(false);
@@ -175,12 +215,15 @@ export default function KonfirmasiPemilih() {
 
     try {
       const profile = await verifyVoterByCardId(idToSearch.trim());
-      // Check if not found or is soft deleted
-      if (!profile || profile.is_deleted) {
-        setErrorMsg('Tidak dapat menemukan data pemilih.');
-      } else {
+      
+      // Check if found and is valid
+      if (profile && !profile.is_deleted) {
+        console.log('[Scanner] Voter validated successfully:', profile.full_name);
         setFoundVoter(profile);
         if (triggerSound) playBeep();
+      } else {
+        console.log('[Scanner] Voter not found or is inactive.');
+        setErrorMsg('Tidak dapat menemukan data pemilih.');
       }
     } catch (err) {
       console.error(err);
@@ -293,6 +336,14 @@ export default function KonfirmasiPemilih() {
                 id="qr-reader-admin-container" 
                 className="overflow-hidden rounded-xl border-2 border-indigo-500 aspect-square w-full bg-black relative"
               >
+                {/* Visual Feedback for active scanner */}
+                <div className="absolute top-3 left-0 right-0 z-10 flex justify-center pointer-events-none">
+                  <div className="bg-indigo-600/90 text-white px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest shadow-lg flex items-center gap-2">
+                    <span className="w-1.5 h-1.5 bg-white rounded-full animate-pulse"></span>
+                    <span>Scanner Aktif</span>
+                  </div>
+                </div>
+
                 {/* Subtle Scanner Guidelines Overlay */}
                 <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
                   <div className="w-[60%] h-[60%] border-2 border-indigo-400 border-dashed rounded-lg opacity-60"></div>
@@ -448,7 +499,7 @@ export default function KonfirmasiPemilih() {
                   </div>
 
                   {/* Actions Bar */}
-                  <div className="pt-6 border-t border-slate-200">
+                  <div className="pt-6 border-t border-slate-200 space-y-3">
                     {foundVoter.account_status === 'belum_dikonfirmasi' ? (
                       <button
                         type="button"
@@ -459,16 +510,27 @@ export default function KonfirmasiPemilih() {
                         Konfirmasi Akun
                       </button>
                     ) : (
-                      <div className="bg-slate-100 border border-slate-200 p-4 rounded-xl text-center">
-                        <p className="text-sm font-bold text-slate-600 flex items-center justify-center gap-1.5">
-                          <ShieldCheck className="w-5 h-5 text-emerald-500" />
+                      <div className="bg-emerald-50 border border-emerald-200 p-4 rounded-xl text-center">
+                        <p className="text-sm font-bold text-emerald-700 flex items-center justify-center gap-1.5">
+                          <CheckCircle className="w-5 h-5" />
                           Akun sudah dikonfirmasi.
-                        </p>
-                        <p className="text-xs text-slate-500 mt-1">
-                          Pemilih sudah diizinkan menggunakan hak suaranya di bilik suara digital.
                         </p>
                       </div>
                     )}
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setFoundVoter(null);
+                        setCardIdInput('');
+                        setErrorMsg(null);
+                        setSuccessMsg(null);
+                      }}
+                      className="w-full flex justify-center items-center gap-2 bg-slate-100 hover:bg-indigo-50 text-slate-600 hover:text-indigo-600 font-bold text-xs py-2.5 px-4 rounded-lg transition-all border border-slate-200 hover:border-indigo-200"
+                    >
+                      <RefreshCw className="w-4 h-4" />
+                      Scan Pemilih Berikutnya
+                    </button>
                   </div>
                 </div>
               ) : (
