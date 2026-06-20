@@ -1,12 +1,14 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 
-type ConnectionStatus = 'online' | 'offline' | 'weak';
+type ConnectionStatus = 'online' | 'offline' | 'weak' | 'checking';
 
 export default function NetworkStatus() {
   const [status, setStatus] = useState<ConnectionStatus>(navigator.onLine ? 'online' : 'offline');
   const [showGreen, setShowGreen] = useState(false);
-  
+  const [isManualExpanded, setIsManualExpanded] = useState(false);
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+
   useEffect(() => {
     const handleOnline = () => {
       setStatus('online');
@@ -20,10 +22,9 @@ export default function NetworkStatus() {
     };
 
     const checkConnectionQuality = () => {
-      // @ts-ignore - navigator.connection is not standard in all browsers yet
+      // @ts-ignore - navigator.connection is not standard
       const conn = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
       if (conn) {
-        // Effective types: 'slow-2g', '2g', '3g', '4g'
         if (conn.effectiveType === 'slow-2g' || conn.effectiveType === '2g') {
           setStatus('weak');
         } else if (navigator.onLine) {
@@ -35,7 +36,6 @@ export default function NetworkStatus() {
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
     
-    // Check quality every 5 seconds
     const qualityInterval = setInterval(checkConnectionQuality, 5000);
     checkConnectionQuality();
 
@@ -43,85 +43,107 @@ export default function NetworkStatus() {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
       clearInterval(qualityInterval);
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
     };
   }, []);
 
+  const handleMobileClick = () => {
+    if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    setIsManualExpanded(true);
+    timeoutRef.current = setTimeout(() => {
+      setIsManualExpanded(false);
+    }, 3000);
+  };
+
   const isRed = status === 'offline';
   const isYellow = status === 'weak';
-  const isGreen = status === 'online' && (showGreen || (!isRed && !isYellow));
-
-  // Determine which light is active
-  // Green only stays "vibrant" for 3s after reconnecting or if stable
-  // For the purpose of "stable connection", we show green if online and not weak.
-  // But per instructions: "hijau ditampilkan 3 detik jika berhasil terhubung"
-  // This implies if we are stable, it might go dim. Let's follow the literal timing.
+  const isGreenActive = (status === 'online' && (showGreen || (!isRed && !isYellow)));
+  
+  // Expanded logic: either auto-notifying (showGreen), manual interaction, or critical status (offline/weak)
+  const isExpanded = isManualExpanded || showGreen || isRed || isYellow;
 
   return (
-    <div className="fixed bottom-4 left-4 z-[9999] pointer-events-none select-none">
+    <div className="fixed bottom-4 left-4 z-[9999] pointer-events-auto select-none">
       <motion.div 
-        animate={{ scale: isRed || showGreen ? 1.15 : 0.8 }}
+        onMouseEnter={() => setIsManualExpanded(true)}
+        onMouseLeave={() => setIsManualExpanded(false)}
+        onClick={handleMobileClick}
+        animate={{ 
+          scale: isExpanded ? 1.15 : 0.8
+        }}
         transition={{ 
           type: "spring", 
-          stiffness: 500, 
-          damping: 15, // Provides the subtle bouncing effect
+          stiffness: 400, 
+          damping: 15,
           mass: 1
         }}
-        className="bg-slate-900/80 backdrop-blur-md px-2 py-3 rounded-full border border-slate-700/50 flex flex-col gap-2 shadow-2xl origin-bottom-left"
+        className="bg-slate-900/80 backdrop-blur-md px-2 py-3 rounded-full border border-slate-700/50 flex flex-col gap-3 shadow-2xl origin-bottom-left cursor-pointer"
       >
         
         {/* Red Light (Offline) */}
-        <div className="relative group">
-          <div className={`w-3 h-3 rounded-full transition-colors duration-500 shadow-sm ${
+        <div className="relative flex items-center justify-center">
+          <div className={`w-3.5 h-3.5 rounded-full transition-colors duration-500 shadow-sm z-10 ${
             isRed 
               ? 'bg-rose-500 shadow-[0_0_12px_rgba(244,63,94,0.8)]' 
               : 'bg-slate-700 opacity-30'
           }`} />
-          {isRed && (
-            <motion.div 
-              initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-              className="absolute left-6 top-1/2 -translate-y-1/2 bg-rose-600 text-white text-[10px] font-bold px-2 py-1 rounded whitespace-nowrap"
-            >
-              OFFLINE
-            </motion.div>
-          )}
+          <AnimatePresence>
+            {isExpanded && isRed && (
+              <motion.span 
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -10 }}
+                className="absolute left-7 text-[9px] font-black text-rose-400 uppercase tracking-tighter whitespace-nowrap drop-shadow-sm"
+              >
+                OFFLINE
+              </motion.span>
+            )}
+          </AnimatePresence>
         </div>
 
         {/* Yellow Light (Weak) */}
-        <div className="relative group">
-          <div className={`w-3 h-3 rounded-full transition-all duration-500 shadow-sm ${
+        <div className="relative flex items-center justify-center">
+          <div className={`w-3.5 h-3.5 rounded-full transition-all duration-500 shadow-sm z-10 ${
             isYellow 
               ? 'bg-amber-400 shadow-[0_0_12px_rgba(251,191,36,0.8)]' 
-              : 'bg-slate-700 opacity-30'
+              : 'bg-slate-700 opacity-20'
           }`} />
-          {isYellow && (
-            <motion.div 
-              initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-              className="absolute left-6 top-1/2 -translate-y-1/2 bg-amber-500 text-white text-[10px] font-bold px-2 py-1 rounded whitespace-nowrap"
-            >
-              SIGNAL WEAK
-            </motion.div>
-          )}
+          <AnimatePresence>
+            {isExpanded && isYellow && (
+              <motion.span 
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -10 }}
+                className="absolute left-7 text-[9px] font-black text-amber-500 uppercase tracking-tighter whitespace-nowrap drop-shadow-sm"
+              >
+                WEAK SIGNAL
+              </motion.span>
+            )}
+          </AnimatePresence>
         </div>
 
         {/* Green Light (Connected) */}
-        <div className="relative group">
-          <div className={`w-3 h-3 rounded-full transition-colors duration-500 shadow-sm ${
-            (isGreen || showGreen) && status !== 'offline' && status !== 'weak'
+        <div className="relative flex items-center justify-center">
+          <div className={`w-3.5 h-3.5 rounded-full transition-colors duration-500 shadow-sm z-10 ${
+            isGreenActive
               ? 'bg-emerald-500 shadow-[0_0_12px_rgba(16,185,129,0.8)]' 
               : 'bg-slate-700 opacity-30'
           }`} />
-          {(showGreen) && (
-            <motion.div 
-              initial={{ opacity: 0, x: -10 }} 
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -10 }}
-              className="absolute left-6 top-1/2 -translate-y-1/2 bg-emerald-600 text-white text-[10px] font-bold px-2 py-1 rounded whitespace-nowrap"
-            >
-              CONNECTED
-            </motion.div>
-          )}
+          <AnimatePresence>
+            {isExpanded && isGreenActive && (
+              <motion.span 
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -10 }}
+                className="absolute left-7 text-[9px] font-black text-emerald-400 uppercase tracking-tighter whitespace-nowrap drop-shadow-sm"
+              >
+                CONNECTED
+              </motion.span>
+            )}
+          </AnimatePresence>
         </div>
       </motion.div>
     </div>
   );
 }
+
