@@ -41,6 +41,18 @@ export default function KonfirmasiPemilih() {
   const html5QrcodeRef = useRef<Html5Qrcode | null>(null);
   const isMobile = /Mobi|Android/i.test(navigator.userAgent);
 
+  // Audio utility for scanner feedback
+  const playBeep = () => {
+    try {
+      const audioPath = `${import.meta.env.BASE_URL}assets/sounds/beep.mp3`.replace(/\/+/g, '/');
+      const audio = new Audio(audioPath);
+      audio.volume = 0.5;
+      audio.play().catch(e => console.warn('Audio playback inhibited by browser:', e));
+    } catch (err) {
+      console.warn('Error playing beep sound:', err);
+    }
+  };
+
   // Modal State
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   useScrollLock(showConfirmModal);
@@ -117,7 +129,7 @@ export default function KonfirmasiPemilih() {
           // Scanned successfully!
           const cleanCardId = decodedText.trim();
           setCardIdInput(cleanCardId);
-          handleSearchCardId(cleanCardId);
+          handleSearchCardId(cleanCardId, true);
           stopScanner();
         },
         () => {
@@ -150,7 +162,7 @@ export default function KonfirmasiPemilih() {
   };
 
   // Searching Profile
-  const handleSearchCardId = async (idToSearch: string) => {
+  const handleSearchCardId = async (idToSearch: string, triggerSound = false) => {
     setErrorMsg(null);
     setSuccessMsg(null);
     setFoundVoter(null);
@@ -168,6 +180,7 @@ export default function KonfirmasiPemilih() {
         setErrorMsg('Tidak dapat menemukan data pemilih.');
       } else {
         setFoundVoter(profile);
+        if (triggerSound) playBeep();
       }
     } catch (err) {
       console.error(err);
