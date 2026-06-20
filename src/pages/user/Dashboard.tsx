@@ -3,7 +3,7 @@ import { useScrollLock } from '../../hooks/useScrollLock';
 import { QRCodeCanvas } from 'qrcode.react';
 import * as htmlToImage from 'html-to-image';
 import { useAuth } from '../../contexts/AuthContext';
-import { LogOut, Download, MessageSquare, LifeBuoy, Edit3, X, Info, CalendarDays, FileText, AlertCircle } from 'lucide-react';
+import { LogOut, Download, MessageSquare, LifeBuoy, Edit3, X, Info, CalendarDays, FileText, AlertCircle, Megaphone, ChevronRight } from 'lucide-react';
 import { useNavigate, Link } from 'react-router-dom';
 import { getHelpdeskButtons } from '../../lib/helpdesk';
 import { HelpdeskButton } from '../../types';
@@ -30,33 +30,6 @@ export default function UserDashboard() {
     maintenance_enabled: false,
     voting_global_enabled: true,
   });
-
-  const informasiList = [
-    {
-      id: 1,
-      type: 'pengumuman',
-      icon: <AlertCircle className="w-5 h-5 text-indigo-400" />,
-      title: 'Selamat Datang di Portal Baru',
-      date: '10 Oktober 2026',
-      content: 'PPU kini hadir dengan tampilan yang lebih fresh dan sistem yang lebih stabil. Pastikan Anda telah terdaftar sebelum masa pemilihan dimulai. '
-    },
-    {
-      id: 2,
-      type: 'jadwal',
-      icon: <CalendarDays className="w-5 h-5 text-emerald-400" />,
-      title: 'Jadwal Pemilihan Umum',
-      date: '15 - 20 Oktober 2026',
-      content: 'Masa pemungutan suara akan dibuka mulai tanggal 15 Oktober pukul 08:00 hingga tanggal 20 Oktober pukul 15:00. Gunakan hak pilih Anda dengan bijak.'
-    },
-    {
-      id: 3,
-      type: 'panduan',
-      icon: <FileText className="w-5 h-5 text-amber-400" />,
-      title: 'Tata Cara Penggunaan PPU',
-      date: 'Terus Berlaku',
-      content: '1. Login menggunakan akun/nisn yang terdaftar.\n2. Masuk ke halaman Bilik Suara.\n3. Pilih kandidat berdasarkan Kategori/Dapil.\n4. Konfirmasi dan kirim hak suara Anda.'
-    }
-  ];
 
   const renderBlurredEmail = (email: string) => {
     if (!email) return null;
@@ -596,46 +569,31 @@ export default function UserDashboard() {
           </div>
         </div>
 
-        {/* Full Information Section (Copied from Informasi page) */}
-        <div className="mt-12 pt-12 border-t border-slate-200">
-          <div className="text-center mb-10 w-full">
-            <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-indigo-50 border border-indigo-100 mb-4 shadow-sm">
-              <Info className="w-6 h-6 text-indigo-600" />
-            </div>
-            <h2 className="text-xl sm:text-2xl font-black text-slate-800 tracking-tight uppercase mb-2">
-              Pusat Informasi Pemilu
-            </h2>
-            <p className="text-slate-500 font-medium text-sm max-w-2xl mx-auto leading-relaxed">
-              Panduan resmi, jadwal pelaksanaan, dan pengumuman penting seputar pemilihan umum digital.
-            </p>
-          </div>
+        {/* Call to action for full Information Page */}
+        <div className="mt-12 pt-10 border-t border-slate-200">
+          <div className="bg-gradient-to-r from-indigo-900 to-indigo-800 rounded-3xl p-8 sm:p-12 text-center relative overflow-hidden shadow-xl">
+            {/* Background Decorative */}
+            <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -mr-20 -mt-20 blur-3xl pointer-events-none"></div>
+            <div className="absolute bottom-0 left-0 w-48 h-48 bg-indigo-500/10 rounded-full -ml-16 -mb-16 blur-2xl pointer-events-none"></div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {informasiList.map((item) => (
-              <div 
-                key={item.id} 
-                className="bg-white border border-slate-200 p-6 rounded-2xl shadow-sm hover:shadow-md hover:border-indigo-200 transition-all group relative overflow-hidden flex flex-col h-full"
-              >
-                <div className="absolute top-0 left-0 w-1.5 h-full bg-indigo-600 opacity-20 group-hover:opacity-100 transition-opacity"></div>
-                
-                <div className="flex items-start gap-4 mb-4">
-                  <div className="w-10 h-10 shrink-0 bg-slate-50 border border-slate-100 rounded-lg flex items-center justify-center shadow-sm">
-                    {item.icon}
-                  </div>
-                  <div>
-                    <h3 className="text-sm font-bold text-slate-800 capitalize leading-tight mb-1">
-                      {item.title}
-                    </h3>
-                    <span className="text-[10px] font-bold text-slate-400 bg-slate-50 px-2 py-0.5 rounded-full whitespace-nowrap">
-                      {item.date}
-                    </span>
-                  </div>
-                </div>
-                <div className="text-xs text-slate-600 leading-relaxed text-left flex-1 whitespace-pre-line font-medium">
-                  {item.content}
-                </div>
+            <div className="relative z-10">
+              <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-white/10 border border-white/20 mb-6 shadow-lg backdrop-blur-sm">
+                <Megaphone className="w-8 h-8 text-indigo-300" />
               </div>
-            ))}
+              <h2 className="text-2xl sm:text-3xl font-black text-white tracking-tight uppercase mb-4">
+                Pusat Informasi WAFO
+              </h2>
+              <p className="text-indigo-100 font-medium text-sm sm:text-base max-w-2xl mx-auto leading-relaxed mb-8">
+                Dapatkan update terbaru, pengumuman resmi, dan panduan lengkap seputar pelaksanaan pemilihan umum digital melalui halaman Informasi terpadu.
+              </p>
+              <Link 
+                to="/informasi"
+                className="inline-flex items-center gap-3 px-8 py-4 bg-white text-indigo-900 rounded-2xl font-black text-sm uppercase tracking-widest hover:bg-slate-50 transition-all shadow-xl hover:scale-105 active:scale-95 group"
+              >
+                <span>Lihat Seluruh Informasi</span>
+                <ChevronRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+              </Link>
+            </div>
           </div>
         </div>
       </main>
