@@ -58,11 +58,20 @@ export default function NetworkStatus() {
 
   return (
     <div className="fixed bottom-4 left-4 z-[9999] pointer-events-none select-none">
-      <div className="bg-slate-900/80 backdrop-blur-md px-2 py-3 rounded-full border border-slate-700/50 flex flex-col gap-2 shadow-2xl scale-75 sm:scale-100 origin-bottom-left transition-transform duration-300">
+      <motion.div 
+        animate={{ scale: isRed || showGreen ? 1.15 : 0.8 }}
+        transition={{ 
+          type: "spring", 
+          stiffness: 500, 
+          damping: 15, // Provides the subtle bouncing effect
+          mass: 1
+        }}
+        className="bg-slate-900/80 backdrop-blur-md px-2 py-3 rounded-full border border-slate-700/50 flex flex-col gap-2 shadow-2xl origin-bottom-left"
+      >
         
         {/* Red Light (Offline) */}
         <div className="relative group">
-          <div className={`w-3 h-3 rounded-full transition-all duration-500 shadow-sm ${
+          <div className={`w-3 h-3 rounded-full transition-colors duration-500 shadow-sm ${
             isRed 
               ? 'bg-rose-500 shadow-[0_0_12px_rgba(244,63,94,0.8)]' 
               : 'bg-slate-700 opacity-30'
@@ -96,7 +105,7 @@ export default function NetworkStatus() {
 
         {/* Green Light (Connected) */}
         <div className="relative group">
-          <div className={`w-3 h-3 rounded-full transition-all duration-500 shadow-sm ${
+          <div className={`w-3 h-3 rounded-full transition-colors duration-500 shadow-sm ${
             (isGreen || showGreen) && status !== 'offline' && status !== 'weak'
               ? 'bg-emerald-500 shadow-[0_0_12px_rgba(16,185,129,0.8)]' 
               : 'bg-slate-700 opacity-30'
@@ -112,7 +121,7 @@ export default function NetworkStatus() {
             </motion.div>
           )}
         </div>
-      </div>
+      </motion.div>
     </div>
   );
 }
