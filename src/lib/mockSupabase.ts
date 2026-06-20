@@ -187,39 +187,13 @@ export const seedMockData = () => {
   const wafos = localStorage.getItem('mock_wafo_announcements');
   const votes = localStorage.getItem('mock_votes');
 
-  if (!users) {
-    const defaultUsers: MockAuthUser[] = [
-      { id: 'usr-demo-1', email: 'user@ppu.demo', password: 'user12345' },
-      { id: 'usr-demo-2', email: 'admin@ppu.demo', password: 'admin12345' }
-    ];
+  if (true) {
+    const defaultUsers: MockAuthUser[] = [];
     localStorage.setItem('mock_users', JSON.stringify(defaultUsers));
   }
 
-  if (!profiles) {
-    const defaultProfiles: Profile[] = [
-      {
-        id: 'usr-demo-1',
-        full_name: 'Demo User',
-        email: 'user@ppu.demo',
-        class: 'XII IPA 1',
-        role: 'user',
-        account_status: 'dikonfirmasi',
-        voting_status: 'belum',
-        card_id: '4821',
-        created_at: new Date().toISOString()
-      },
-      {
-        id: 'usr-demo-2',
-        full_name: 'Demo Admin',
-        email: 'admin@ppu.demo',
-        class: '',
-        role: 'admin',
-        account_status: 'dikonfirmasi',
-        voting_status: 'belum',
-        card_id: '9211',
-        created_at: new Date().toISOString()
-      }
-    ];
+  if (true) {
+    const defaultProfiles: Profile[] = [];
     localStorage.setItem('mock_profiles', JSON.stringify(defaultProfiles));
   }
 

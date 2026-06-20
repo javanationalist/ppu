@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { supabase } from '../lib/supabase';
+import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { CheckCircle2 } from 'lucide-react';
 
@@ -54,6 +54,12 @@ export default function Login() {
     e.preventDefault();
     setLoading(true);
     setError(null);
+
+    if (!isSupabaseConfigured) {
+      setError('Database Cloud tidak terhubung. Pembungkus demo ditiadakan, Anda harus menghubungkan Supabase untuk menggunakan portal.');
+      setLoading(false);
+      return;
+    }
 
     try {
       const { data, error } = await supabase.auth.signInWithPassword({
@@ -138,7 +144,7 @@ export default function Login() {
                 type="email"
                 required
                 className="appearance-none rounded-xl relative block w-full px-3.5 py-2.5 border border-ppu-border placeholder-slate-400 text-slate-800 focus:outline-none focus:ring-2 focus:ring-ppu-blue/20 focus:border-ppu-blue sm:text-sm font-medium"
-                placeholder="Disarankan user@ppu.demo"
+                placeholder="Masukkan alamat email Anda"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
               />

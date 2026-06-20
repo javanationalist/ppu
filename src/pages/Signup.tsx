@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { supabase } from '../lib/supabase';
+import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { getUserAccessSettings } from '../lib/userAccessService';
 import { ALL_CLASSES } from '../lib/classConstants';
 
@@ -62,6 +62,12 @@ export default function Signup() {
     e.preventDefault();
     setLoading(true);
     setError(null);
+
+    if (!isSupabaseConfigured) {
+      setError('Database Cloud tidak terhubung. Pembungkus demo ditiadakan, Anda harus menghubungkan Supabase untuk menggunakan portal.');
+      setLoading(false);
+      return;
+    }
 
     if (password !== confirmPassword) {
       setError('Password and Confirm Password do not match.');

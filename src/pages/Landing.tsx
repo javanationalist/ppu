@@ -1,6 +1,5 @@
 import { Link } from 'react-router-dom';
-import { isSupabaseConfigured } from '../lib/supabase';
-import { LogIn, UserPlus, Vote, BarChart3, ShieldAlert, BookOpen } from 'lucide-react';
+import { LogIn, UserPlus, Vote, BarChart3, BookOpen } from 'lucide-react';
 
 export default function Landing() {
   return (
@@ -64,36 +63,6 @@ export default function Landing() {
             <span>Cara Menggunakan</span>
           </Link>
         </div>
-
-        {/* Sandbox Indicator (Dynamic) */}
-        {!isSupabaseConfigured && (
-          <div className="mt-8 p-5 border border-ppu-red/30 bg-ppu-red/5 rounded-2xl text-left shadow-md">
-            <h4 className="text-xs font-bold text-ppu-red uppercase tracking-widest mb-3 flex items-center gap-2">
-              <ShieldAlert className="w-4 h-4 shrink-0" />
-              💡 Sandbox Demo Mode
-            </h4>
-            <p className="text-xs text-slate-700 leading-relaxed mb-4 font-medium">
-              Database cloud belum terhubung. Portal disimulasikan menggunakan data lokal berikut:
-            </p>
-            <div className="space-y-3 text-xs text-slate-800 font-mono bg-slate-50 p-4 rounded-xl border border-ppu-border">
-              <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
-                <span className="font-semibold text-ppu-blue bg-ppu-blue/10 px-2 py-1 rounded inline-block w-fit">[User]</span>
-                <span><span className="text-slate-500">email:</span> <span className="font-bold text-slate-900">user@ppu.demo</span></span>
-                <span><span className="text-slate-500">pass:</span> <span className="font-bold text-slate-900">user12345</span></span>
-              </div>
-              <div className="border-t border-ppu-border pt-3">
-                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
-                  <span className="font-semibold text-ppu-red bg-ppu-red/10 px-2 py-1 rounded inline-block w-fit">[Admin]</span>
-                  <span><span className="text-slate-500">email:</span> <span className="font-bold text-slate-900">admin@ppu.demo</span></span>
-                  <span><span className="text-slate-500">pass:</span> <span className="font-bold text-slate-900">admin12345</span></span>
-                </div>
-              </div>
-            </div>
-            <p className="text-[10px] text-slate-500 mt-4 leading-normal font-semibold">
-              Gunakan variable <code className="bg-slate-100 px-1.5 py-0.5 rounded text-slate-800 font-mono border border-slate-200">VITE_SUPABASE_URL</code> & <code className="bg-slate-100 px-1.5 py-0.5 rounded text-slate-800 font-mono border border-slate-200">VITE_SUPABASE_ANON_KEY</code> untuk database cloud.
-            </p>
-          </div>
-        )}
       </div>
     </div>
   );
