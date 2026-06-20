@@ -873,11 +873,18 @@ export default function VotePage() {
             ) : (
               <div className="flex-1 flex flex-col">
                 {isSelectedCatMpk && voterDapil && (
-                  <div className="w-full bg-[#151821] border border-indigo-500/30 p-4 rounded-2xl text-xs flex gap-3 text-indigo-300 leading-relaxed mb-6 items-start shadow-md shadow-indigo-500/5">
-                    <CheckCircle2 className="w-5 h-5 shrink-0 text-indigo-400" />
-                    <div>
-                      <p className="font-bold mb-1">Daerah Pemilihan (MPK SMABA)</p>
-                      <p className="text-indigo-400/80 font-semibold">Kelas Anda ({voter.class}) masuk dalam Daerah Pemilihan: <strong className="text-white bg-indigo-650 px-2.5 py-0.5 rounded ml-0.5">{voterDapil.name}</strong>. Silakan pilih masing-masing tepat 1 perwakilan per kelompok kelas di bawah ini.</p>
+                  <div className="w-full bg-[#151821] border border-indigo-500/30 p-6 rounded-3xl text-sm flex gap-4 text-indigo-300 leading-relaxed mb-8 items-start shadow-2xl shadow-indigo-500/5 transition-all">
+                    <div className="bg-indigo-500/20 p-3 rounded-2xl flex items-center justify-center">
+                      <CheckCircle2 className="w-6 h-6 shrink-0 text-indigo-400" />
+                    </div>
+                    <div className="space-y-2">
+                      <p className="font-black text-white text-base tracking-tight">Daerah Pemilihan MPK</p>
+                      <p className="text-white/80 font-medium text-xs sm:text-sm">
+                        Kelas Anda (<strong className="text-indigo-400 font-black">{voter.class}</strong>) masuk dalam Daerah Pemilihan: <strong className="text-indigo-300 font-bold">{voterDapil.name}</strong>
+                      </p>
+                      <p className="text-indigo-400/70 text-xs sm:text-sm font-medium">
+                        Silakan pilih 1 perwakilan pada setiap kelas di bawah ini dengan menekan gambar salah satu kandidat.
+                      </p>
                     </div>
                   </div>
                 )}
@@ -995,12 +1002,14 @@ export default function VotePage() {
                                         </h3>
 
                                         {/* Visi */}
-                                        <div className="mb-4">
-                                          <span className="block text-[9px] uppercase font-bold text-indigo-400 tracking-wider mb-1 font-mono">Visi</span>
-                                          <p className="text-slate-400 text-xs leading-relaxed font-semibold italic text-justify bg-[#1c2030] p-3 rounded-2xl border border-[#2a3050]">
-                                            "{cand.visi}"
-                                          </p>
-                                        </div>
+                                        {cand.visi && cand.visi.trim() !== '' && (
+                                          <div className="mb-4">
+                                            <span className="block text-[9px] uppercase font-bold text-indigo-400 tracking-wider mb-1 font-mono">Visi</span>
+                                            <p className="text-slate-400 text-xs leading-relaxed font-semibold italic text-justify bg-[#1c2030] p-3 rounded-2xl border border-[#2a3050]">
+                                              "{cand.visi}"
+                                            </p>
+                                          </div>
+                                        )}
 
                                         {/* Misi */}
                                         {cand.misi && cand.misi.length > 0 && (
@@ -1017,24 +1026,13 @@ export default function VotePage() {
                                           </div>
                                         )}
 
-                                        {/* Quick Interactive Selector Footer Button */}
-                                        <button 
-                                          type="button"
-                                          onClick={(e) => {
-                                            e.stopPropagation();
-                                            setSelectedMpkVotes(prev => ({
-                                              ...prev,
-                                              [cls]: cand.id
-                                            }));
-                                          }}
-                                          className={`w-full mt-auto py-3.5 rounded-2xl text-xs font-black transition-all ${
-                                            isSelected
-                                              ? 'bg-indigo-600 text-white shadow-xl shadow-indigo-600/15 ring-1 ring-indigo-400'
-                                              : 'bg-[#1c2030] border border-[#2a3050] hover:bg-slate-800 text-slate-300'
-                                          }`}
-                                        >
-                                          {isSelected ? '✓ KANDIDAT DIPILIH' : 'PILIH KANDIDAT INI'}
-                                        </button>
+                                        {/* Quick Selection Indicator Badge (Replaces the button) */}
+                                        {isSelected && (
+                                          <div className="flex items-center justify-center gap-2 py-3 bg-emerald-500/10 border border-emerald-500/30 rounded-2xl text-emerald-400 text-[10px] font-black tracking-widest mt-auto animate-in fade-in zoom-in duration-300">
+                                            <Check className="w-4 h-4" />
+                                            <span>TERPILIH</span>
+                                          </div>
+                                        )}
                                       </div>
                                     </div>
                                   );
@@ -1082,85 +1080,134 @@ export default function VotePage() {
                       </div>
                     </div>
                   ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 flex-1 mb-6 items-start">
-                      {candidates.map((cand) => (
-                        <div 
-                          key={cand.id}
-                          className="bg-[#151821] border border-[#2a3050] hover:border-indigo-500 rounded-3xl overflow-hidden shadow-2xl flex flex-col h-full group"
-                        >
-                          {/* Visual Candidate Avatar Header 16:9 ratio */}
-                          <div className="relative w-full aspect-[16/9] bg-[#1c2030] overflow-hidden shrink-0 flex items-center justify-center text-slate-600">
-                            {cand.photo_url ? (
-                              <img 
-                                src={cand.photo_url} 
-                                alt={cand.chairman} 
-                                className="w-full h-full object-cover"
-                                referrerPolicy="no-referrer"
-                              />
-                            ) : (
-                              <div className="absolute inset-0 flex flex-col items-center justify-center p-4 bg-gradient-to-br from-[#1c2030] to-[#252a42]">
-                                <span className="text-4xl filter saturate-50 drop-shadow mb-2">🧑‍💼</span>
-                                <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Pasfoto Kandidat</span>
-                              </div>
-                            )}
-                            {/* Paslon label badges floating upper leftmost */}
-                            <div className="absolute left-4 top-4 bg-indigo-600 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest text-white shadow-lg">
-                              PASLON {String(cand.number).padStart(2, '0')}
-                            </div>
-                          </div>
-
-                          {/* Candidate Information Card Body */}
-                          <div className="p-5 flex-1 flex flex-col">
-                            {/* Candidates Names with line splits */}
-                            <div className="mb-5">
-                              <h3 className="font-extrabold text-white text-base tracking-tight leading-tight mb-2">
-                                {cand.chairman}
-                              </h3>
-                              {cand.vice && (
-                                <div className="space-y-2">
-                                  <div className="w-1.5 h-1.5 rounded-full bg-slate-500/40 ml-1"></div>
-                                  <h4 className="font-bold text-slate-400 text-sm italic tracking-tight">
-                                    {cand.vice}
-                                  </h4>
+                    <div className="flex-1 flex flex-col pb-24">
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6 items-start">
+                        {candidates.map((cand) => {
+                          const isSelected = selectedCandidate?.id === cand.id;
+                          return (
+                            <div 
+                              key={cand.id}
+                              onClick={() => setSelectedCandidate(cand)}
+                              className={`bg-[#151821] border-2 rounded-3xl overflow-hidden shadow-2xl flex flex-col h-full group transition-all duration-300 cursor-pointer ${
+                                isSelected 
+                                  ? 'border-emerald-500 bg-emerald-500/5 ring-4 ring-emerald-500/10' 
+                                  : 'border-[#2a3050] hover:border-slate-500/50'
+                              }`}
+                            >
+                              {/* Visual Candidate Avatar Header 16:9 ratio */}
+                              <div className="relative w-full aspect-[16/9] bg-[#1c2030] overflow-hidden shrink-0 flex items-center justify-center text-slate-600">
+                                {cand.photo_url ? (
+                                  <img 
+                                    src={cand.photo_url} 
+                                    alt={cand.chairman} 
+                                    className="w-full h-full object-cover"
+                                    referrerPolicy="no-referrer"
+                                  />
+                                ) : (
+                                  <div className="absolute inset-0 flex flex-col items-center justify-center p-4 bg-gradient-to-br from-[#1c2030] to-[#252a42]">
+                                    <span className="text-4xl filter saturate-50 drop-shadow mb-2">🧑‍💼</span>
+                                    <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Pasfoto Kandidat</span>
+                                  </div>
+                                )}
+                                {/* Paslon label badges floating upper leftmost */}
+                                <div className={`absolute left-4 top-4 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest text-white shadow-lg transition-colors ${
+                                  isSelected ? 'bg-emerald-600' : 'bg-indigo-600'
+                                }`}>
+                                  PASLON {String(cand.number).padStart(2, '0')}
                                 </div>
-                              )}
-                            </div>
 
-                            {/* Visi Section */}
-                            <div className="mb-4">
-                              <span className="block text-[9px] uppercase font-bold text-indigo-400 tracking-wider mb-1.5 font-mono">Visi Utama</span>
-                              <p className="text-slate-400 text-xs leading-relaxed font-semibold italic text-justify bg-[#1c2030] p-3 rounded-2xl border border-[#2a3050]">
-                                "{cand.visi}"
-                              </p>
-                            </div>
-
-                            {/* Misi Bullet points section */}
-                            {cand.misi && cand.misi.length > 0 && (
-                              <div className="mb-6 font-semibold">
-                                <span className="block text-[9px] uppercase font-bold text-indigo-400 tracking-wider mb-1.5 font-mono">Misi & Program</span>
-                                <ul className="space-y-1.5">
-                                  {cand.misi.map((m, mIdx) => (
-                                    <li key={mIdx} className="text-slate-400 text-xs leading-normal flex gap-2 items-start text-justify">
-                                      <span className="text-indigo-400 font-extrabold mt-0.5 shrink-0">•</span>
-                                      <span>{m}</span>
-                                    </li>
-                                  ))}
-                                </ul>
+                                {/* Selection Check Overlay */}
+                                {isSelected && (
+                                  <div className="absolute inset-0 bg-emerald-500/10 flex items-center justify-center animate-in fade-in duration-300">
+                                    <div className="bg-emerald-500 text-white p-2 rounded-full shadow-xl">
+                                      <Check className="w-8 h-8 font-black" />
+                                    </div>
+                                  </div>
+                                )}
                               </div>
-                            )}
 
-                            {/* Footer CTA select action buttons */}
-                            <div className="mt-auto pt-4 border-t border-[#1c2030]">
-                              <button 
-                                onClick={() => selectCandidate(cand)}
-                                className="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl text-xs font-black shadow-xl shadow-indigo-600/10 flex items-center justify-center gap-1.5 cursor-pointer"
-                              >
-                                Kirim Pilihan Untuk Paslon {String(cand.number).padStart(2, '0')}
-                              </button>
+                              {/* Candidate Information Card Body */}
+                              <div className="p-5 flex-1 flex flex-col">
+                                {/* Candidates Names in horizontal line */}
+                                <div className="mb-5">
+                                  <h3 className="font-extrabold text-white text-base tracking-tight leading-tight flex flex-wrap items-center gap-x-2">
+                                    <span className="text-white">{cand.chairman}</span>
+                                    {cand.vice && (
+                                      <>
+                                        <span className="text-indigo-400 font-black">•</span>
+                                        <span className="text-slate-400 font-bold text-sm italic">{cand.vice}</span>
+                                      </>
+                                    )}
+                                  </h3>
+                                </div>
+
+                                {/* Visi Section */}
+                                {cand.visi && cand.visi.trim() !== '' && (
+                                  <div className="mb-4">
+                                    <span className="block text-[9px] uppercase font-bold text-indigo-400 tracking-wider mb-1.5 font-mono">Visi</span>
+                                    <p className="text-slate-400 text-xs leading-relaxed font-semibold italic text-justify bg-[#1c2030] p-3 rounded-2xl border border-[#2a3050]">
+                                      "{cand.visi}"
+                                    </p>
+                                  </div>
+                                )}
+
+                                {/* Misi Bullet points section */}
+                                {cand.misi && Array.isArray(cand.misi) && cand.misi.length > 0 && (
+                                  <div className="mb-6 font-semibold">
+                                    <span className="block text-[9px] uppercase font-bold text-indigo-400 tracking-wider mb-1.5 font-mono">Misi</span>
+                                    <ul className="space-y-1.5">
+                                      {cand.misi.map((m, mIdx) => (
+                                        <li key={mIdx} className="text-slate-400 text-xs leading-normal flex gap-2 items-start text-justify">
+                                          <span className="text-indigo-400 font-extrabold mt-0.5 shrink-0">•</span>
+                                          <span>{m}</span>
+                                        </li>
+                                      ))}
+                                    </ul>
+                                  </div>
+                                )}
+
+                                {/* Selected Badge indicator */}
+                                {isSelected && (
+                                  <div className="mt-auto pt-4 flex items-center justify-center">
+                                    <span className="inline-flex items-center gap-1.5 py-2 px-4 rounded-full bg-emerald-500 text-white text-[10px] font-black uppercase tracking-widest shadow-lg shadow-emerald-500/20 animate-in zoom-in duration-300">
+                                      📌 Dipilih
+                                    </span>
+                                  </div>
+                                )}
+                              </div>
                             </div>
-                          </div>
+                          );
+                        })}
+                      </div>
+
+                      {/* Global Sticky Submit Button for Reguler */}
+                      <div className="fixed bottom-0 left-0 right-0 p-4 bg-[#0d0f14]/80 backdrop-blur-xl border-t border-[#2a3050] z-[50] flex justify-center">
+                        <div className="w-full max-w-lg">
+                          <button
+                            onClick={() => {
+                              if (selectedCandidate) {
+                                setShowModal1(true);
+                              }
+                            }}
+                            disabled={!selectedCandidate}
+                            className={`w-full py-4 rounded-2xl text-sm font-black tracking-wide shadow-2xl transition-all flex items-center justify-center gap-3 ${
+                              selectedCandidate
+                                ? 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-emerald-600/20 cursor-pointer'
+                                : 'bg-slate-800 border border-[#2a3050] text-slate-500 cursor-not-allowed opacity-80'
+                            }`}
+                          >
+                            {selectedCandidate ? (
+                              <>
+                                Kirim Suara <ArrowRight className="w-5 h-5" />
+                              </>
+                            ) : (
+                              <>
+                                <AlertTriangle className="w-4 h-4" /> Pilih paslon terlebih dahulu
+                              </>
+                            )}
+                          </button>
                         </div>
-                      ))}
+                      </div>
                     </div>
                   )
                 )}

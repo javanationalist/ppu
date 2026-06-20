@@ -102,30 +102,40 @@ export const AdminLayout = () => {
           {navLinks.map((link) => {
             const isActive = location.pathname === link.to;
             const enabled = isLinkEnabled(link.key);
-            return (
-              <Link
-                key={link.to}
-                to={enabled ? link.to : '#'}
-                onClick={(e) => {
-                  if (!enabled) {
-                    e.preventDefault();
-                    return;
-                  }
-                  closeSidebar();
-                }}
-                className={`flex items-center justify-between px-3 py-2 text-sm font-semibold rounded-lg transition-colors ${
-                  !enabled
-                    ? 'opacity-40 grayscale cursor-not-allowed text-gray-400 bg-gray-50/55'
-                    : isActive
-                    ? 'bg-indigo-50 text-indigo-700'
-                    : 'text-gray-700 hover:bg-gray-100'
-                }`}
-              >
+            
+            const content = (
+              <>
                 <div className="flex items-center gap-3">
                   <link.icon className={`w-5 h-5 ${!enabled ? 'text-gray-400' : isActive ? 'text-indigo-600' : 'text-gray-500'}`} />
                   <span>{link.label}</span>
                 </div>
                 {!enabled && <Lock className="w-3.5 h-3.5 text-gray-400 shrink-0" />}
+              </>
+            );
+
+            if (!enabled) {
+              return (
+                <div
+                  key={link.to}
+                  className="flex items-center justify-between px-3 py-2 text-sm font-semibold rounded-lg bg-gray-50/50 text-gray-400 cursor-not-allowed select-none blur-[1.5px] opacity-50 pointer-events-none"
+                >
+                  {content}
+                </div>
+              );
+            }
+
+            return (
+              <Link
+                key={link.to}
+                to={link.to}
+                onClick={closeSidebar}
+                className={`flex items-center justify-between px-3 py-2 text-sm font-semibold rounded-lg transition-colors ${
+                  isActive
+                    ? 'bg-indigo-50 text-indigo-700'
+                    : 'text-gray-700 hover:bg-gray-100'
+                }`}
+              >
+                {content}
               </Link>
             );
           })}
@@ -155,29 +165,39 @@ export const AdminLayout = () => {
           {navLinks.map((link) => {
             const isActive = location.pathname === link.to;
             const enabled = isLinkEnabled(link.key);
-            return (
-              <Link
-                key={link.to}
-                to={enabled ? link.to : '#'}
-                onClick={(e) => {
-                  if (!enabled) {
-                    e.preventDefault();
-                    return;
-                  }
-                }}
-                className={`flex items-center justify-between px-3 py-2 text-sm font-semibold rounded-lg transition-colors ${
-                  !enabled
-                    ? 'opacity-40 grayscale cursor-not-allowed text-gray-400 bg-gray-50/55 animate-pulse-subtle'
-                    : isActive
-                    ? 'bg-indigo-50 text-indigo-700'
-                    : 'text-gray-700 hover:bg-gray-100'
-                }`}
-              >
+            
+            const content = (
+              <>
                 <div className="flex items-center gap-3">
                   <link.icon className={`w-5 h-5 ${!enabled ? 'text-gray-400' : isActive ? 'text-indigo-600' : 'text-gray-500'}`} />
                   <span>{link.label}</span>
                 </div>
                 {!enabled && <Lock className="w-3.5 h-3.5 text-gray-400 shrink-0" />}
+              </>
+            );
+
+            if (!enabled) {
+              return (
+                <div
+                  key={link.to}
+                  className="flex items-center justify-between px-3 py-2 text-sm font-semibold rounded-lg bg-gray-50/50 text-gray-400 cursor-not-allowed select-none blur-[1.5px] opacity-50 pointer-events-none"
+                >
+                  {content}
+                </div>
+              );
+            }
+
+            return (
+              <Link
+                key={link.to}
+                to={link.to}
+                className={`flex items-center justify-between px-3 py-2 text-sm font-semibold rounded-lg transition-colors ${
+                  isActive
+                    ? 'bg-indigo-50 text-indigo-700'
+                    : 'text-gray-700 hover:bg-gray-100'
+                }`}
+              >
+                {content}
               </Link>
             );
           })}
