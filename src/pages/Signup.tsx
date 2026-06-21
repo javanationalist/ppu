@@ -121,6 +121,7 @@ export default function Signup() {
               role: 'user',
               account_status: 'belum_dikonfirmasi',
               voting_status: 'belum',
+              card_visibility: true,
             },
           ]);
 

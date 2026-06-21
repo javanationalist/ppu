@@ -14,6 +14,7 @@ export interface Profile {
   created_at: string;
   is_deleted?: boolean;
   deleted_at?: string | null;
+  card_visibility?: boolean;
 }
 
 export interface AuditLog {

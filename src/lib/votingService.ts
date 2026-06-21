@@ -1,4 +1,4 @@
-import { supabase } from './supabase';
+import { supabase, isSupabaseConfigured } from './supabase';
 import { Category, Candidate, Vote, Profile, Dapil } from '../types';
 
 const defaultCategories: Category[] = [
@@ -853,32 +853,39 @@ export const submitMultipleVotes = async (votes: Vote[]): Promise<boolean> => {
   }
 };
 
-// Update voting status to "sudah" when finalized
+// Update voting status to "sudah" when finalized, reset verification, and expire voter card
 export const finalizeVotingStatus = async (voterId: string): Promise<boolean> => {
   try {
     const { error } = await supabase
       .from('profiles')
-      .upsert({
-        id: voterId,
-        voting_status: 'sudah'
-      });
+      .update({
+        voting_status: 'sudah',
+        account_status: 'belum_dikonfirmasi',
+        card_visibility: false
+      })
+      .eq('id', voterId);
 
     if (error) {
-      // Fallback update profile in localStorage mock
-      const mockProfilesStr = localStorage.getItem('mock_profiles');
-      if (mockProfilesStr) {
-        const mockProfiles: Profile[] = JSON.parse(mockProfilesStr);
-        const idx = mockProfiles.findIndex(p => p.id === voterId);
-        if (idx >= 0) {
-          mockProfiles[idx].voting_status = 'sudah';
-          localStorage.setItem('mock_profiles', JSON.stringify(mockProfiles));
-        }
+      console.error('Database finalize error:', error);
+      throw new Error(error.message || 'Gagal menyimpan status akhir pemilihan ke database.');
+    }
+
+    // Update profile in localStorage mock for matching both environments
+    const mockProfilesStr = localStorage.getItem('mock_profiles');
+    if (mockProfilesStr) {
+      const mockProfiles: Profile[] = JSON.parse(mockProfilesStr);
+      const idx = mockProfiles.findIndex(p => p.id === voterId);
+      if (idx >= 0) {
+        mockProfiles[idx].voting_status = 'sudah';
+        mockProfiles[idx].account_status = 'belum_dikonfirmasi';
+        mockProfiles[idx].card_visibility = false;
+        localStorage.setItem('mock_profiles', JSON.stringify(mockProfiles));
       }
     }
     return true;
-  } catch (err) {
+  } catch (err: any) {
     console.error('Error finalizing voting status:', err);
-    return false;
+    throw err;
   }
 };
 

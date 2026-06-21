@@ -216,6 +216,18 @@ export const seedMockData = () => {
   if (!votes) {
     localStorage.setItem('mock_votes', JSON.stringify([]));
   }
+
+  const landingVisibility = localStorage.getItem('mock_landing_page_visibility');
+  if (!landingVisibility) {
+    const defaultVisibility = [
+      { id: 'bilik_suara', is_visible: true },
+      { id: 'lihat_hasil', is_visible: true },
+      { id: 'login', is_visible: true },
+      { id: 'register', is_visible: true },
+      { id: 'cara_menggunakan', is_visible: true }
+    ];
+    localStorage.setItem('mock_landing_page_visibility', JSON.stringify(defaultVisibility));
+  }
 };
 
 const getTableData = (table: string): any[] => {
@@ -401,6 +413,24 @@ export const mockSupabase = {
         });
         saveTableData(table, dataList);
         return { data: items, error: null };
+      },
+
+      async update(item: any) {
+        return {
+          eq(fieldName: string, value: any) {
+            dataList.forEach((r, idx) => {
+              const itemVal = r[fieldName];
+              const match = (typeof itemVal === 'string' && typeof value === 'string')
+                ? itemVal.toLowerCase() === value.toLowerCase()
+                : itemVal === value;
+              if (match) {
+                dataList[idx] = { ...r, ...item };
+              }
+            });
+            saveTableData(table, dataList);
+            return { data: null, error: null };
+          }
+        };
       },
 
       async delete() {

@@ -374,23 +374,27 @@ export default function VotePage() {
   const handleFinalFinish = async () => {
     if (!voter) return;
 
-    // Save final status to database profiles
-    await finalizeVotingStatus(voter.id);
+    try {
+      // Save final status to database profiles
+      await finalizeVotingStatus(voter.id);
 
-    // Transition to fullscreen thank you
-    setScreen('thankyou');
-    setThankyouCountdown(10);
-    clearCountdown();
+      // Transition to fullscreen thank you
+      setScreen('thankyou');
+      setThankyouCountdown(10);
+      clearCountdown();
 
-    let currentSecs = 10;
-    countdownIntervalRef.current = setInterval(() => {
-      currentSecs--;
-      setThankyouCountdown(currentSecs);
-      if (currentSecs <= 0) {
-        clearCountdown();
-        resetSessionToKiosk();
-      }
-    }, 1000);
+      let currentSecs = 10;
+      countdownIntervalRef.current = setInterval(() => {
+        currentSecs--;
+        setThankyouCountdown(currentSecs);
+        if (currentSecs <= 0) {
+          clearCountdown();
+          resetSessionToKiosk();
+        }
+      }, 1000);
+    } catch (err: any) {
+      alert(err.message || 'Gagal menyimpan pilihan suara akhir. Silakan coba kembali.');
+    }
   };
 
   // Reset voting booth for the next voter

@@ -417,7 +417,7 @@ export default function UserDashboard() {
                     <span>Edit Profil</span>
                   </button>
                 )}
-                {accessSettings.download_kartu_enabled && accessSettings.visibilitas_kartu_enabled && (
+                {accessSettings.download_kartu_enabled && accessSettings.visibilitas_kartu_enabled && !(profile?.card_visibility === false && (profile?.voting_status === 'sudah' || isAllCompleted)) && (
                   <button 
                     onClick={handleDownload} 
                     disabled={isDownloading}
@@ -432,7 +432,38 @@ export default function UserDashboard() {
             </div>
 
             {/* THE KARTU PU (VOTERS CARD) */}
-            {!accessSettings.visibilitas_kartu_enabled ? (
+            {profile?.card_visibility === false && (profile?.voting_status === 'sudah' || isAllCompleted) ? (
+              <div className="w-full bg-white border border-slate-200 rounded-2xl p-6 sm:p-8 shadow-sm space-y-6">
+                <div className="border-b border-slate-100 pb-4">
+                  <h3 className="text-lg font-black text-slate-800 tracking-tight">Informasi Pemilih</h3>
+                  <p className="text-slate-450 text-xs mt-1">Status penggunaan kartu pemilih digital Anda</p>
+                  <div className="mt-4 p-3.5 bg-red-50 border border-red-100 rounded-xl text-xs flex flex-col gap-1.5 shadow-sm">
+                    <div className="flex items-center gap-2">
+                      <span className="w-2.5 h-2.5 rounded-full bg-red-600 animate-pulse"></span>
+                      <span className="text-red-700 font-extrabold uppercase tracking-widest text-[10px]">Kartu Expired</span>
+                    </div>
+                    <p className="text-slate-700 font-semibold leading-relaxed">
+                      Hak pilih Anda telah digunakan. <br className="hidden sm:inline"/>
+                      Terima kasih telah berpartisipasi dalam pemilu.
+                    </p>
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                  <div className="space-y-1">
+                    <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest">Nama Lengkap</span>
+                    <span className="block text-slate-800 text-base font-extrabold truncate">{profile.full_name}</span>
+                  </div>
+                  <div className="space-y-1">
+                    <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest">Email Terdaftar</span>
+                    <span className="block text-slate-800 text-sm font-semibold truncate">{renderBlurredEmail(profile.email)}</span>
+                  </div>
+                  <div className="space-y-1 sm:col-span-2">
+                    <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest">Kelas DPT</span>
+                    <span className="block text-slate-800 text-sm font-black">{profile.class || 'N/A'}</span>
+                  </div>
+                </div>
+              </div>
+            ) : !accessSettings.visibilitas_kartu_enabled ? (
               <div className="w-full bg-white border border-slate-200 rounded-2xl p-6 sm:p-8 shadow-sm space-y-6">
                 <div className="border-b border-slate-100 pb-4">
                   <h3 className="text-lg font-black text-slate-800 tracking-tight">Informasi Pemilih</h3>
