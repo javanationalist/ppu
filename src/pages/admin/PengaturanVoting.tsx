@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { Link } from 'react-router-dom';
 import { useScrollLock } from '../../hooks/useScrollLock';
 import { 
   Settings, Trash2, ShieldAlert, CheckCircle, 
-  Save, Lock, Unlock, Database, ArrowUp, ArrowDown, Plus, Edit2, X, PlusCircle, Check
+  Save, Lock, Unlock, Database, ArrowUp, ArrowDown, Plus, Edit2, X, PlusCircle, Check, Zap
 } from 'lucide-react';
 import { getCategories, resetAllVotingData, saveCategory, deleteCategory, getDapils, saveDapil, deleteDapil } from '../../lib/votingService';
 import { getAllProfiles, logAdminAction } from '../../lib/adminService';
@@ -294,14 +295,23 @@ export default function PengaturanVoting() {
       )}
 
       {/* Header */}
-      <div>
-        <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight flex items-center gap-2">
-          <Settings className="w-6 h-6 text-indigo-600" />
-          <span>Pengaturan Portal Pemilu</span>
-        </h1>
-        <p className="text-slate-500 text-sm mt-1">
-          Konfigurasi gerbang akses, format kategori bilik suara, dan utilitas reset data.
-        </p>
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-slate-100 pb-5">
+        <div>
+          <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight flex items-center gap-2">
+            <Settings className="w-6 h-6 text-indigo-600" />
+            <span>Pengaturan Portal Pemilu</span>
+          </h1>
+          <p className="text-slate-500 text-sm mt-1">
+            Konfigurasi gerbang akses, format kategori bilik suara, dan utilitas reset data.
+          </p>
+        </div>
+        <Link
+          to="/admin/scanner-pro"
+          className="bg-slate-900 hover:bg-slate-800 text-white hover:text-indigo-300 px-5 py-3 rounded-2xl text-sm font-black flex items-center gap-2 shadow-md hover:shadow-lg transition-all border border-indigo-500/20 cursor-pointer self-stretch sm:self-auto justify-center sm:justify-start shrink-0"
+        >
+          <Zap className="w-5 h-5 text-indigo-400 fill-indigo-400 animate-pulse" />
+          <span>Scanner (PRO)</span>
+        </Link>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8">

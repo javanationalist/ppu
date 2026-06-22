@@ -94,6 +94,13 @@ export const confirmVoterAccount = async (
         if (idx >= 0) {
           profiles[idx].account_status = 'dikonfirmasi';
           localStorage.setItem('mock_profiles', JSON.stringify(profiles));
+          
+          await logAdminAction(
+            adminEmail,
+            'Admin confirmed voter (Local Fallback)',
+            `${voterName} (Card ID: ${cardId})`
+          );
+          return true; // Return true as local fallback succeeded
         }
       }
       return false; // Return false to indicate DB persistence failed
@@ -127,6 +134,7 @@ export const resetVoterConfirmation = async (
       .eq('id', voterId);
 
     if (error) {
+      console.error('Supabase Error resetting voter confirmation:', error);
       const localProfilesStr = localStorage.getItem('mock_profiles');
       if (localProfilesStr) {
         const profiles: Profile[] = JSON.parse(localProfilesStr);
@@ -134,6 +142,13 @@ export const resetVoterConfirmation = async (
         if (idx >= 0) {
           profiles[idx].account_status = 'belum_dikonfirmasi';
           localStorage.setItem('mock_profiles', JSON.stringify(profiles));
+          
+          await logAdminAction(
+            adminEmail,
+            'Admin reset confirmation (Local Fallback)',
+            `${voterName} (Card ID: ${cardId})`
+          );
+          return true; // Return true as local fallback succeeded
         }
       }
       return false;
@@ -147,6 +162,58 @@ export const resetVoterConfirmation = async (
     return true;
   } catch (err) {
     console.error('Failed to reset voter confirmation:', err);
+    return false;
+  }
+};
+
+// Reset confirmation status for ALL voters
+export const resetAllVotersConfirmation = async (
+  adminEmail: string
+): Promise<boolean> => {
+  try {
+    const { error } = await supabase
+      .from('profiles')
+      .update({
+        account_status: 'belum_dikonfirmasi'
+      })
+      .eq('role', 'user');
+
+    // Also update mock profiles in localStorage
+    const localProfilesStr = localStorage.getItem('mock_profiles');
+    let localSucceeded = false;
+    if (localProfilesStr) {
+      const profiles: Profile[] = JSON.parse(localProfilesStr);
+      const updated = profiles.map(p => {
+        if (p.role === 'user') {
+          return { ...p, account_status: 'belum_dikonfirmasi' as const };
+        }
+        return p;
+      });
+      localStorage.setItem('mock_profiles', JSON.stringify(updated));
+      localSucceeded = true;
+    }
+
+    if (error) {
+      console.error('Database error in resetAllVotersConfirmation:', error);
+      if (localSucceeded) {
+        await logAdminAction(
+          adminEmail,
+          'Admin reset all voter confirmations (Local Fallback)',
+          'Seluruh status konfirmasi akun di-reset ke Belum Dikonfirmasi'
+        );
+        return true; // Return true as local fallback succeeded
+      }
+      return false;
+    }
+
+    await logAdminAction(
+      adminEmail,
+      'Admin reset all voter confirmations',
+      'Seluruh status konfirmasi akun di-reset ke Belum Dikonfirmasi'
+    );
+    return true;
+  } catch (err) {
+    console.error('Failed to reset all voter confirmations:', err);
     return false;
   }
 };

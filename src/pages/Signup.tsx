@@ -182,20 +182,26 @@ export default function Signup() {
   if (!signupEnabled) {
     return (
       <div className="min-h-screen bg-ppu-surface flex flex-col items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-md w-full space-y-6 text-center bg-white p-8 rounded-2xl shadow-xl border border-ppu-border">
-          <div className="w-16 h-16 bg-ppu-red/10 text-ppu-red border border-ppu-red/20 rounded-full flex items-center justify-center mx-auto shadow-sm">
-            <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-shield-alert"><path d="M20 13c0 5-3.5 7.5-7.66 9.7a1 1 0 0 1-.68 0C7.5 20.5 4 18 4 13V6a1 1 0 0 1 .76-.97l8-2a1 1 0 0 1 .48 0l8 2a1 1 0 0 1 .76.97Z"/><line x1="12" x2="12" y1="9" y2="13"/><line x1="12" x2="12.01" y1="17" y2="17"/></svg>
-          </div>
-          <div className="space-y-2">
-            <h2 className="text-xl font-black text-[#0B1220] tracking-tight">Pendaftaran Ditutup</h2>
-            <p className="text-slate-600 text-xs sm:text-sm leading-relaxed font-semibold">
-              Pendaftaran akun sudah ditutup. Silakan hubungi Panitia jika ini adalah kesalahan.
+        <div className="max-w-md w-full space-y-8 text-center bg-white p-8 sm:p-12 rounded-3xl shadow-2xl border border-ppu-border relative overflow-hidden">
+          <div className="absolute top-0 left-0 w-full h-2 bg-ppu-red"></div>
+          
+          <img 
+            src="https://bfuuuzmcrkfjblancewz.supabase.co/storage/v1/object/public/content/signup.png" 
+            alt="Pendaftaran Ditutup" 
+            className="w-full max-w-[280px] mx-auto transform hover:scale-[1.02] transition-transform duration-500"
+          />
+
+          <div className="space-y-3">
+            <h2 className="text-2xl font-black text-[#0B1220] tracking-tight">Pendaftaran Ditutup</h2>
+            <p className="text-slate-500 text-sm leading-relaxed font-semibold">
+              Terima kasih atas antusiasme Anda. Pendaftaran akun pemilih telah resmi ditutup oleh panitia.
             </p>
           </div>
-          <div className="pt-4 border-t border-ppu-border">
+
+          <div className="pt-6 border-t border-ppu-border">
             <Link
               to="/login"
-              className="w-full inline-flex items-center justify-center py-2.5 px-4 bg-ppu-blue hover:bg-ppu-blue-dark text-white rounded-xl text-xs font-bold transition-all shadow-md shadow-ppu-blue/15"
+              className="w-full inline-flex items-center justify-center py-3.5 px-6 bg-ppu-blue hover:bg-ppu-blue-dark active:scale-[0.98] text-white rounded-xl text-sm font-bold transition-all shadow-lg shadow-ppu-blue/20"
             >
               Kembali ke Login
             </Link>

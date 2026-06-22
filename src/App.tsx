@@ -24,6 +24,7 @@ import { PlaceholderPage } from './pages/admin/PlaceholderPage';
 import HelpdeskManager from './pages/admin/HelpdeskManager';
 import VotePage from './pages/Vote';
 import KonfirmasiPemilih from './pages/admin/KonfirmasiPemilih';
+import ScannerPro from './pages/admin/ScannerPro';
 import KelolaPemilih from './pages/admin/KelolaPemilih';
 import AuditLog from './pages/admin/AuditLog';
 import DashboardOverview from './pages/admin/DashboardOverview';
@@ -76,6 +77,7 @@ function AppContent() {
           <Route path="kandidat" element={<KelolaKandidat />} />
           <Route path="kategori" element={<KelolaKategori />} />
           <Route path="konfirmasi" element={<KonfirmasiPemilih />} />
+          <Route path="scanner-pro" element={<ScannerPro />} />
           <Route path="pemilih" element={<KelolaPemilih />} />
           <Route path="wafo" element={<WafoManager />} />
           <Route path="helpdesk" element={<HelpdeskManager />} />

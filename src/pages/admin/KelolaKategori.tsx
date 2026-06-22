@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Layers, Plus, Edit2, Trash2, CheckCircle, Save, X, ArrowUp, ArrowDown, RefreshCw, AlertCircle } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { Layers, Plus, Edit2, Trash2, CheckCircle, Save, X, ArrowUp, ArrowDown, RefreshCw, AlertCircle, Zap } from 'lucide-react';
 import { getCategories, saveCategory, deleteCategory } from '../../lib/votingService';
 import { getCandidates, deleteCandidate } from '../../lib/votingService';
 import { logAdminAction } from '../../lib/adminService';
@@ -211,6 +212,13 @@ export default function KelolaKategori() {
           >
             <RefreshCw className={`w-5 h-5 ${loading ? 'animate-spin' : ''}`} />
           </button>
+          <Link
+            to="/admin/scanner-pro"
+            className="bg-slate-900 hover:bg-slate-800 text-white hover:text-indigo-300 px-4 py-2 rounded-xl text-sm font-black flex items-center gap-2 shadow-md hover:shadow-lg transition-all border border-indigo-500/20 cursor-pointer"
+          >
+            <Zap className="w-4 h-4 text-indigo-400 fill-indigo-400 animate-pulse" />
+            <span>Scanner (PRO)</span>
+          </Link>
           <button
             onClick={openAddModal}
             className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 shadow-sm transition-all cursor-pointer"

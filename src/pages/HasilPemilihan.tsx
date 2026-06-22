@@ -136,20 +136,26 @@ export default function HasilPemilihan() {
   if (!lihatHasilEnabled && currentUser?.role !== 'admin') {
     return (
       <div className="min-h-screen bg-ppu-surface flex flex-col items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-md w-full space-y-6 text-center bg-white p-8 rounded-2xl shadow-xl border border-ppu-border">
-          <div className="w-16 h-16 bg-ppu-red/10 text-ppu-red border border-ppu-red/20 rounded-full flex items-center justify-center mx-auto shadow-sm">
-            <ShieldAlert className="w-8 h-8" />
-          </div>
-          <div className="space-y-2">
-            <h2 className="text-xl font-black text-slate-800 tracking-tight">Forbidden</h2>
-            <p className="text-slate-600 text-xs sm:text-sm leading-relaxed font-semibold">
-              Perolehan suara dinonaktifkan.
+        <div className="max-w-md w-full space-y-8 text-center bg-white p-8 sm:p-12 rounded-3xl shadow-2xl border border-ppu-border relative overflow-hidden">
+          <div className="absolute top-0 left-0 w-full h-2 bg-ppu-blue"></div>
+          
+          <img 
+            src="https://bfuuuzmcrkfjblancewz.supabase.co/storage/v1/object/public/content/result.png" 
+            alt="Hasil Pemilihan Ditutup" 
+            className="w-full max-w-[280px] mx-auto transform hover:scale-[1.02] transition-transform duration-500"
+          />
+
+          <div className="space-y-3">
+            <h2 className="text-2xl font-black text-slate-800 tracking-tight">Akses Terbatas</h2>
+            <p className="text-slate-500 text-sm leading-relaxed font-semibold">
+              Hasil perolehan suara saat ini sedang tidak dipublikasikan. Silakan hubungi Panitia untuk informasi lebih lanjut.
             </p>
           </div>
-          <div className="pt-4 border-t border-ppu-border">
+
+          <div className="pt-6 border-t border-ppu-border">
             <Link
               to="/"
-              className="w-full inline-flex items-center justify-center py-2.5 px-4 bg-ppu-blue hover:bg-ppu-blue-dark text-white rounded-xl text-xs font-bold transition-all shadow-md shadow-ppu-blue/15"
+              className="w-full inline-flex items-center justify-center py-3.5 px-6 bg-ppu-blue hover:bg-ppu-blue-dark active:scale-[0.98] text-white rounded-xl text-sm font-bold transition-all shadow-lg shadow-ppu-blue/20"
             >
               Kembali ke Beranda
             </Link>
