@@ -35,6 +35,8 @@ import HasilAdmin from './pages/admin/HasilAdmin';
 import ExportData from './pages/admin/ExportData';
 import Maintenance from './pages/admin/Maintenance';
 import WafoManager from './pages/admin/WafoManager';
+import GelombangVoting from './pages/admin/GelombangVoting';
+import AksesPro from './pages/admin/AksesPro';
 import NetworkStatus from './components/NetworkStatus';
 
 function AppContent() {
@@ -74,6 +76,7 @@ function AppContent() {
           }
         >
           <Route index element={<DashboardOverview />} />
+          <Route path="gelombang" element={<GelombangVoting />} />
           <Route path="kandidat" element={<KelolaKandidat />} />
           <Route path="kategori" element={<KelolaKategori />} />
           <Route path="konfirmasi" element={<KonfirmasiPemilih />} />
@@ -86,6 +89,7 @@ function AppContent() {
           <Route path="hasil" element={<HasilAdmin />} />
           <Route path="audit" element={<AuditLog />} />
           <Route path="export" element={<ExportData />} />
+          <Route path="akses-pro" element={<AksesPro />} />
         </Route>
 
         {/* Fallback */}

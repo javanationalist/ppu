@@ -499,8 +499,15 @@ export default function KelolaPemilihan() {
       ? candMisi.split('\n').map(line => line.trim()).filter(line => line.length > 0)
       : [];
 
+    const generateSafeId = () => {
+      if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+        return crypto.randomUUID();
+      }
+      return 'cand-' + Math.random().toString(36).substring(2, 11) + '-' + Date.now().toString(36);
+    };
+
     const payload: Candidate = {
-      id: candEditing ? candEditing.id : crypto.randomUUID(),
+      id: candEditing ? candEditing.id : generateSafeId(),
       category_id: selectedCatId,
       number: Number(candNumber),
       chairman: candChairman.trim(),

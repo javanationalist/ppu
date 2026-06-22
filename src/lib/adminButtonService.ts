@@ -1,6 +1,7 @@
 import { supabase, isSupabaseConfigured } from './supabase';
 
 export interface AdminButtonSettings {
+  gelombang_voting: boolean;
   kelola_kategori: boolean;
   kelola_kandidat: boolean;
   konfirmasi_pemilih: boolean;
@@ -15,6 +16,7 @@ export interface AdminButtonSettings {
 }
 
 const DEFAULT_BUTTON_SETTINGS: AdminButtonSettings = {
+  gelombang_voting: true,
   kelola_kategori: true,
   kelola_kandidat: true,
   konfirmasi_pemilih: true,
@@ -81,6 +83,7 @@ export const getAdminButtonSettings = async (): Promise<AdminButtonSettings> => 
     }
 
     return {
+      gelombang_voting: data.gelombang_voting !== false,
       kelola_kategori: data.kelola_kategori !== false,
       kelola_kandidat: data.kelola_kandidat !== false,
       konfirmasi_pemilih: data.konfirmasi_pemilih !== false,
@@ -117,6 +120,7 @@ export const saveAdminButtonSettings = async (settings: AdminButtonSettings): Pr
       .from('admin_button')
       .upsert({
         id: 'default',
+        gelombang_voting: settings.gelombang_voting,
         kelola_kategori: settings.kelola_kategori,
         kelola_kandidat: settings.kelola_kandidat,
         konfirmasi_pemilih: settings.konfirmasi_pemilih,

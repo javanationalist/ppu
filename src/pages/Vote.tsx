@@ -27,6 +27,7 @@ import { getCategories, getCandidates, verifyVoterByCardId, submitVote, submitMu
 import { Category, Candidate, Profile, Vote, Dapil } from '../types';
 
 import { getUserAccessSettings, UserAccessSettings } from '../lib/userAccessService';
+import { getGelombangConfigActive, getGelombangSesiList, GelombangSesi } from '../lib/gelombangService';
 
 export default function VotePage() {
   const navigate = useNavigate();
@@ -34,13 +35,17 @@ export default function VotePage() {
 
   const [accessSettings, setAccessSettings] = useState<UserAccessSettings | null>(null);
 
-  // Screen state: 'scan' | 'profile' | 'categories' | 'candidates' | 'success' | 'thankyou' | 'forbidden'
-  const [screen, setScreen] = useState<'scan' | 'profile' | 'categories' | 'candidates' | 'success' | 'thankyou' | 'forbidden'>('scan');
+  // Screen state: 'scan' | 'profile' | 'categories' | 'candidates' | 'success' | 'thankyou' | 'forbidden' | 'gelombang_aktif' | 'gelombang_blokir'
+  const [screen, setScreen] = useState<'scan' | 'profile' | 'categories' | 'candidates' | 'success' | 'thankyou' | 'forbidden' | 'gelombang_aktif' | 'gelombang_blokir'>('scan');
 
   // Input states
   const [cardIdInput, setCardIdInput] = useState('');
   const [searchLoading, setSearchLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  // Gelombang states
+  const [detectedActiveSession, setDetectedActiveSession] = useState<GelombangSesi | null>(null);
+  const [detectedClassSchedule, setDetectedClassSchedule] = useState<GelombangSesi | null>(null);
 
   // Current Voter & Vote details
   const [voter, setVoter] = useState<Profile | null>(null);
@@ -225,7 +230,44 @@ export default function VotePage() {
       setIsVoterAllCompleted(completionStatus.allCompleted);
       setVotedCategories(votedMap);
       setVoter(profile);
-      setScreen('profile');
+
+      // Check Gelombang Voting Waves Scheduling
+      const isGelombangGlobalActive = await getGelombangConfigActive();
+      if (isGelombangGlobalActive) {
+        const isEnded = profile.voting_status === 'sudah' || completionStatus.allCompleted;
+        if (isEnded) {
+          // Blokir - straight to profile where Sudah Memilih error blocks them
+          setScreen('profile');
+          setSearchLoading(false);
+          return;
+        }
+
+        const voterClass = profile.class || '';
+        const listSesi = await getGelombangSesiList();
+
+        // Find current matching active session slot
+        const now = new Date();
+        const nowStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+
+        const activeSesi = listSesi.find(s => 
+          s.is_active &&
+          s.kelas.includes(voterClass) &&
+          nowStr >= s.jam_mulai &&
+          nowStr <= s.jam_selesai
+        );
+
+        if (activeSesi) {
+          setDetectedActiveSession(activeSesi);
+          setScreen('gelombang_aktif');
+        } else {
+          // Find any session info for this class to display scheduling details to the student
+          const infoSesi = listSesi.find(s => s.kelas.includes(voterClass));
+          setDetectedClassSchedule(infoSesi || null);
+          setScreen('gelombang_blokir');
+        }
+      } else {
+        setScreen('profile');
+      }
     } catch (err: any) {
       setErrorMessage(err.message || 'Terjadi kesalahan sistem saat memverifikasi ID.');
     } finally {
@@ -434,9 +476,9 @@ export default function VotePage() {
           {/* Stunning Layered Closed-State Illustration */}
           <div className="relative mb-8 flex items-center justify-center">
             {/* Outer pulsating glow ring */}
-            <div className="absolute w-28 h-28 bg-rose-500/10 rounded-full blur-xl animate-pulse"></div>
+            <div className="absolute w-28 h-28 bg-rose-500/10 rounded-full blur-xl"></div>
             {/* Secondary thin dashed rotating ring */}
-            <div className="absolute w-24 h-24 border border-rose-500/20 rounded-full animate-[spin_20s_linear_infinite] border-dashed"></div>
+            <div className="absolute w-24 h-24 border border-rose-500/20 rounded-full border-dashed"></div>
             {/* Outer border ring */}
             <div className="relative w-20 h-20 bg-[#151821] border border-rose-500/30 rounded-2xl flex items-center justify-center shadow-2xl shadow-rose-950/50">
               <Lock className="w-9 h-9 text-rose-500" />
@@ -449,7 +491,7 @@ export default function VotePage() {
 
           {/* Status Badge */}
           <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-rose-500/10 border border-rose-500/20 text-rose-400 text-[10px] font-black tracking-widest uppercase mb-4">
-            <span className="w-1.5 h-1.5 bg-rose-500 rounded-full animate-ping"></span>
+            <span className="w-1.5 h-1.5 bg-rose-500 rounded-full"></span>
             <span>Bilik Suara Ditutup</span>
           </div>
 
@@ -590,6 +632,108 @@ export default function VotePage() {
                 Lanjutkan Verifikasi <ArrowRight className="w-4 h-4" />
               </>
             )}
+          </button>
+        </main>
+      )}
+
+      {/* ────────────────────────────────────────────────
+           SCREEN 1.1: GELOMBANG VOTING ACTIVE MATCH
+         ──────────────────────────────────────────────── */}
+      {screen === 'gelombang_aktif' && voter && detectedActiveSession && (
+        <main className="flex-1 flex flex-col items-center justify-center p-6 w-full max-w-sm mx-auto text-center">
+          <div className="relative mb-6 flex items-center justify-center">
+            <div className="absolute w-24 h-24 bg-indigo-500/10 rounded-full blur-xl"></div>
+            <div className="relative w-16 h-16 bg-[#151821] border border-indigo-500/30 rounded-2xl flex items-center justify-center shadow-xl">
+              <Check className="w-8 h-8 text-indigo-400" />
+            </div>
+          </div>
+
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-indigo-500/15 border border-indigo-500/25 text-indigo-400 text-[10px] font-black tracking-widest uppercase mb-4">
+            <span className="w-1.5 h-1.5 bg-indigo-400 rounded-full"></span>
+            <span>Sesi Sesuai</span>
+          </div>
+
+          <h1 className="text-xl font-extrabold text-white tracking-tight mb-2 uppercase">Sesi Aktif</h1>
+          <p className="text-slate-400 font-medium text-xs mb-6 leading-relaxed max-w-sm">
+            Waktu pemilihan untuk kelas Anda sedang berlangsung aktif sekarang. Anda dapat melanjutkan proses pemungutan suara.
+          </p>
+
+          <div className="w-full bg-[#151821] border border-[#2a3050] rounded-2xl p-5 mb-8 text-left space-y-3 relative overflow-hidden">
+            <div className="flex justify-between items-center text-xs">
+              <span className="text-slate-500 font-bold uppercase tracking-wider">Nama Sesi</span>
+              <span className="font-extrabold text-indigo-400">{detectedActiveSession.nama_sesi}</span>
+            </div>
+            <div className="flex justify-between items-center text-xs">
+              <span className="text-slate-500 font-bold uppercase tracking-wider">Waktu Sesi</span>
+              <span className="font-extrabold text-[#e8ecf5] bg-[#1c2030] px-2.5 py-1 rounded border border-[#2a3050]">{detectedActiveSession.jam_mulai} - {detectedActiveSession.jam_selesai}</span>
+            </div>
+            <div className="flex justify-between items-center text-xs">
+              <span className="text-slate-500 font-bold uppercase tracking-wider">Kelas Anda</span>
+              <span className="font-extrabold text-slate-200 font-mono">{voter.class}</span>
+            </div>
+          </div>
+
+          <div className="w-full space-y-3">
+            <button 
+              onClick={() => setScreen('profile')}
+              className="w-full py-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-bold shadow-xl shadow-indigo-600/10 flex items-center justify-center gap-2 group cursor-pointer transition-colors"
+            >
+              Lanjutkan Validasi Profil <ArrowRight className="w-4 h-4" />
+            </button>
+            <button 
+              onClick={resetSessionToKiosk}
+              className="w-full py-3.5 bg-[#1c2030] hover:bg-[#232840] text-slate-400 hover:text-white border border-[#2a3050] rounded-xl text-xs font-bold flex items-center justify-center gap-2 cursor-pointer transition-colors"
+            >
+              ← Batal
+            </button>
+          </div>
+        </main>
+      )}
+
+      {/* ────────────────────────────────────────────────
+           SCREEN 1.2: GELOMBANG VOTING BLOCKED
+         ──────────────────────────────────────────────── */}
+      {screen === 'gelombang_blokir' && voter && (
+        <main className="flex-1 flex flex-col items-center justify-center p-6 w-full max-w-sm mx-auto text-center">
+          <div className="relative mb-6 flex items-center justify-center">
+            <div className="absolute w-24 h-24 bg-rose-500/15 rounded-full blur-xl"></div>
+            <div className="relative w-16 h-16 bg-[#151821] border border-rose-500/30 rounded-2xl flex items-center justify-center shadow-xl">
+              <Lock className="w-8 h-8 text-rose-500" />
+            </div>
+          </div>
+
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-rose-500/15 border border-rose-500/25 text-rose-400 text-[10px] font-black tracking-widest uppercase mb-4">
+            <span className="w-1.5 h-1.5 bg-rose-500 rounded-full"></span>
+            <span>Akses Ditangguhkan</span>
+          </div>
+
+          <h1 className="text-xl font-extrabold text-white tracking-tight mb-2 uppercase">Sesi Tidak Aktif</h1>
+          <p className="text-slate-400 font-medium text-xs mb-6 leading-relaxed max-w-sm">
+            Kelas Anda belum memiliki sesi voting aktif saat ini. Silakan datang kembali sesuai jadwal yang telah ditentukan panitia.
+          </p>
+
+          {/* Conditional session details for class */}
+          {detectedClassSchedule && (
+            <div className="w-full bg-[#1c1316] border border-rose-950/40 rounded-2xl p-5 mb-8 text-left space-y-3 relative overflow-hidden">
+              <h4 className="text-[10px] font-black text-rose-400 uppercase tracking-widest border-b border-rose-950/40 pb-2 mb-2">
+                Informasi Sesi Kelas {voter.class}
+              </h4>
+              <div className="flex justify-between items-center text-xs">
+                <span className="text-slate-500 font-bold uppercase tracking-wider">Nama Sesi</span>
+                <span className="font-extrabold text-rose-300">{detectedClassSchedule.nama_sesi}</span>
+              </div>
+              <div className="flex justify-between items-center text-xs">
+                <span className="text-slate-500 font-bold uppercase tracking-wider">Jadwal</span>
+                <span className="font-extrabold text-[#e8ecf5] bg-[#1c2030] px-2.5 py-1 rounded border border-[#2a3050]">{detectedClassSchedule.jam_mulai} - {detectedClassSchedule.jam_selesai}</span>
+              </div>
+            </div>
+          )}
+
+          <button 
+            onClick={resetSessionToKiosk}
+            className="w-full py-4 bg-[#1c2030] hover:bg-[#232840] text-slate-200 border border-[#2a3050] rounded-xl text-xs font-bold flex items-center justify-center gap-2 cursor-pointer transition-colors"
+          >
+            ← Kembali ke Layar Awal
           </button>
         </main>
       )}
@@ -1032,7 +1176,7 @@ export default function VotePage() {
 
                                         {/* Quick Selection Indicator Badge (Replaces the button) */}
                                         {isSelected && (
-                                          <div className="flex items-center justify-center gap-2 py-3 bg-emerald-500/10 border border-emerald-500/30 rounded-2xl text-emerald-400 text-[10px] font-black tracking-widest mt-auto animate-in fade-in zoom-in duration-300">
+                                          <div className="flex items-center justify-center gap-2 py-3 bg-emerald-500/10 border border-emerald-500/30 rounded-2xl text-emerald-400 text-[10px] font-black tracking-widest mt-auto">
                                             <Check className="w-4 h-4" />
                                             <span>TERPILIH</span>
                                           </div>
@@ -1122,7 +1266,7 @@ export default function VotePage() {
 
                                 {/* Selection Check Overlay */}
                                 {isSelected && (
-                                  <div className="absolute inset-0 bg-emerald-500/10 flex items-center justify-center animate-in fade-in duration-300">
+                                  <div className="absolute inset-0 bg-emerald-500/10 flex items-center justify-center">
                                     <div className="bg-emerald-500 text-white p-2 rounded-full shadow-xl">
                                       <Check className="w-8 h-8 font-black" />
                                     </div>
@@ -1173,7 +1317,7 @@ export default function VotePage() {
                                 {/* Selected Badge indicator */}
                                 {isSelected && (
                                   <div className="mt-auto pt-4 flex items-center justify-center">
-                                    <span className="inline-flex items-center gap-1.5 py-2 px-4 rounded-full bg-emerald-500 text-white text-[10px] font-black uppercase tracking-widest shadow-lg shadow-emerald-500/20 animate-in zoom-in duration-300">
+                                    <span className="inline-flex items-center gap-1.5 py-2 px-4 rounded-full bg-emerald-500 text-white text-[10px] font-black uppercase tracking-widest shadow-lg shadow-emerald-500/20">
                                       📌 Dipilih
                                     </span>
                                   </div>

@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { 
   Users, CheckCircle2, Award, ClipboardCheck, 
   ChevronRight, ArrowUpRight, LifeBuoy, Database, History,
-  Settings, Layers, FileText, ShieldAlert, BarChart3, RefreshCw, Lock, Unlock, ShieldCheck
+  Settings, Layers, FileText, ShieldAlert, BarChart3, RefreshCw, Lock, Unlock, ShieldCheck, Clock
 } from 'lucide-react';
 import { getAllProfiles } from '../../lib/adminService';
 import { getCategories, getAllVotes } from '../../lib/votingService';
@@ -81,6 +81,19 @@ export default function DashboardOverview() {
     acc[cat.id] = votes.filter(v => v.category_id === cat.id).length;
     return acc;
   }, {} as Record<string, number>);
+
+  const handleToggleSetting = async (key: string) => {
+    const updated = {
+      ...btnSettings,
+      [key]: !(btnSettings as any)[key]
+    };
+    setBtnSettings(updated);
+    try {
+      await saveAdminButtonSettings(updated);
+    } catch (err) {
+      console.error('Failed to save admin button settings', err);
+    }
+  };
 
   return (
     <div className="p-4 sm:p-8 max-w-7xl mx-auto space-y-8">
@@ -208,12 +221,13 @@ export default function DashboardOverview() {
             <div className="flex items-center justify-between mb-4">
               <div>
                 <h3 className="text-lg font-bold text-slate-900">Kontrol Akses Menu Admin</h3>
-                <p className="text-xs text-slate-400">Status fitur admin saat ini (Dikelola sistem).</p>
+                <p className="text-xs text-slate-400">Status fitur admin saat ini (Klik ikon/kartu untuk mengubah secara langsung!).</p>
               </div>
             </div>
 
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
               {[
+                { key: 'gelombang_voting', label: 'Gelombang Voting', icon: Clock },
                 { key: 'kelola_kategori', label: 'Kelola Kategori', icon: Settings },
                 { key: 'kelola_kandidat', label: 'Kelola Kandidat', icon: Layers },
                 { key: 'konfirmasi_pemilih', label: 'Konfirmasi', icon: ShieldCheck },
@@ -228,12 +242,14 @@ export default function DashboardOverview() {
               ].map((item) => {
                 const isEnabled = (btnSettings as any)[item.key];
                 return (
-                  <div
+                  <button
                     key={item.key}
-                    className={`flex items-center gap-2 p-2 rounded-xl border select-none transition-all ${
+                    type="button"
+                    onClick={() => handleToggleSetting(item.key)}
+                    className={`flex items-center gap-2 p-2 rounded-xl border select-none text-left transition-all cursor-pointer hover:border-indigo-300 active:scale-[0.98] duration-150 w-full ${
                       isEnabled 
-                        ? 'bg-white border-slate-200 text-slate-700' 
-                        : 'bg-slate-50 border-slate-100 text-slate-400 grayscale opacity-60'
+                        ? 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50' 
+                        : 'bg-slate-50/80 border-slate-100 text-slate-400 opacity-60 hover:bg-slate-100'
                     }`}
                   >
                     <div className={`p-1.5 rounded-lg shrink-0 ${isEnabled ? 'bg-indigo-50 text-indigo-600' : 'bg-slate-200 text-slate-400'}`}>
@@ -245,7 +261,7 @@ export default function DashboardOverview() {
                         {isEnabled ? 'Tersedia' : 'Tidak Tersedia'}
                       </span>
                     </div>
-                  </div>
+                  </button>
                 );
               })}
             </div>

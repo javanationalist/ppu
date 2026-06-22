@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { LogOut, Home, Users, Settings, BarChart, FileText, LifeBuoy, Menu, X, ShieldCheck, Layers, Eye, ShieldAlert, Lock } from 'lucide-react';
+import { LogOut, Home, Users, Settings, BarChart, FileText, LifeBuoy, Menu, X, ShieldCheck, Layers, Eye, ShieldAlert, Lock, Clock } from 'lucide-react';
 import { getAdminButtonSettings, AdminButtonSettings } from '../lib/adminButtonService';
 
 export const AdminLayout = () => {
@@ -25,6 +25,18 @@ export const AdminLayout = () => {
     return () => clearInterval(interval);
   }, []);
 
+  useEffect(() => {
+    if (btnSettings) {
+      const currentLink = navLinks.find(link => 
+        location.pathname === link.to || 
+        (link.to !== '/admin' && location.pathname.startsWith(link.to + '/'))
+      );
+      if (currentLink && currentLink.key && !isLinkEnabled(currentLink.key)) {
+        navigate('/admin/akses-pro', { replace: true });
+      }
+    }
+  }, [location.pathname, btnSettings]);
+
   const handleLogout = async () => {
     await signOut();
     navigate('/');
@@ -32,6 +44,7 @@ export const AdminLayout = () => {
 
   const navLinks = [
     { to: '/admin', icon: Home, label: 'Dashboard' },
+    { to: '/admin/gelombang', icon: Clock, label: 'Gelombang Voting', key: 'gelombang_voting' },
     { to: '/admin/pengaturan', icon: Settings, label: 'Kelola Kategori', key: 'kelola_kategori' },
     { to: '/admin/kandidat', icon: Layers, label: 'Kelola Kandidat', key: 'kelola_kandidat' },
     { to: '/admin/konfirmasi', icon: ShieldCheck, label: 'Konfirmasi Pemilih', key: 'konfirmasi_pemilih' },
