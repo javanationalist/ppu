@@ -21,7 +21,9 @@ import {
   Check,
   HelpCircle,
   Lock,
-  ShieldAlert
+  ShieldAlert,
+  Maximize,
+  Minimize
 } from 'lucide-react';
 import { getCategories, getCandidates, verifyVoterByCardId, submitVote, submitMultipleVotes, getVoterSubmittedVotes, finalizeVotingStatus, getDapils, getVotingCompletionStatus } from '../lib/votingService';
 import { Category, Candidate, Profile, Vote, Dapil } from '../types';
@@ -77,6 +79,60 @@ export default function VotePage() {
   const [showModal1, setShowModal1] = useState(false);
   const [showModal2, setShowModal2] = useState(false);
   useScrollLock(showModal1 || showModal2);
+
+  // Fullscreen enforcement layer
+  const [isFullscreen, setIsFullscreen] = useState(false);
+
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(!!document.fullscreenElement);
+    };
+
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    setIsFullscreen(!!document.fullscreenElement);
+
+    return () => {
+      document.removeEventListener('fullscreenchange', handleFullscreenChange);
+    };
+  }, []);
+
+  const triggerFullscreen = async () => {
+    try {
+      const docEl = document.documentElement as any;
+      const requestMethod = docEl.requestFullscreen || 
+                            docEl.mozRequestFullScreen || 
+                            docEl.webkitRequestFullscreen || 
+                            docEl.msRequestFullscreen;
+      if (requestMethod) {
+        await requestMethod.call(docEl);
+      }
+    } catch (err) {
+      console.warn("Gagal masuk mode fullscreen:", err);
+    }
+  };
+
+  // Initial interaction auto-request fullscreen
+  useEffect(() => {
+    let hasAttempted = false;
+    const autoEnter = async () => {
+      if (hasAttempted) return;
+      hasAttempted = true;
+      cleanup();
+      await triggerFullscreen();
+    };
+
+    const cleanup = () => {
+      window.removeEventListener('click', autoEnter);
+      window.removeEventListener('touchstart', autoEnter);
+    };
+
+    window.addEventListener('click', autoEnter, { once: true });
+    window.addEventListener('touchstart', autoEnter, { once: true });
+
+    return () => {
+      cleanup();
+    };
+  }, []);
 
   // Load classes initially
   useEffect(() => {
@@ -1522,6 +1578,57 @@ export default function VotePage() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* ────────────────────────────────────────────────
+           FULLSCREEN ENFORCEMENT OVERLAY
+         ──────────────────────────────────────────────── */}
+      {!isFullscreen && (
+        <div className="fixed inset-0 bg-[#0d0f14]/98 backdrop-blur-md z-[9999] flex flex-col items-center justify-center p-6 text-center select-none">
+          <div className="absolute top-0 right-0 w-80 h-80 bg-rose-500/5 rounded-full blur-3xl pointer-events-none"></div>
+          <div className="absolute -bottom-20 -left-20 w-80 h-80 bg-indigo-500/5 rounded-full blur-3xl pointer-events-none"></div>
+          
+          <div className="relative mb-6 flex items-center justify-center">
+            <div className="absolute w-28 h-28 bg-indigo-500/10 rounded-full blur-xl animate-pulse"></div>
+            <div className="relative w-20 h-20 bg-[#151821] border border-indigo-500/20 rounded-2xl flex items-center justify-center shadow-2xl">
+              <Maximize className="w-10 h-10 text-indigo-400" />
+            </div>
+          </div>
+
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 text-[10px] font-black tracking-widest uppercase mb-4">
+            <span>Sistem Keamanan Layar</span>
+          </div>
+
+          <h2 className="text-2xl sm:text-3xl font-black text-white tracking-tight mb-2 uppercase">
+            Mode Layar Penuh Diperlukan
+          </h2>
+          
+          <p className="text-slate-400 font-medium text-xs sm:text-sm max-w-sm mb-8 leading-relaxed">
+            Demi menjaga ketertiban, keamanan, serta integritas jalannya pemilihan, bilik suara elektronik ini diwajibkan berjalan dalam mode Layar Penuh (Fullscreen).
+          </p>
+
+          <button
+            onClick={triggerFullscreen}
+            className="w-full max-w-xs flex items-center justify-center gap-2.5 px-6 py-3.5 bg-gradient-to-r from-indigo-500 to-indigo-600 hover:from-indigo-600 hover:to-indigo-700 text-white rounded-2xl font-bold text-xs uppercase tracking-wider shadow-lg shadow-indigo-950/50 hover:shadow-indigo-500/25 transition-all text-center cursor-pointer active:scale-95 duration-150"
+          >
+            <Maximize className="w-4 h-4" />
+            <span>Kembali ke Fullscreen</span>
+          </button>
+        </div>
+      )}
+
+      {/* ────────────────────────────────────────────────
+           FALLSCREEN MANUAL CORNER FALLBACK BUTTON
+         ──────────────────────────────────────────────── */}
+      {!isFullscreen && (
+        <button
+          onClick={triggerFullscreen}
+          className="fixed bottom-6 right-6 z-50 flex items-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-full shadow-lg hover:shadow-indigo-500/20 active:scale-95 transition-all border border-indigo-500/30 cursor-pointer"
+          title="Manual Fullscreen Fallback"
+        >
+          <Maximize className="w-4 h-4" />
+          <span>Layar Penuh (Fullscreen)</span>
+        </button>
       )}
 
     </div>
