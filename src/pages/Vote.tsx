@@ -80,6 +80,58 @@ export default function VotePage() {
   const [showModal2, setShowModal2] = useState(false);
   useScrollLock(showModal1 || showModal2);
 
+  // OTP-style separate inputs for Card ID
+  const otpRef0 = useRef<HTMLInputElement>(null);
+  const otpRef1 = useRef<HTMLInputElement>(null);
+  const otpRef2 = useRef<HTMLInputElement>(null);
+  const otpRef3 = useRef<HTMLInputElement>(null);
+  const otpRefs = [otpRef0, otpRef1, otpRef2, otpRef3];
+
+  const handleOtpChange = (index: number, val: string) => {
+    const numericOnly = val.replace(/\D/g, '');
+    if (numericOnly.length > 1) {
+      const padded = numericOnly.slice(0, 4);
+      setCardIdInput(padded);
+      const focusIndex = Math.min(padded.length, 3);
+      otpRefs[focusIndex].current?.focus();
+      return;
+    }
+
+    const digit = numericOnly.slice(-1);
+    const currentDigits = [
+      cardIdInput[0] || '',
+      cardIdInput[1] || '',
+      cardIdInput[2] || '',
+      cardIdInput[3] || ''
+    ];
+    currentDigits[index] = digit;
+    const merged = currentDigits.join('');
+    setCardIdInput(merged);
+
+    if (digit && index < 3) {
+      otpRefs[index + 1].current?.focus();
+    }
+  };
+
+  const handleOtpKeyDown = (index: number, e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Backspace') {
+      const currentVal = cardIdInput[index] || '';
+      if (!currentVal && index > 0) {
+        otpRefs[index - 1].current?.focus();
+        const currentDigits = [
+          cardIdInput[0] || '',
+          cardIdInput[1] || '',
+          cardIdInput[2] || '',
+          cardIdInput[3] || ''
+        ];
+        currentDigits[index - 1] = '';
+        setCardIdInput(currentDigits.join(''));
+      }
+    } else if (e.key === 'Enter') {
+      handleVerifyCardId(cardIdInput);
+    }
+  };
+
   // Fullscreen enforcement layer
   const [isFullscreen, setIsFullscreen] = useState(false);
 
@@ -583,12 +635,44 @@ export default function VotePage() {
             Verifikasi
           </h1>
           <p className="text-xs text-slate-400 self-start mb-6">
-            Silakan scan QR Code yang ada di Voters Card atau masukkan Card ID secara manual
+            Silakan masukkan Card ID secara manual atau scan QR Code yang ada di Voters Card
           </p>
 
-          {/* QR Scan Container Box */}
+          {/* Manual Input field styled as 4-digits OTP - FIRST */}
+          <div className="w-full mb-4">
+            <label className="block text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-2">
+              Card ID
+            </label>
+            <div className="flex gap-2.5 justify-center py-1">
+              {[0, 1, 2, 3].map((index) => (
+                <input
+                  key={index}
+                  ref={otpRefs[index]}
+                  type="tel"
+                  inputMode="numeric"
+                  maxLength={1}
+                  value={cardIdInput[index] || ''}
+                  onChange={(e) => handleOtpChange(index, e.target.value)}
+                  onKeyDown={(e) => handleOtpKeyDown(index, e)}
+                  autoComplete="off"
+                  className="w-14 h-14 sm:w-16 sm:h-16 bg-[#1c2030] border-2 border-[#2a3050] focus:border-indigo-500 rounded-xl outline-none text-white font-mono font-bold text-center text-2xl transition-all shadow-md focus:ring-4 focus:ring-indigo-500/15"
+                />
+              ))}
+            </div>
+            <p className="text-[10px] text-slate-500 mt-2 text-center select-none">
+              (CARD ID MAKSIMAL INPUT 4 ANGKA, TIDAK BISA LEBIH DARI 4 DAN WAJIB BERISI ANGKA)
+            </p>
+          </div>
+
+          <div className="w-full flex items-center gap-4 my-3 text-slate-500 text-xs font-bold uppercase tracking-wider">
+            <span className="h-px bg-[#2a3050] flex-1"></span>
+            atau scan qr code
+            <span className="h-px bg-[#2a3050] flex-1"></span>
+          </div>
+
+          {/* QR Scan Container Box - SECOND */}
           <div className="w-full bg-[#151821] border border-[#2a3050] rounded-2xl overflow-hidden shadow-2xl relative mb-4">
-            <div id="qr-reader-container" className="w-full aspect-square relative bg-black/40 flex flex-col items-center justify-center overflow-hidden">
+            <div id="qr-reader-container" className="w-full h-[180px] sm:h-[200px] relative bg-black/40 flex flex-col items-center justify-center overflow-hidden">
               {/* Overlay with instructions when not scanning */}
               {!isScanning && (
                 <div 
@@ -637,34 +721,6 @@ export default function VotePage() {
               <span>{camError}</span>
             </div>
           )}
-
-          <div className="w-full flex items-center gap-4 my-3 text-slate-500 text-xs font-bold uppercase tracking-wider">
-            <span className="h-px bg-[#2a3050] flex-1"></span>
-            atau masukkan manual
-            <span className="h-px bg-[#2a3050] flex-1"></span>
-          </div>
-
-          {/* Manual Input field */}
-          <div className="w-full mb-6">
-            <label htmlFor="card-id-input" className="block text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-2">
-              Card ID
-            </label>
-            <input 
-              id="card-id-input"
-              type="text" 
-              placeholder="Contoh: 1234" 
-              className="w-full bg-[#1c2030] border border-[#2a3050] focus:border-indigo-500 rounded-xl px-4 py-3 placeholder-slate-600 outline-none text-white font-mono font-medium tracking-wide text-center"
-              value={cardIdInput}
-              onChange={(e) => setCardIdInput(e.target.value.replace(/\D/g, '').slice(0, 4))}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') handleVerifyCardId(cardIdInput);
-              }}
-              autoComplete="off"
-            />
-            <p className="text-[10px] text-slate-500 mt-2 text-center">
-              (CARD ID MAKSIMAL INPUT 4 ANGKA, TIDAK BISA LEBIH DARI 4 DAN WAJIB BERISI ANGKA)
-            </p>
-          </div>
 
           {errorMessage && (
             <div className="w-full bg-red-950/45 border border-red-800/50 text-red-400 px-4 py-3 rounded-xl text-xs font-semibold leading-relaxed mb-4 flex gap-2 items-start">
