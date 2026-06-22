@@ -6,11 +6,18 @@ export default function AksesPro() {
   const navigate = useNavigate();
 
   const proFeatures = [
-    'Manajemen Gelombang & Sesi Pemilihan Tidak Terbatas',
-    'Real-time Live Count Widget dengan Dukungan High-Load',
-    'Sistem Ekspor Data Format Excel, PDF & CSV Lengkap',
-    'Audit Log Log Keamanan untuk Pelacakan Akses',
-    'Scanner Pro QR-Code & OCR untuk Pemilih Cepat',
+    'Gelombang Voting (Manajemen Gelombang & Sesi Pemilihan Presisi)',
+    'Kelola Kategori (Pengaturan Kategori Voting Dinamis & Kustom)',
+    'Kelola Kandidat (Manajemen Profil Kandidat, Foto, & Visi Misi)',
+    'Konfirmasi Pemilih (Verifikasi Cepat & Validasi Token Kehadiran)',
+    'Kelola Pemilih (Manajemen Database Lengkap Daftar Pemilih Tetap)',
+    'Hasil Quick Count (Statistik Real-time, Charts, & Kalkulasi Suara)',
+    'Audit Log Keamanan (Pelacakan Log Jejak Aktivitas Admin & Sistem)',
+    'Export Laporan (Unduh Data Format Excel, CSV, & PDF Sekali Klik)',
+    'Scanner Pro (Pemindaian Cepat QR-Code & Pemilih Berbasis Kamera)',
+    'Helpdesk S.O.S (Manajemen Tiket Keluhan & Kendala Pemilih Instan)',
+    'Sistem Maintenance (Mode Pemeliharaan & Kunci Akses Cepat)',
+    'Integrasi Sektor WAFO (Manajemen Guru, Staf GTK, & Unit Sekolah)',
     'Dukungan Premium CS Response 24/7 & SLA 99.9%'
   ];
 
@@ -38,18 +45,15 @@ export default function AksesPro() {
           {/* Badge & Crown Icon */}
           <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-400/30 text-indigo-300 text-[10px] font-black tracking-widest uppercase">
             <Crown className="w-3.5 h-3.5 text-amber-400 fill-amber-400 animate-pulse" />
-            <span>Fitur Khusus PPU PRO</span>
+            <span>PPU Pro</span>
           </div>
 
           <h1 className="text-2xl sm:text-4xl font-extrabold tracking-tight bg-gradient-to-r from-white via-indigo-100 to-indigo-300 bg-clip-text text-transparent">
-            Akses Terbatas: Kelola PPU Pro
+            PPU Pro
           </h1>
 
           <p className="text-slate-400 text-sm sm:text-base leading-relaxed font-medium">
-            Maaf, menu fitur ini dinonaktifkan atau memerlukan lisensi berbayar.
-            <span className="block mt-1 text-indigo-300 font-bold">
-              Upgrade ke versi PPU PRO untuk menggunakan fitur ini.
-            </span>
+            Maaf, menu fitur ini memerlukan upgrade PPU Pro. Akun ada belum berlangganan fitur Pro.
           </p>
 
           <div className="w-full max-w-md h-px bg-gradient-to-r from-transparent via-slate-800 to-transparent my-2" />
@@ -76,7 +80,7 @@ export default function AksesPro() {
         {/* Action Button Section */}
         <div className="relative z-10 mt-10 text-center flex flex-col sm:flex-row items-center justify-center gap-4">
           <a
-            href="https://wa.me/something" // Placeholder, dynamic or professional mock contact
+            href="https://wa.me/6285174181228?text=Halo!%20Saya%20ingin%20_upgrade_%20PPU%20Pro"
             target="_blank"
             rel="noreferrer"
             className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white rounded-2xl text-xs font-black uppercase tracking-widest shadow-xl shadow-indigo-900/40 hover:shadow-indigo-900/60 hover:-translate-y-0.5 active:translate-y-0 transition-all"
