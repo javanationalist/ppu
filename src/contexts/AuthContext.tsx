@@ -28,6 +28,49 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [loading, setLoading] = useState(true);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
+  const fetchProfile = async (userId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .single();
+
+      if (error) {
+        console.error('Error fetching profile:', error);
+      } else {
+        const prof = data as Profile;
+        if (prof.is_deleted) {
+          console.warn('Soft-deleted voter account tried to login: signing out');
+          await supabase.auth.signOut();
+          setProfile(null);
+        } else {
+          setProfile(prof);
+        }
+      }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const signOut = async () => {
+    setIsLoggingOut(true);
+    try {
+      await supabase.auth.signOut();
+    } catch (err) {
+      console.error('Error during signOut:', err);
+    } finally {
+      localStorage.removeItem('session_expires_at');
+      localStorage.removeItem('lastActivity');
+      setSession(null);
+      setUser(null);
+      setProfile(null);
+      setIsLoggingOut(false);
+    }
+  };
+
   useEffect(() => {
     // Activity tracking & session expiration updating
     const updateActivity = () => {
@@ -129,49 +172,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       clearInterval(interval);
     };
   }, []);
-
-  const fetchProfile = async (userId: string) => {
-    try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', userId)
-        .single();
-
-      if (error) {
-        console.error('Error fetching profile:', error);
-      } else {
-        const prof = data as Profile;
-        if (prof.is_deleted) {
-          console.warn('Soft-deleted voter account tried to login: signing out');
-          await supabase.auth.signOut();
-          setProfile(null);
-        } else {
-          setProfile(prof);
-        }
-      }
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const signOut = async () => {
-    setIsLoggingOut(true);
-    try {
-      await supabase.auth.signOut();
-    } catch (err) {
-      console.error('Error during signOut:', err);
-    } finally {
-      localStorage.removeItem('session_expires_at');
-      localStorage.removeItem('lastActivity');
-      setSession(null);
-      setUser(null);
-      setProfile(null);
-      setIsLoggingOut(false);
-    }
-  };
 
   return (
     <AuthContext.Provider value={{ user, session, profile, loading, signOut, isLoggingOut }}>

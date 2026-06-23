@@ -18,8 +18,20 @@ const getEnvVar = (key: string): string => {
   return '';
 };
 
-const supabaseUrl = getEnvVar('VITE_SUPABASE_URL') || 'https://placeholder.supabase.co';
+const supabaseUrlRaw = getEnvVar('VITE_SUPABASE_URL') || 'https://placeholder.supabase.co';
 const supabaseAnonKey = getEnvVar('VITE_SUPABASE_ANON_KEY') || 'placeholder-key';
+
+// Helper to check if URL is structurally valid
+const getSafeSupabaseUrl = (url: string): string => {
+  try {
+    new URL(url);
+    return url;
+  } catch (e) {
+    return 'https://placeholder.supabase.co';
+  }
+};
+
+const supabaseUrl = getSafeSupabaseUrl(supabaseUrlRaw);
 
 const isPlaceholder = (val: string): boolean => {
   const lower = val.toLowerCase();
@@ -41,7 +53,15 @@ export const isSupabaseConfigured =
   supabaseAnonKey !== 'placeholder-key' && 
   !isPlaceholder(supabaseAnonKey);
 
-export const realSupabase = createClient(supabaseUrl, supabaseAnonKey);
+let initializedRealSupabase: any = null;
+try {
+  initializedRealSupabase = createClient(supabaseUrl, supabaseAnonKey);
+} catch (err) {
+  console.warn("Failed to initialize real Supabase client:", err);
+  initializedRealSupabase = {} as any;
+}
+
+export const realSupabase = initializedRealSupabase;
 
 // Resilient fallback mechanism: if any query fails due to network/fetch issues, 
 // automatically transition to locally mocked storage to prevent app crashes.

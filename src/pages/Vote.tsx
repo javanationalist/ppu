@@ -132,10 +132,27 @@ export default function VotePage() {
     }
   };
 
-  // Fullscreen enforcement layer
-  const [isFullscreen, setIsFullscreen] = useState(false);
+  // Check if we are inside an iframe or if fullscreen is completely blocked/unavailable
+  const isFullscreenSupported = (() => {
+    try {
+      if (typeof window === 'undefined' || typeof document === 'undefined') return false;
+      const isIframe = window.self !== window.top;
+      if (isIframe) return false;
+      return !!(document.fullscreenEnabled || 
+                (document as any).webkitFullscreenEnabled || 
+                (document as any).mozFullScreenEnabled || 
+                (document as any).msFullscreenEnabled);
+    } catch (e) {
+      return false;
+    }
+  })();
+
+  // Fullscreen enforcement layer - auto-bypass if running in an iframe or unsupported
+  const [isFullscreen, setIsFullscreen] = useState(!isFullscreenSupported);
 
   useEffect(() => {
+    if (!isFullscreenSupported) return;
+
     const handleFullscreenChange = () => {
       setIsFullscreen(!!document.fullscreenElement);
     };
@@ -146,9 +163,10 @@ export default function VotePage() {
     return () => {
       document.removeEventListener('fullscreenchange', handleFullscreenChange);
     };
-  }, []);
+  }, [isFullscreenSupported]);
 
   const triggerFullscreen = async () => {
+    if (!isFullscreenSupported) return;
     try {
       const docEl = document.documentElement as any;
       const requestMethod = docEl.requestFullscreen || 
@@ -156,7 +174,12 @@ export default function VotePage() {
                             docEl.webkitRequestFullscreen || 
                             docEl.msRequestFullscreen;
       if (requestMethod) {
-        await requestMethod.call(docEl);
+        const promise = requestMethod.call(docEl);
+        if (promise && typeof promise.catch === 'function') {
+          promise.catch((err: any) => {
+            console.warn("Gagal masuk mode fullscreen (caught promise):", err);
+          });
+        }
       }
     } catch (err) {
       console.warn("Gagal masuk mode fullscreen:", err);
@@ -165,6 +188,7 @@ export default function VotePage() {
 
   // Initial interaction auto-request fullscreen
   useEffect(() => {
+    if (!isFullscreenSupported) return;
     let hasAttempted = false;
     const autoEnter = async () => {
       if (hasAttempted) return;
@@ -184,7 +208,7 @@ export default function VotePage() {
     return () => {
       cleanup();
     };
-  }, []);
+  }, [isFullscreenSupported]);
 
   // Load classes initially
   useEffect(() => {

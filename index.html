@@ -6,6 +6,43 @@
     <title>Website Pemilihan Umum Digital</title>
     <meta name="description" content="©2026 | PPU DIGITAL" />
 
+    <script id="error-suppressor">
+      (function() {
+        var suppressMsg = function(msg) {
+          if (!msg) return true; // Suppress blank/undefined errors which map as Script error.
+          var str = String(msg).toLowerCase();
+          return str.includes('script error') || 
+                 str.includes('fullscreen') || 
+                 str.includes('camera') || 
+                 str.includes('permission') || 
+                 str.includes('notallowederror') ||
+                 str.includes('not-allowed');
+        };
+        window.onerror = function(message, source, lineno, colno, error) {
+          if (suppressMsg(message)) {
+            console.warn('Suppressed window.onerror in index.html:', message);
+            return true;
+          }
+          return false;
+        };
+        window.addEventListener('error', function(event) {
+          if (suppressMsg(event.message)) {
+            event.preventDefault();
+            event.stopPropagation();
+            console.warn('Suppressed window error event in index.html:', event.message);
+          }
+        }, true);
+        window.addEventListener('unhandledrejection', function(event) {
+          var reason = (event.reason && (event.reason.message || event.reason)) || '';
+          if (suppressMsg(reason)) {
+            event.preventDefault();
+            event.stopPropagation();
+            console.warn('Suppressed unhandledrejection in index.html:', reason);
+          }
+        }, true);
+      })();
+    </script>
+
     <meta property="og:type" content="website" />
     <meta property="og:url" content="https://javanationalist.github.io/ppu/" />
     <meta property="og:title" content="Website Pemilihan Umum Digital" />

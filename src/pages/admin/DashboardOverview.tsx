@@ -8,7 +8,7 @@ import {
 import { getAllProfiles } from '../../lib/adminService';
 import { getCategories, getAllVotes } from '../../lib/votingService';
 import { getHelpdeskButtons } from '../../lib/helpdesk';
-import { getAdminButtonSettings, saveAdminButtonSettings, AdminButtonSettings } from '../../lib/adminButtonService';
+import { getAdminButtonSettings, AdminButtonSettings } from '../../lib/adminButtonService';
 import { Profile, Category, Vote } from '../../types';
 
 export default function DashboardOverview() {
@@ -81,19 +81,6 @@ export default function DashboardOverview() {
     acc[cat.id] = votes.filter(v => v.category_id === cat.id).length;
     return acc;
   }, {} as Record<string, number>);
-
-  const handleToggleSetting = async (key: string) => {
-    const updated = {
-      ...btnSettings,
-      [key]: !(btnSettings as any)[key]
-    };
-    setBtnSettings(updated);
-    try {
-      await saveAdminButtonSettings(updated);
-    } catch (err) {
-      console.error('Failed to save admin button settings', err);
-    }
-  };
 
   return (
     <div className="p-4 sm:p-8 max-w-7xl mx-auto space-y-8">
@@ -221,49 +208,63 @@ export default function DashboardOverview() {
             <div className="flex items-center justify-between mb-4">
               <div>
                 <h3 className="text-lg font-bold text-slate-900">Kontrol Akses Menu Admin</h3>
-                <p className="text-xs text-slate-400">Status fitur admin saat ini (Klik ikon/kartu untuk mengubah secara langsung!).</p>
+                <p className="text-xs text-slate-400">Status visibilitas fitur admin saat ini (Hanya dapat diubah langsung melalui database).</p>
               </div>
             </div>
 
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-              {[
-                { key: 'gelombang_voting', label: 'Gelombang Voting', icon: Clock },
-                { key: 'kelola_kategori', label: 'Kelola Kategori', icon: Settings },
-                { key: 'kelola_kandidat', label: 'Kelola Kandidat', icon: Layers },
-                { key: 'konfirmasi_pemilih', label: 'Konfirmasi', icon: ShieldCheck },
-                { key: 'kelola_pemilih', label: 'Kelola Pemilih', icon: Users },
-                { key: 'wafo', label: 'WAFO', icon: FileText },
-                { key: 'kelola_helpdesk', label: 'Helpdesk', icon: LifeBuoy },
-                { key: 'visibilitas_user', label: 'Visibilitas', icon: ShieldAlert },
-                { key: 'hasil_voting', label: 'Hasil Voting', icon: BarChart3 },
-                { key: 'audit_log', label: 'Audit Log', icon: FileText },
-                { key: 'export_data', label: 'Export Data', icon: FileText },
-                { key: 'maintenance', label: 'Maintenance', icon: Settings },
-              ].map((item) => {
-                const isEnabled = (btnSettings as any)[item.key];
-                return (
-                  <button
-                    key={item.key}
-                    type="button"
-                    onClick={() => handleToggleSetting(item.key)}
-                    className={`flex items-center gap-2 p-2 rounded-xl border select-none text-left transition-all cursor-pointer hover:border-indigo-300 active:scale-[0.98] duration-150 w-full ${
-                      isEnabled 
-                        ? 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50' 
-                        : 'bg-slate-50/80 border-slate-100 text-slate-400 opacity-60 hover:bg-slate-100'
-                    }`}
-                  >
-                    <div className={`p-1.5 rounded-lg shrink-0 ${isEnabled ? 'bg-indigo-50 text-indigo-600' : 'bg-slate-200 text-slate-400'}`}>
-                      <item.icon className="w-3.5 h-3.5" />
-                    </div>
-                    <div className="overflow-hidden">
-                      <span className="block text-[11px] font-bold truncate">{item.label}</span>
-                      <span className={`text-[9px] font-black uppercase tracking-tight ${isEnabled ? 'text-emerald-600' : 'text-rose-500'}`}>
-                        {isEnabled ? 'Tersedia' : 'Tidak Tersedia'}
-                      </span>
-                    </div>
-                  </button>
-                );
-              })}
+            <div className="overflow-hidden border border-slate-100 rounded-xl">
+              <table className="min-w-full divide-y divide-slate-100">
+                <thead className="bg-slate-50">
+                  <tr>
+                    <th scope="col" className="px-4 py-3 text-left text-xs font-black text-slate-500 uppercase tracking-widest">
+                      Nama Menu
+                    </th>
+                    <th scope="col" className="px-4 py-3 text-right text-xs font-black text-slate-500 uppercase tracking-widest w-36">
+                      Status
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-slate-100">
+                  {[
+                    { key: 'gelombang_voting', label: 'Gelombang Voting', icon: Clock },
+                    { key: 'kelola_kategori', label: 'Kelola Kategori', icon: Settings },
+                    { key: 'kelola_kandidat', label: 'Kelola Kandidat', icon: Layers },
+                    { key: 'konfirmasi_pemilih', label: 'Konfirmasi', icon: ShieldCheck },
+                    { key: 'kelola_pemilih', label: 'Kelola Pemilih', icon: Users },
+                    { key: 'wafo', label: 'WAFO', icon: FileText },
+                    { key: 'kelola_helpdesk', label: 'Helpdesk', icon: LifeBuoy },
+                    { key: 'visibilitas_user', label: 'Visibilitas', icon: ShieldAlert },
+                    { key: 'hasil_voting', label: 'Hasil Voting', icon: BarChart3 },
+                    { key: 'audit_log', label: 'Audit Log', icon: FileText },
+                    { key: 'export_data', label: 'Export Data', icon: FileText },
+                    { key: 'maintenance', label: 'Maintenance', icon: Settings },
+                  ].map((item) => {
+                    const isEnabled = (btnSettings as any)[item.key];
+                    return (
+                      <tr key={item.key} className="hover:bg-slate-50/50 transition-colors">
+                        <td className="px-4 py-2.5 whitespace-nowrap">
+                          <div className="flex items-center gap-3">
+                            <div className={`p-1.5 rounded-lg shrink-0 ${isEnabled ? 'bg-indigo-50 text-indigo-600' : 'bg-slate-100 text-slate-400'}`}>
+                              <item.icon className="w-4 h-4" />
+                            </div>
+                            <span className="text-xs font-bold text-slate-700">{item.label}</span>
+                          </div>
+                        </td>
+                        <td className="px-4 py-2.5 whitespace-nowrap text-right">
+                          <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${
+                            isEnabled 
+                              ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' 
+                              : 'bg-rose-50 text-rose-700 border border-rose-100'
+                          }`}>
+                            <span className={`w-1 h-1 rounded-full ${isEnabled ? 'bg-emerald-500' : 'bg-rose-500'}`}></span>
+                            {isEnabled ? 'Aktif' : 'Nonaktif'}
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
             </div>
           </div>
         </div>
