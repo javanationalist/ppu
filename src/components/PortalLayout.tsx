@@ -41,24 +41,14 @@ export default function PortalLayout() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             {/* Logo and Name */}
-            <Link to="/" className="flex items-center gap-3 group" onClick={closeMenu}>
-              <div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center p-1 shadow-md border border-ppu-border">
-                <img
-                  src="https://bfuuuzmcrkfjblancewz.supabase.co/storage/v1/object/public/official%20logo/PPU.webp"
-                  alt="PPU Logo"
-                  className="w-full h-full object-contain"
-                />
-              </div>
-              <div>
-                <h1 className="text-ppu-blue font-bold tracking-wide text-sm sm:text-base leading-tight uppercase group-hover:text-ppu-blue-dark transition-colors">
-                  PORTAL PEMILIHAN UMUM
-                </h1>
-                <p className="text-slate-500 text-[10px] sm:text-xs font-semibold uppercase tracking-widest hidden sm:block">
-                  Sistem Informasi & Pemungutan Suara
-                </p>
-                <p className="text-slate-500 text-[10px] font-semibold uppercase tracking-widest sm:hidden">
-                  PPU
-                </p>
+            <Link to="/" className="flex items-center gap-2 group" onClick={closeMenu}>
+              <img
+                src="https://bfuuuzmcrkfjblancewz.supabase.co/storage/v1/object/public/official%20logo/PPU.webp"
+                alt="PPU Logo"
+                className="w-9 h-9 object-contain select-none shrink-0"
+              />
+              <div className="inline-flex items-center px-2.5 py-0.5 rounded-full bg-ppu-blue/10 text-ppu-blue text-[11px] font-semibold uppercase tracking-wider shrink-0 transition-colors group-hover:bg-ppu-blue/15">
+                PPU 2026
               </div>
             </Link>
 

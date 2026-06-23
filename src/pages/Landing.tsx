@@ -61,11 +61,6 @@ export default function Landing() {
           />
         </div>
 
-        {/* Badge PPU 2026 - Clean, transparent blue background */}
-        <div className="inline-flex items-center px-2.5 py-0.5 rounded-full bg-ppu-blue/10 text-ppu-blue text-[11px] font-semibold uppercase tracking-wider">
-          PPU 2026
-        </div>
-
         {/* Title */}
         <h1 className="text-slate-800 font-bold tracking-tight text-[22px] sm:text-[24px] md:text-[26px] leading-snug max-w-lg">
           Pilih Pemimpin Terbaik Kamu di Portal Pemilihan Umum
