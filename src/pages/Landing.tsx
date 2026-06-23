@@ -2,8 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { LogIn, UserPlus, Vote, BarChart3, BookOpen, ExternalLink } from 'lucide-react';
 import { supabase } from '../lib/supabase';
+import { useTheme } from '../contexts/ThemeContext';
 
 export default function Landing() {
+  const { isDark } = useTheme();
   const [visibility, setVisibility] = useState({
     bilik_suara: true,
     lihat_hasil: true,
@@ -54,7 +56,7 @@ export default function Landing() {
         {/* Official Logo PPU - Crisp and compact */}
         <div className="mb-1">
           <img
-            src="https://bfuuuzmcrkfjblancewz.supabase.co/storage/v1/object/public/official%20logo/PPU.webp"
+            src={isDark ? "https://bfuuuzmcrkfjblancewz.supabase.co/storage/v1/object/public/official%20logo/PPU%20WHITE.webp" : "https://bfuuuzmcrkfjblancewz.supabase.co/storage/v1/object/public/official%20logo/PPU.webp"}
             alt="Logo Resmi PPU"
             className="w-16 sm:w-20 h-auto object-contain select-none"
             referrerPolicy="no-referrer"
@@ -62,12 +64,12 @@ export default function Landing() {
         </div>
 
         {/* Title */}
-        <h1 className="text-slate-800 font-bold tracking-tight text-[22px] sm:text-[24px] md:text-[26px] leading-snug max-w-lg">
+        <h1 className="text-slate-800 dark:text-[#f5f5f5] font-bold tracking-tight text-[22px] sm:text-[24px] md:text-[26px] leading-snug max-w-lg transition-colors">
           Pilih Pemimpin Terbaik Kamu di Portal Pemilihan Umum
         </h1>
 
         {/* Description */}
-        <p className="text-slate-500 text-[13px] sm:text-[14px] leading-[1.6] max-w-lg font-normal">
+        <p className="text-slate-500 dark:text-[#a3a3a3] text-[13px] sm:text-[14px] leading-[1.6] max-w-lg font-normal transition-colors">
           Website ini dibuat untuk memberi kemudahan akses pemungutan suara dengan memanfaatkan kemajuan teknologi yang efisien, aman, dan transparan. Akses fitur lengkap portal untuk melakukan pemilihan umum secara online.
         </p>
       </div>
@@ -76,8 +78,8 @@ export default function Landing() {
       <div className="w-full flex justify-center">
         {loading ? (
           <div className="flex flex-col items-center justify-center py-4 gap-2">
-            <div className="w-6 h-6 border-2 border-ppu-blue border-t-transparent rounded-full animate-spin"></div>
-            <p className="text-[10px] text-slate-400 font-semibold uppercase tracking-wide">Menghubungkan ke verifikasi...</p>
+            <div className="w-6 h-6 border-2 border-ppu-blue dark:border-sky-500 border-t-transparent rounded-full animate-spin"></div>
+            <p className="text-[10px] text-slate-400 dark:text-[#a3a3a3] font-semibold uppercase tracking-wide">Menghubungkan ke verifikasi...</p>
           </div>
         ) : (
           <div className="flex flex-row flex-wrap justify-center items-center gap-2 w-full max-w-lg px-2">
@@ -86,7 +88,7 @@ export default function Landing() {
             {visibility.bilik_suara && (
               <Link
                 to="/vote"
-                className="bg-ppu-blue hover:bg-ppu-blue-dark text-white text-[13px] font-medium px-4 py-2 rounded-md transition-all shadow-xs flex items-center justify-center gap-1.5 focus:outline-hidden"
+                className="bg-ppu-blue hover:bg-ppu-blue-dark dark:bg-sky-600 dark:hover:bg-sky-500 text-white text-[13px] font-medium px-4 py-2 rounded-md transition-all shadow-xs flex items-center justify-center gap-1.5 focus:outline-hidden"
               >
                 <Vote className="w-3.5 h-3.5 shrink-0" />
                 <span>Bilik Suara (Voting)</span>
@@ -97,7 +99,7 @@ export default function Landing() {
             {visibility.lihat_hasil && (
               <Link
                 to="/hasil"
-                className="bg-white border border-ppu-blue text-ppu-blue hover:bg-ppu-blue/5 text-[13px] font-medium px-4 py-2 rounded-md transition-all flex items-center justify-center gap-1.5 focus:outline-hidden"
+                className="bg-white dark:bg-[#2a2a2a] border border-ppu-blue dark:border-sky-500 text-ppu-blue dark:text-sky-400 hover:bg-ppu-blue/5 dark:hover:bg-sky-500/10 text-[13px] font-medium px-4 py-2 rounded-md transition-all flex items-center justify-center gap-1.5 focus:outline-hidden"
               >
                 <BarChart3 className="w-3.5 h-3.5 shrink-0" />
                 <span>Lihat Hasil Pemilu</span>
@@ -108,7 +110,7 @@ export default function Landing() {
             {visibility.login && (
               <Link
                 to="/login"
-                className="bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 text-[13px] font-medium px-4 py-2 rounded-md transition-all flex items-center justify-center gap-1.5 focus:outline-hidden"
+                className="bg-white dark:bg-[#2a2a2a] border border-slate-200 dark:border-[#333333] text-slate-600 dark:text-[#a3a3a3] hover:bg-slate-50 dark:hover:bg-[#333333] text-[13px] font-medium px-4 py-2 rounded-md transition-all flex items-center justify-center gap-1.5 focus:outline-hidden"
               >
                 <LogIn className="w-3.5 h-3.5 shrink-0" />
                 <span>Login</span>
@@ -119,7 +121,7 @@ export default function Landing() {
             {visibility.register && (
               <Link
                 to="/signup"
-                className="bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 text-[13px] font-medium px-4 py-2 rounded-md transition-all flex items-center justify-center gap-1.5 focus:outline-hidden"
+                className="bg-white dark:bg-[#2a2a2a] border border-slate-200 dark:border-[#333333] text-slate-600 dark:text-[#a3a3a3] hover:bg-slate-50 dark:hover:bg-[#333333] text-[13px] font-medium px-4 py-2 rounded-md transition-all flex items-center justify-center gap-1.5 focus:outline-hidden"
               >
                 <UserPlus className="w-3.5 h-3.5 shrink-0" />
                 <span>Register</span>
@@ -130,7 +132,7 @@ export default function Landing() {
             {visibility.cara_menggunakan && (
               <Link
                 to="/cara-menggunakan"
-                className="bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 text-[13px] font-medium px-4 py-2 rounded-md transition-all flex items-center justify-center gap-1.5 focus:outline-hidden"
+                className="bg-white dark:bg-[#2a2a2a] border border-slate-200 dark:border-[#333333] text-slate-600 dark:text-[#a3a3a3] hover:bg-slate-50 dark:hover:bg-[#333333] text-[13px] font-medium px-4 py-2 rounded-md transition-all flex items-center justify-center gap-1.5 focus:outline-hidden"
               >
                 <BookOpen className="w-3.5 h-3.5 shrink-0" />
                 <span>Cara Menggunakan</span>
@@ -142,22 +144,22 @@ export default function Landing() {
       </div>
 
       {/* 3. INFORMASI PENTING */}
-      <div className="w-full text-center space-y-1.5 mt-1 max-w-lg border border-slate-100 rounded-lg p-3.5 bg-slate-50/50">
-        <h3 className="text-slate-400 text-[11px] font-bold uppercase tracking-wider">Informasi Penting</h3>
-        <p className="text-slate-500 text-[12.5px] leading-relaxed">
+      <div className="w-full text-center space-y-1.5 mt-1 max-w-lg border border-slate-100 dark:border-[#2a2a2a] rounded-lg p-3.5 bg-slate-50/50 dark:bg-[#2a2a2a]/40 transition-colors">
+        <h3 className="text-slate-400 dark:text-[#a3a3a3] text-[11px] font-bold uppercase tracking-wider">Informasi Penting</h3>
+        <p className="text-slate-500 dark:text-[#a3a3a3] text-[12.5px] leading-relaxed transition-colors">
           Baca pengumuman terbaru dan informasi penting di{' '}
-          <Link to="/informasi" className="text-ppu-blue font-medium hover:underline inline-flex items-center gap-0.5 text-[12.5px]">
+          <Link to="/informasi" className="text-ppu-blue dark:text-sky-400 font-medium hover:underline inline-flex items-center gap-0.5 text-[12.5px]">
             Informasi
             <ExternalLink className="w-3 h-3 inline-block" />
           </Link>.
         </p>
-        <p className="text-slate-500 text-[12.5px] leading-relaxed">
+        <p className="text-slate-500 dark:text-[#a3a3a3] text-[12.5px] leading-relaxed transition-colors">
           Untuk mengakses laman resmi SMA Negeri 1 dapat melalui tautan berikut:{' '}
           <a
             href="https://sman1.sch.id/"
             target="_blank"
             rel="noopener noreferrer"
-            className="text-ppu-blue font-medium hover:underline inline-flex items-center gap-0.5 text-[12.5px]"
+            className="text-ppu-blue dark:text-sky-400 font-medium hover:underline inline-flex items-center gap-0.5 text-[12.5px]"
           >
             Situs SMA Negeri 1
             <ExternalLink className="w-3 h-3 inline-block" />
@@ -166,24 +168,24 @@ export default function Landing() {
       </div>
 
       {/* 4. ILUSTRASI */}
-      <div className="w-full max-w-lg overflow-hidden rounded-lg shadow-xs border border-slate-100/60">
+      <div className="w-full max-w-lg overflow-hidden rounded-lg shadow-xs border border-slate-100/60 dark:border-[#2a2a2a] transition-colors">
         <img
-          src="https://bfuuuzmcrkfjblancewz.supabase.co/storage/v1/object/public/content/Landing%20Page.jpg"
+          src={isDark ? "https://bfuuuzmcrkfjblancewz.supabase.co/storage/v1/object/public/content/Landing(2).png" : "https://bfuuuzmcrkfjblancewz.supabase.co/storage/v1/object/public/content/Landing%20Page.jpg"}
           alt="Ilustrasi Portal PPU"
-          className="w-full h-auto object-cover select-none"
+          className="w-full h-auto object-cover select-none dark:opacity-85"
           referrerPolicy="no-referrer"
         />
       </div>
 
       {/* 5. FOOTER */}
-      <footer className="w-full text-center border-t border-slate-200/40 pt-4 mt-2 select-none">
-        <p className="text-[11px] text-slate-400 leading-normal">
+      <footer className="w-full text-center border-t border-slate-200/40 dark:border-[#2a2a2a] pt-4 mt-2 select-none transition-colors">
+        <p className="text-[11px] text-slate-400 dark:text-[#a3a3a3] leading-normal transition-colors">
           © 2026 | Tim Pelaksana Pemilihan. v1.0.4 Foundation. Illustration by{' '}
           <a
             href="https://www.magnific.com/author/pch-vector"
             target="_blank"
             rel="noopener noreferrer"
-            className="text-ppu-blue hover:underline font-semibold text-[11px]"
+            className="text-ppu-blue dark:text-sky-400 hover:underline font-semibold text-[11px]"
           >
             Pch.Vector
           </a>

@@ -1,5 +1,7 @@
 @import "tailwindcss";
 
+@variant dark (&:where(.dark, .dark *));
+
 @theme {
   --color-ppu-blue: #123E8A;
   --color-ppu-blue-dark: #0b295c;
@@ -11,3 +13,54 @@
   --color-ppu-surface: #F5F7FA;
   --color-ppu-border: #DCE3EA;
 }
+
+/* Custom CSS-only Sun and Moon Icons */
+.css-icon-container {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  position: relative;
+}
+
+.css-icon-sun {
+  width: 8px;
+  height: 8px;
+  background-color: currentColor;
+  border-radius: 50%;
+  position: relative;
+}
+
+.css-icon-sun::before {
+  content: '';
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  border: 1.5px dashed currentColor;
+  border-radius: 50%;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  animation: spin-slow 16s linear infinite;
+}
+
+.css-icon-moon {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: transparent;
+  box-shadow: inset -4px -3px 0 0 currentColor;
+  position: relative;
+  transform: rotate(-15deg);
+}
+
+@keyframes spin-slow {
+  from {
+    transform: translate(-50%, -50%) rotate(0deg);
+  }
+  to {
+    transform: translate(-50%, -50%) rotate(360deg);
+  }
+}
+

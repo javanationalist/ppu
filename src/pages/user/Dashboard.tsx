@@ -3,6 +3,7 @@ import { useScrollLock } from '../../hooks/useScrollLock';
 import { QRCodeCanvas } from 'qrcode.react';
 import * as htmlToImage from 'html-to-image';
 import { useAuth } from '../../contexts/AuthContext';
+import { useTheme } from '../../contexts/ThemeContext';
 import { LogOut, Download, MessageSquare, LifeBuoy, Edit3, X, Info, CalendarDays, FileText, AlertCircle, Megaphone, ChevronRight, Clock, MapPin } from 'lucide-react';
 import { useNavigate, Link } from 'react-router-dom';
 import { getHelpdeskButtons } from '../../lib/helpdesk';
@@ -16,6 +17,7 @@ import WafoSlider from '../../components/WafoSlider';
 
 export default function UserDashboard() {
   const { profile, signOut } = useAuth();
+  const { isDark, theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
   const cardRef = useRef<HTMLDivElement>(null);
   const qrRef = useRef<HTMLCanvasElement>(null);
@@ -246,30 +248,43 @@ export default function UserDashboard() {
   if (!profile) return null;
 
   return (
-    <div className="min-h-screen bg-slate-50 font-sans text-slate-900 flex flex-col overflow-hidden">
+    <div className="min-h-screen bg-slate-50 dark:bg-[#1a1a1a] font-sans text-slate-900 dark:text-[#f5f5f5] flex flex-col overflow-hidden transition-colors duration-300">
       {/* Top Navigation */}
-      <nav className="h-16 bg-white border-b border-slate-200 px-4 sm:px-8 flex items-center justify-between shadow-sm z-10 shrink-0">
+      <nav className="h-16 bg-white dark:bg-[#1a1a1a] border-b border-slate-200 dark:border-[#2a2a2a] px-4 sm:px-8 flex items-center justify-between shadow-sm z-10 shrink-0 transition-colors duration-300">
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 bg-white border border-slate-200 rounded-sm overflow-hidden flex items-center justify-center shadow-sm shrink-0">
+          <div className="w-8 h-8 bg-white dark:bg-[#2a2a2a] border border-slate-200 dark:border-[#333333] rounded-sm overflow-hidden flex items-center justify-center shadow-sm shrink-0">
             <img 
-              src="https://bfuuuzmcrkfjblancewz.supabase.co/storage/v1/object/public/official%20logo/PPU.webp" 
+              src={isDark ? "https://bfuuuzmcrkfjblancewz.supabase.co/storage/v1/object/public/official%20logo/PPU%20WHITE.webp" : "https://bfuuuzmcrkfjblancewz.supabase.co/storage/v1/object/public/official%20logo/PPU.webp"} 
               alt="PPU Logo" 
               className="w-full h-full object-contain p-0.5" 
             />
           </div>
-          <span className="font-bold text-lg tracking-tight text-slate-800">PPU <span className="hidden sm:inline font-normal text-slate-500 text-sm ml-2">Portal Pemilihan Umum</span></span>
+          <span className="font-bold text-lg tracking-tight text-slate-800 dark:text-slate-150 transition-colors">PPU <span className="hidden sm:inline font-normal text-slate-500 dark:text-[#a3a3a3] text-sm ml-2">Portal Pemilihan Umum</span></span>
         </div>
         <div className="flex items-center gap-4 sm:gap-6">
+          {/* Theme Toggle Button */}
+          <button
+            type="button"
+            className="text-slate-600 dark:text-[#a3a3a3] hover:text-ppu-blue dark:hover:text-sky-400 p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-[#2a2a2a] transition-colors focus:outline-none flex items-center justify-center"
+            onClick={toggleTheme}
+            aria-label="Toggle theme"
+            title={theme === 'dark' ? 'Aktifkan Mode Terang' : 'Aktifkan Mode Gelap'}
+          >
+            <span className="css-icon-container" aria-hidden="true">
+              <span className={theme === 'dark' ? 'css-icon-moon' : 'css-icon-sun'} />
+            </span>
+          </button>
+
           <div className="flex items-center gap-3">
             <div className="text-right hidden sm:block">
-              <p className="text-xs font-semibold leading-none">{profile.full_name}</p>
-              <p className="text-[10px] text-slate-400">User ID: {(profile.id || '').split('-')[0].toUpperCase()}</p>
+              <p className="text-xs font-semibold leading-none text-slate-800 dark:text-[#f5f5f5] transition-colors">{profile.full_name}</p>
+              <p className="text-[10px] text-slate-400 dark:text-[#a3a3a3]">User ID: {(profile.id || '').split('-')[0].toUpperCase()}</p>
             </div>
-            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-indigo-100 flex items-center justify-center border border-indigo-200 text-indigo-700 font-bold uppercase">
+            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-indigo-100 dark:bg-[#2a2a2a] flex items-center justify-center border border-indigo-200 dark:border-[#333333] text-indigo-700 dark:text-[#f5f5f5] font-bold uppercase transition-colors">
               {profile.full_name.substring(0, 2)}
             </div>
-            <button onClick={handleLogout} className="ml-1 sm:ml-2 text-slate-400 hover:text-red-500 group" title="Logout">
-              <LogOut className="w-5 h-5 group-hover:stroke-red-500" />
+            <button onClick={handleLogout} className="ml-1 sm:ml-2 text-slate-400 dark:text-[#a3a3a3] hover:text-red-500 dark:hover:text-red-400 group transition-colors" title="Logout">
+              <LogOut className="w-5 h-5 group-hover:stroke-red-500 dark:group-hover:stroke-red-400" />
             </button>
           </div>
         </div>
@@ -280,17 +295,17 @@ export default function UserDashboard() {
 
       {/* Alert if Profile is Incomplete */}
       {accessSettings.edit_profil_enabled && (!profile.full_name || !profile.class) && (
-        <div className="bg-amber-50 border-b border-amber-200 px-4 py-3 sm:px-8 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 z-10 shrink-0 select-none animate-fade-in">
+        <div className="bg-amber-50 dark:bg-amber-950/40 border-b border-amber-200 dark:border-amber-900/50 px-4 py-3 sm:px-8 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 z-10 shrink-0 select-none animate-fade-in transition-colors">
           <div className="flex items-center gap-3">
-            <span className="flex-shrink-0 w-6 h-6 bg-amber-100 rounded-full flex items-center justify-center text-amber-700 font-bold text-xs">!</span>
-            <p className="text-xs sm:text-sm text-amber-800 font-semibold text-left">
+            <span className="flex-shrink-0 w-6 h-6 bg-amber-100 dark:bg-amber-900/40 rounded-full flex items-center justify-center text-amber-700 dark:text-amber-300 font-bold text-xs">!</span>
+            <p className="text-xs sm:text-sm text-amber-800 dark:text-amber-200 font-semibold text-left transition-colors">
               Data profil Anda belum lengkap. Silakan lengkapi Nama Lengkap dan Kelas Anda agar kartu pemilih Anda sah & dapat diverifikasi oleh panitia.
             </p>
           </div>
           <button 
             type="button"
             onClick={() => setIsEditModalOpen(true)}
-            className="text-xs font-bold text-amber-900 hover:text-amber-700 underline shrink-0"
+            className="text-xs font-bold text-amber-900 dark:text-amber-350 hover:text-amber-700 dark:hover:text-amber-200 underline shrink-0 transition-colors"
           >
             Lengkapi Profil Sekarang &rarr;
           </button>
@@ -305,41 +320,41 @@ export default function UserDashboard() {
           <div className="col-span-1 md:col-span-4 flex flex-col gap-6">
             {/* Status Cards */}
             <div className="grid grid-cols-2 gap-4">
-              <div className="bg-white border border-slate-200 p-4 rounded-xl shadow-sm">
-                <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">Status Akun</p>
+              <div className="bg-white dark:bg-[#2a2a2a] border border-slate-200 dark:border-[#333333] p-4 rounded-xl shadow-sm transition-colors">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-[#a3a3a3] mb-1">Status Akun</p>
                 <div className="flex items-center gap-2">
                   <div className={`w-2 h-2 rounded-full ${profile.account_status === 'dikonfirmasi' ? 'bg-emerald-500' : 'bg-red-500'}`}></div>
-                  <span className={`text-sm font-bold ${profile.account_status === 'dikonfirmasi' ? 'text-emerald-700' : 'text-red-700'}`}>{profile.account_status === 'dikonfirmasi' ? 'Dikonfirmasi' : 'Belum Dikonfirmasi'}</span>
+                  <span className={`text-sm font-bold ${profile.account_status === 'dikonfirmasi' ? 'text-emerald-700 dark:text-emerald-400' : 'text-red-700 dark:text-rose-400'} transition-colors`}>{profile.account_status === 'dikonfirmasi' ? 'Dikonfirmasi' : 'Belum Dikonfirmasi'}</span>
                 </div>
               </div>
-              <div className="bg-white border border-slate-200 p-4 rounded-xl shadow-sm">
-                <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">Status PU</p>
+              <div className="bg-white dark:bg-[#2a2a2a] border border-slate-200 dark:border-[#333333] p-4 rounded-xl shadow-sm transition-colors">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-[#a3a3a3] mb-1">Status PU</p>
                 <div className="flex items-center gap-2">
                   <div className={`w-2 h-2 rounded-full ${(profile.voting_status === 'sudah' || isAllCompleted) ? 'bg-emerald-500' : 'bg-amber-500'}`}></div>
-                  <span className={`text-sm font-bold truncate ${(!accessSettings.voting_global_enabled) ? 'text-rose-700' : (profile.voting_status === 'sudah' || isAllCompleted) ? 'text-emerald-700' : 'text-amber-700'}`}>{!accessSettings.voting_global_enabled ? 'Bilik Nonaktif' : (profile.voting_status === 'sudah' || isAllCompleted) ? 'Sudah Memilih' : 'Belum Memilih'}</span>
+                  <span className={`text-sm font-bold truncate transition-colors ${(!accessSettings.voting_global_enabled) ? 'text-rose-700 dark:text-rose-400' : (profile.voting_status === 'sudah' || isAllCompleted) ? 'text-emerald-700 dark:text-emerald-400' : 'text-amber-700 dark:text-amber-400'}`}>{!accessSettings.voting_global_enabled ? 'Bilik Nonaktif' : (profile.voting_status === 'sudah' || isAllCompleted) ? 'Sudah Memilih' : 'Belum Memilih'}</span>
                 </div>
               </div>
             </div>
 
             {/* Voting Section */}
-            <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
-              <div className="bg-slate-50 px-5 py-3 border-b border-slate-200">
-                <h3 className="text-sm font-bold text-slate-700">Panel Pemungutan Suara</h3>
+            <div className="bg-white dark:bg-[#2a2a2a] border border-slate-200 dark:border-[#333333] rounded-xl overflow-hidden shadow-sm transition-colors">
+              <div className="bg-slate-50 dark:bg-[#1a1a1a]/50 px-5 py-3 border-b border-slate-200 dark:border-[#333333] transition-colors">
+                <h3 className="text-sm font-bold text-slate-700 dark:text-[#f5f5f5]">Panel Pemungutan Suara</h3>
               </div>
               <div className="p-6 space-y-5">
                 
                 {/* Alokasi Sesi */}
                 {isSessionConfigActive && (
-                  <div className="space-y-1 pb-4 border-b border-slate-100">
-                    <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Alokasi Sesi</p>
+                  <div className="space-y-1 pb-4 border-b border-slate-100 dark:border-[#333333]">
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-[#a3a3a3]">Alokasi Sesi</p>
                     {userSession ? (
                       <div>
-                        <h4 className="text-sm font-extrabold text-slate-800">{userSession.nama_sesi}</h4>
-                        <p className="text-xs text-slate-500 font-medium">{userSession.jam_mulai} - {userSession.jam_selesai} WIB</p>
+                        <h4 className="text-sm font-extrabold text-slate-800 dark:text-[#f5f5f5] transition-colors">{userSession.nama_sesi}</h4>
+                        <p className="text-xs text-slate-500 dark:text-[#a3a3a3] font-medium transition-colors">{userSession.jam_mulai} - {userSession.jam_selesai} WIB</p>
                       </div>
                     ) : (
                       <div>
-                        <h4 className="text-sm font-extrabold text-amber-700">Belum Dijadwalkan</h4>
+                        <h4 className="text-sm font-extrabold text-amber-750 dark:text-amber-400 transition-colors">Belum Dijadwalkan</h4>
                       </div>
                     )}
                   </div>
@@ -347,11 +362,11 @@ export default function UserDashboard() {
 
                 {/* Alokasi Dapil */}
                 <div className="space-y-1">
-                  <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Alokasi Dapil</p>
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-[#a3a3a3]">Alokasi Dapil</p>
                   {userDapil ? (
                     <div>
-                      <h4 className="text-sm font-extrabold text-slate-800 mb-1">{userDapil.name}</h4>
-                      <p className="text-xs text-slate-500 leading-relaxed font-medium bg-slate-50 p-2.5 rounded-lg border border-slate-100">
+                      <h4 className="text-sm font-extrabold text-slate-800 dark:text-[#f5f5f5] mb-1 transition-colors">{userDapil.name}</h4>
+                      <p className="text-xs text-slate-500 dark:text-[#a3a3a3] leading-relaxed font-medium bg-slate-50 dark:bg-[#1a1a1a]/50 p-2.5 rounded-lg border border-slate-100 dark:border-[#333333]/50 transition-colors">
                         {userDapil.eligible_classes && userDapil.eligible_classes.length > 0 
                           ? userDapil.eligible_classes.join(', ') 
                           : 'Tidak ada kelompok kelas'}
@@ -359,8 +374,8 @@ export default function UserDashboard() {
                     </div>
                   ) : (
                     <div>
-                      <h4 className="text-sm font-extrabold text-slate-500">Belum Dialokasikan</h4>
-                      <p className="text-xs text-slate-400">Kelas Anda belum terdaftar di Dapil mana pun.</p>
+                      <h4 className="text-sm font-extrabold text-slate-500 dark:text-[#a3a3a3] transition-colors">Belum Dialokasikan</h4>
+                      <p className="text-xs text-slate-400 dark:text-[#a3a3a3] transition-colors">Kelas Anda belum terdaftar di Dapil mana pun.</p>
                     </div>
                   )}
                 </div>
@@ -369,15 +384,15 @@ export default function UserDashboard() {
             </div>
 
             {/* Helpdesk Section */}
-            <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
-              <div className="bg-slate-50 px-5 py-3 border-b border-slate-200 flex items-center justify-between">
-                <h3 className="text-sm font-bold text-slate-700 flex items-center gap-2">
-                  <LifeBuoy className="w-4 h-4 text-indigo-600 animate-pulse" />
+            <div className="bg-white dark:bg-[#2a2a2a] border border-slate-200 dark:border-[#333333] rounded-xl overflow-hidden shadow-sm transition-colors">
+              <div className="bg-slate-50 dark:bg-[#1a1a1a]/50 px-5 py-3 border-b border-slate-200 dark:border-[#333333] flex items-center justify-between transition-colors">
+                <h3 className="text-sm font-bold text-slate-700 dark:text-[#f5f5f5] flex items-center gap-2">
+                  <LifeBuoy className="w-4 h-4 text-indigo-600 dark:text-indigo-400 animate-pulse" />
                   Layanan Bantuan
                 </h3>
               </div>
               <div className="p-5 space-y-4">
-                <p className="text-xs text-slate-500 leading-relaxed">
+                <p className="text-xs text-slate-500 dark:text-[#a3a3a3] leading-relaxed transition-colors">
                   Jika ada kendala atau membutuhkan informasi, silakan hubungi panitia melalui kanal berikut.
                 </p>
                 <div className="grid grid-cols-2 gap-3">
@@ -387,14 +402,14 @@ export default function UserDashboard() {
                       href={btn.url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="flex items-center justify-center gap-2 px-3 py-2.5 border border-slate-200 hover:border-indigo-100 hover:bg-slate-50 text-slate-700 hover:text-indigo-700 rounded-xl text-xs font-bold transition-all shadow-sm group"
+                      className="flex items-center justify-center gap-2 px-3 py-2.5 border border-slate-200 dark:border-[#333333] hover:border-indigo-100 dark:hover:border-indigo-550 hover:bg-slate-50 dark:hover:bg-[#1a1a1a] text-slate-700 dark:text-[#a3a3a3] hover:text-indigo-700 dark:hover:text-[#a3a3a3] rounded-xl text-xs font-bold transition-all shadow-sm group"
                     >
                       <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 group-hover:scale-125 transition-transform" />
                       {btn.label}
                     </a>
                   ))}
                   {helpdeskButtons.length === 0 && (
-                    <p className="col-span-2 text-center text-xs text-slate-400 italic py-2">
+                    <p className="col-span-2 text-center text-xs text-slate-400 dark:text-[#a3a3a3] italic py-2">
                       Layanan bantuan belum tersedia.
                     </p>
                   )}
@@ -407,14 +422,14 @@ export default function UserDashboard() {
           <div className="col-span-1 md:col-span-8 flex flex-col gap-4">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-3 mb-2">
               <div>
-                <h2 className="text-2xl font-bold text-slate-800">Kartu Pemilih Digital</h2>
-                <p className="text-slate-500 text-sm">Identitas untuk Pemilihan Umum</p>
+                <h2 className="text-2xl font-bold text-slate-800 dark:text-[#f5f5f5] transition-colors">Kartu Pemilih Digital</h2>
+                <p className="text-slate-500 dark:text-[#a3a3a3] text-sm transition-colors">Identitas untuk Pemilihan Umum</p>
               </div>
               <div className="flex gap-2 w-full sm:w-auto">
                 {accessSettings.edit_profil_enabled && (
                   <button 
                     onClick={() => setIsEditModalOpen(true)} 
-                    className="flex-1 sm:flex-initial flex items-center justify-center gap-2 bg-slate-200 hover:bg-slate-300 text-slate-700 px-4 py-2 rounded-lg text-sm font-bold transition-colors shrink-0"
+                    className="flex-1 sm:flex-initial flex items-center justify-center gap-2 bg-slate-200 dark:bg-[#2a2a2a] hover:bg-slate-300 dark:hover:bg-[#333333] text-slate-700 dark:text-[#f5f5f5] px-4 py-2 rounded-lg text-sm font-bold transition-all shrink-0"
                     type="button"
                   >
                     <Edit3 className="w-4 h-4" />
@@ -425,7 +440,7 @@ export default function UserDashboard() {
                   <button 
                     onClick={handleDownload} 
                     disabled={isDownloading}
-                    className="flex-1 sm:flex-initial flex items-center justify-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-indigo-700 transition-colors shadow-lg shadow-indigo-100 shrink-0 disabled:opacity-50"
+                    className="flex-1 sm:flex-initial flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 dark:hover:bg-indigo-500 text-white px-4 py-2 rounded-lg text-sm font-bold transition-colors shadow-lg shadow-indigo-100 dark:shadow-none shrink-0 disabled:opacity-50"
                     type="button"
                   >
                     <Download className={`w-4 h-4 ${isDownloading ? 'animate-bounce' : ''}`} />
@@ -437,16 +452,16 @@ export default function UserDashboard() {
 
             {/* THE KARTU PU (VOTERS CARD) */}
             {profile?.card_visibility === false && (profile?.voting_status === 'sudah' || isAllCompleted) ? (
-              <div className="w-full bg-white border border-slate-200 rounded-2xl p-6 sm:p-8 shadow-sm space-y-6">
-                <div className="border-b border-slate-100 pb-4">
-                  <h3 className="text-lg font-black text-slate-800 tracking-tight">Informasi Pemilih</h3>
-                  <p className="text-slate-450 text-xs mt-1">Status penggunaan kartu pemilih digital Anda</p>
-                  <div className="mt-4 p-3.5 bg-red-50 border border-red-100 rounded-xl text-xs flex flex-col gap-1.5 shadow-sm">
+              <div className="w-full bg-white dark:bg-[#2a2a2a] border border-slate-200 dark:border-[#333333] rounded-2xl p-6 sm:p-8 shadow-sm space-y-6 transition-colors">
+                <div className="border-b border-slate-100 dark:border-[#333333] pb-4">
+                  <h3 className="text-lg font-black text-slate-800 dark:text-[#f5f5f5] tracking-tight transition-colors">Informasi Pemilih</h3>
+                  <p className="text-slate-450 dark:text-[#a3a3a3] text-xs mt-1 transition-colors">Status penggunaan kartu pemilih digital Anda</p>
+                  <div className="mt-4 p-3.5 bg-red-50 dark:bg-red-950/30 border border-red-100 dark:border-red-900/50 rounded-xl text-xs flex flex-col gap-1.5 shadow-sm transition-colors">
                     <div className="flex items-center gap-2">
                       <span className="w-2.5 h-2.5 rounded-full bg-red-600 animate-pulse"></span>
-                      <span className="text-red-700 font-extrabold uppercase tracking-widest text-[10px]">Kartu Expired</span>
+                      <span className="text-red-700 dark:text-red-400 font-extrabold uppercase tracking-widest text-[10px] transition-colors">Kartu Expired</span>
                     </div>
-                    <p className="text-slate-700 font-semibold leading-relaxed">
+                    <p className="text-slate-700 dark:text-[#f5f5f5] font-semibold leading-relaxed transition-colors">
                       Hak pilih Anda telah digunakan. <br className="hidden sm:inline"/>
                       Terima kasih telah berpartisipasi dalam pemilu.
                     </p>
@@ -454,41 +469,41 @@ export default function UserDashboard() {
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                   <div className="space-y-1">
-                    <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest">Nama Lengkap</span>
-                    <span className="block text-slate-800 text-base font-extrabold truncate">{profile.full_name}</span>
+                    <span className="block text-[10px] font-bold text-slate-400 dark:text-[#a3a3a3] uppercase tracking-widest">Nama Lengkap</span>
+                    <span className="block text-slate-800 dark:text-[#f5f5f5] text-base font-extrabold truncate transition-colors">{profile.full_name}</span>
                   </div>
                   <div className="space-y-1">
-                    <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest">Email Terdaftar</span>
-                    <span className="block text-slate-800 text-sm font-semibold truncate">{renderBlurredEmail(profile.email)}</span>
+                    <span className="block text-[10px] font-bold text-slate-400 dark:text-[#a3a3a3] uppercase tracking-widest">Email Terdaftar</span>
+                    <span className="block text-slate-800 dark:text-[#f5f5f5] text-sm font-semibold truncate transition-colors">{renderBlurredEmail(profile.email)}</span>
                   </div>
                   <div className="space-y-1 sm:col-span-2">
-                    <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest">Kelas DPT</span>
-                    <span className="block text-slate-800 text-sm font-black">{profile.class || 'N/A'}</span>
+                    <span className="block text-[10px] font-bold text-slate-400 dark:text-[#a3a3a3] uppercase tracking-widest">Kelas DPT</span>
+                    <span className="block text-slate-800 dark:text-[#f5f5f5] text-sm font-black transition-colors">{profile.class || 'N/A'}</span>
                   </div>
                 </div>
               </div>
             ) : !accessSettings.visibilitas_kartu_enabled ? (
-              <div className="w-full bg-white border border-slate-200 rounded-2xl p-6 sm:p-8 shadow-sm space-y-6">
-                <div className="border-b border-slate-100 pb-4">
-                  <h3 className="text-lg font-black text-slate-800 tracking-tight">Informasi Pemilih</h3>
-                  <p className="text-slate-400 text-xs mt-1">Data identitas Anda untuk verifikasi manual oleh panitia kesiswaan</p>
-                  <div className="mt-4 p-3 bg-rose-50 border border-rose-100 rounded-lg text-rose-600 text-xs font-bold flex items-center gap-2">
+              <div className="w-full bg-white dark:bg-[#2a2a2a] border border-slate-200 dark:border-[#333333] rounded-2xl p-6 sm:p-8 shadow-sm space-y-6 transition-colors">
+                <div className="border-b border-slate-100 dark:border-[#333333] pb-4">
+                  <h3 className="text-lg font-black text-slate-800 dark:text-[#f5f5f5] tracking-tight transition-colors">Informasi Pemilih</h3>
+                  <p className="text-slate-400 dark:text-[#a3a3a3] text-xs mt-1 transition-colors">Data identitas Anda untuk verifikasi manual oleh panitia kesiswaan</p>
+                  <div className="mt-4 p-3 bg-rose-50 dark:bg-rose-950/30 border border-rose-100 dark:border-rose-900/50 rounded-lg text-rose-600 dark:text-rose-450 text-xs font-bold flex items-center gap-2 transition-colors">
                     <span className="w-2 h-2 rounded-full bg-rose-500"></span>
                     Kartu pemilih digital belum diterbitkan.
                   </div>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                   <div className="space-y-1">
-                    <span className="block text-[10px] font-bold text-slate-450 uppercase tracking-widest">Nama Lengkap</span>
-                    <span className="block text-slate-800 text-base font-extrabold truncate">{profile.full_name}</span>
+                    <span className="block text-[10px] font-bold text-slate-450 dark:text-[#a3a3a3] uppercase tracking-widest">Nama Lengkap</span>
+                    <span className="block text-slate-800 dark:text-[#f5f5f5] text-base font-extrabold truncate transition-colors">{profile.full_name}</span>
                   </div>
                   <div className="space-y-1">
-                    <span className="block text-[10px] font-bold text-slate-450 uppercase tracking-widest">Email Terdaftar</span>
-                    <span className="block text-slate-800 text-sm font-semibold truncate">{renderBlurredEmail(profile.email)}</span>
+                    <span className="block text-[10px] font-bold text-slate-450 dark:text-[#a3a3a3] uppercase tracking-widest">Email Terdaftar</span>
+                    <span className="block text-slate-800 dark:text-[#f5f5f5] text-sm font-semibold truncate transition-colors">{renderBlurredEmail(profile.email)}</span>
                   </div>
                   <div className="space-y-1 sm:col-span-2">
-                    <span className="block text-[10px] font-bold text-slate-450 uppercase tracking-widest">Kelas DPT</span>
-                    <span className="block text-slate-800 text-sm font-black">{profile.class || 'N/A'}</span>
+                    <span className="block text-[10px] font-bold text-slate-450 dark:text-[#a3a3a3] uppercase tracking-widest">Kelas DPT</span>
+                    <span className="block text-slate-800 dark:text-[#f5f5f5] text-sm font-black transition-colors">{profile.class || 'N/A'}</span>
                   </div>
                 </div>
               </div>
@@ -605,14 +620,14 @@ export default function UserDashboard() {
         </div>
 
         {/* Call to action for full Information Page */}
-        <div className="mt-12 pt-10 border-t border-slate-200">
+        <div className="mt-12 pt-10 border-t border-slate-200 dark:border-[#2a2a2a] transition-colors">
           <div className="bg-gradient-to-r from-indigo-900 to-indigo-800 rounded-3xl p-8 sm:p-12 text-center relative overflow-hidden shadow-xl">
             {/* Background Decorative */}
             <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -mr-20 -mt-20 blur-3xl pointer-events-none"></div>
             <div className="absolute bottom-0 left-0 w-48 h-48 bg-indigo-500/10 rounded-full -ml-16 -mb-16 blur-2xl pointer-events-none"></div>
 
             <div className="relative z-10">
-              <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-white/10 border border-white/20 mb-6 shadow-lg backdrop-blur-sm">
+               <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-white/10 border border-white/20 mb-6 shadow-lg backdrop-blur-sm">
                 <Megaphone className="w-8 h-8 text-indigo-300" />
               </div>
               <h2 className="text-2xl sm:text-3xl font-black text-white tracking-tight uppercase mb-4">
@@ -634,7 +649,7 @@ export default function UserDashboard() {
       </main>
 
       {/* Bottom Info Bar */}
-      <footer className="h-10 bg-slate-100 border-t border-slate-200 px-4 sm:px-8 flex items-center justify-between text-[8px] sm:text-[10px] text-slate-500 uppercase tracking-widest shrink-0">
+      <footer className="h-10 bg-slate-100 dark:bg-[#1a1a1a] border-t border-slate-200 dark:border-[#2a2a2a] px-4 sm:px-8 flex items-center justify-between text-[8px] sm:text-[10px] text-slate-500 dark:text-[#a3a3a3] uppercase tracking-widest shrink-0 transition-colors duration-300">
         <div className="flex gap-2 sm:gap-4">
           <span>Version 1.0.4 Foundation</span>
           <span className="hidden sm:inline">&bull;</span>
@@ -647,8 +662,8 @@ export default function UserDashboard() {
 
       {/* Edit Profile Modal Dialog */}
       {isEditModalOpen && (
-        <div className="fixed inset-0 bg-slate-900/60 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-2xl max-w-md w-full shadow-2xl border border-slate-100 overflow-hidden animate-scale-up">
+        <div className="fixed inset-0 bg-slate-900/60 dark:bg-black/70 flex items-center justify-center p-4 z-50">
+          <div className="bg-white dark:bg-[#2a2a2a] rounded-2xl max-w-md w-full shadow-2xl border border-slate-100 dark:border-[#333333] overflow-hidden animate-scale-up transition-colors">
             <div className="bg-indigo-900 text-white p-6 flex justify-between items-center">
               <div>
                 <h3 className="text-lg font-extrabold">Lengkapi / Edit Profil</h3>
@@ -665,31 +680,31 @@ export default function UserDashboard() {
             
             <form onSubmit={handleSaveProfile} className="p-6 space-y-4">
               {editError && (
-                <div className="bg-red-50 text-red-600 text-xs font-semibold p-3 rounded-xl border border-red-100">
+                <div className="bg-red-50 dark:bg-red-950/30 text-red-600 dark:text-red-400 text-xs font-semibold p-3 rounded-xl border border-red-100 dark:border-red-900/50">
                   {editError}
                 </div>
               )}
               
               <div>
-                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Nama Lengkap</label>
+                <label className="block text-xs font-bold text-slate-500 dark:text-[#a3a3a3] uppercase tracking-wider mb-1.5">Nama Lengkap</label>
                 <input 
                   type="text" 
                   value={editFullName}
                   onChange={(e) => setEditFullName(e.target.value)}
-                  className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                  className="w-full px-3 py-2 border border-slate-200 dark:border-[#333333] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-[#1a1a1a] text-slate-900 dark:text-[#f5f5f5] transition-colors"
                   placeholder="Nama Lengkap Anda"
                   required
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Kelas</label>
+                <label className="block text-xs font-bold text-slate-500 dark:text-[#a3a3a3] uppercase tracking-wider mb-1.5">Kelas</label>
                 <div className="relative">
                   <button
                     type="button"
                     ref={triggerRef}
                     onClick={toggleDropdown}
-                    className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm text-left bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 flex justify-between items-center"
+                    className="w-full px-3 py-2 border border-slate-200 dark:border-[#333333] rounded-xl text-sm text-left bg-white dark:bg-[#1a1a1a] text-slate-900 dark:text-[#f5f5f5] focus:outline-none focus:ring-2 focus:ring-indigo-500 flex justify-between items-center transition-colors"
                   >
                     <span>{editClass || 'Pilih Kelas'}</span>
                     <span className="text-slate-400 text-xs">▼</span>
@@ -701,14 +716,14 @@ export default function UserDashboard() {
                 <button 
                   type="button"
                   onClick={() => setIsEditModalOpen(false)}
-                  className="flex-1 py-2.5 px-4 bg-slate-100 hover:bg-slate-250 text-slate-700 font-bold text-sm rounded-xl transition-colors"
+                  className="flex-1 py-2.5 px-4 bg-slate-100 dark:bg-[#333333] hover:bg-slate-200 dark:hover:bg-opacity-80 text-slate-700 dark:text-[#f5f5f5] font-bold text-sm rounded-xl transition-all"
                 >
                   Batal
                 </button>
                 <button 
                   type="submit"
                   disabled={editLoading}
-                  className="flex-1 py-2.5 px-4 bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-400 text-white font-bold text-sm rounded-xl transition-colors shadow-lg shadow-indigo-100"
+                  className="flex-1 py-2.5 px-4 bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-400 text-white font-bold text-sm rounded-xl transition-colors shadow-lg shadow-indigo-100 dark:shadow-none"
                 >
                   {editLoading ? 'Menyimpan...' : 'Simpan Perubahan'}
                 </button>
@@ -721,7 +736,7 @@ export default function UserDashboard() {
       {dropdownOpen && (
         <div 
           ref={dropdownRef}
-          className="fixed z-[100] bg-white border border-slate-200 rounded-xl shadow-xl p-3 max-h-60 overflow-y-auto"
+          className="fixed z-[100] bg-white dark:bg-[#2a2a2a] border border-slate-200 dark:border-[#333333] rounded-xl shadow-xl p-3 max-h-60 overflow-y-auto transition-colors"
           style={{
             top: dropdownPosition.top + 'px',
             left: dropdownPosition.left + 'px',
@@ -730,7 +745,7 @@ export default function UserDashboard() {
         >
           {/* Special Classes (GTK) Section */}
           {specialClasses.length > 0 && (
-            <div className="mb-3 pb-2 border-b border-slate-100 flex flex-wrap gap-2">
+            <div className="mb-3 pb-2 border-b border-slate-100 dark:border-[#333333] flex flex-wrap gap-2">
               {specialClasses.map(cls => (
                 <button
                   key={cls}
@@ -739,8 +754,8 @@ export default function UserDashboard() {
                     setEditClass(cls);
                     setDropdownOpen(false);
                   }}
-                  className={`flex-1 py-1 text-[11px] text-center rounded hover:bg-indigo-50 hover:text-indigo-650 font-bold transition-all border ${
-                    editClass === cls ? 'bg-indigo-600 text-white border-indigo-600' : 'text-slate-600 border-slate-150 bg-white'
+                  className={`flex-1 py-1 text-[11px] text-center rounded hover:bg-indigo-50 dark:hover:bg-[#333333] hover:text-indigo-650 dark:hover:text-[#a3a3a3] font-bold transition-all border ${
+                    editClass === cls ? 'bg-indigo-600 text-white border-indigo-600' : 'text-slate-600 dark:text-[#a3a3a3] border-slate-150 dark:border-[#333333] bg-white dark:bg-[#1a1a1a]'
                   }`}
                 >
                   {cls}
@@ -754,7 +769,7 @@ export default function UserDashboard() {
               const cols = [col1, col2, col3];
               return (
                 <div key={grade} className="space-y-1">
-                  <div className="text-[9px] uppercase font-bold text-slate-400 border-b border-slate-100 pb-1 mb-1 text-center font-mono">{grade}</div>
+                  <div className="text-[9px] uppercase font-bold text-slate-400 dark:text-[#a3a3a3] border-b border-slate-100 dark:border-[#333333] pb-1 mb-1 text-center font-mono">{grade}</div>
                   {cols[idx].map(cls => (
                     <button
                       key={cls}
@@ -763,8 +778,8 @@ export default function UserDashboard() {
                         setEditClass(cls);
                         setDropdownOpen(false);
                       }}
-                      className={`w-full py-1 text-[11px] text-center rounded hover:bg-indigo-50 hover:text-indigo-650 font-bold transition-all ${
-                        editClass === cls ? 'bg-indigo-600 text-white hover:bg-indigo-600 hover:text-white' : 'text-slate-600'
+                      className={`w-full py-1 text-[11px] text-center rounded hover:bg-indigo-50 dark:hover:bg-[#333333] hover:text-indigo-650 dark:hover:text-white font-bold transition-all ${
+                        editClass === cls ? 'bg-indigo-600 text-white hover:bg-indigo-600 hover:text-white' : 'text-slate-600 dark:text-[#a3a3a3]'
                       }`}
                     >
                       {cls}
