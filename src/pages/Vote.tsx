@@ -683,9 +683,7 @@ export default function VotePage() {
                 />
               ))}
             </div>
-            <p className="text-[10px] text-slate-500 mt-2 text-center select-none">
-              (CARD ID MAKSIMAL INPUT 4 ANGKA, TIDAK BISA LEBIH DARI 4 DAN WAJIB BERISI ANGKA)
-            </p>
+
           </div>
 
           <div className="w-full flex items-center gap-4 my-3 text-slate-500 text-xs font-bold uppercase tracking-wider">

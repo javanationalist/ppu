@@ -3,13 +3,14 @@ import { useScrollLock } from '../../hooks/useScrollLock';
 import { QRCodeCanvas } from 'qrcode.react';
 import * as htmlToImage from 'html-to-image';
 import { useAuth } from '../../contexts/AuthContext';
-import { LogOut, Download, MessageSquare, LifeBuoy, Edit3, X, Info, CalendarDays, FileText, AlertCircle, Megaphone, ChevronRight } from 'lucide-react';
+import { LogOut, Download, MessageSquare, LifeBuoy, Edit3, X, Info, CalendarDays, FileText, AlertCircle, Megaphone, ChevronRight, Clock, MapPin } from 'lucide-react';
 import { useNavigate, Link } from 'react-router-dom';
 import { getHelpdeskButtons } from '../../lib/helpdesk';
-import { HelpdeskButton } from '../../types';
+import { HelpdeskButton, Dapil } from '../../types';
 import { supabase } from '../../lib/supabase';
 import { getUserAccessSettings, UserAccessSettings } from '../../lib/userAccessService';
-import { getVotingCompletionStatus } from '../../lib/votingService';
+import { getVotingCompletionStatus, getDapils } from '../../lib/votingService';
+import { getGelombangConfigActive, getGelombangSesiList, GelombangSesi } from '../../lib/gelombangService';
 import { ALL_CLASSES } from '../../lib/classConstants';
 import WafoSlider from '../../components/WafoSlider';
 
@@ -21,6 +22,9 @@ export default function UserDashboard() {
   const [isDownloading, setIsDownloading] = useState(false);
   const [helpdeskButtons, setHelpdeskButtons] = useState<HelpdeskButton[]>([]);
   const [isAllCompleted, setIsAllCompleted] = useState(false);
+  const [isSessionConfigActive, setIsSessionConfigActive] = useState(false);
+  const [userSession, setUserSession] = useState<GelombangSesi | null>(null);
+  const [userDapil, setUserDapil] = useState<Dapil | null>(null);
   const [accessSettings, setAccessSettings] = useState<UserAccessSettings>({
     signup_enabled: true,
     lihat_hasil_enabled: true,
@@ -149,6 +153,30 @@ export default function UserDashboard() {
           console.log("DASHBOARD STATUS SAAT INI (SOURCE profile.voting_status):", profile.voting_status === 'sudah' ? 'Sudah Memilih' : 'Belum Memilih');
           console.log("STATUS YANG SEHARUSNYA:", status.allCompleted ? 'Sudah Memilih' : 'Belum Memilih');
           console.log("============================");
+
+          const voterClass = profile.class || '';
+
+          // 1. Fetch Session allocation
+          try {
+            const sessionActive = await getGelombangConfigActive();
+            setIsSessionConfigActive(sessionActive);
+            if (sessionActive) {
+              const listSesi = await getGelombangSesiList();
+              const foundSesi = listSesi.find(s => s.kelas.includes(voterClass));
+              setUserSession(foundSesi || null);
+            }
+          } catch (sessionErr) {
+            console.error('Failed to fetch session configurations:', sessionErr);
+          }
+
+          // 2. Fetch Dapil allocation
+          try {
+            const listDapil = await getDapils();
+            const foundDapil = listDapil.find(d => d.eligible_classes.includes(voterClass));
+            setUserDapil(foundDapil || null);
+          } catch (dapilErr) {
+            console.error('Failed to fetch dapils:', dapilErr);
+          }
         }
       } catch (err) {
         console.error('Failed to load helpdesk or settings:', err);
@@ -294,73 +322,49 @@ export default function UserDashboard() {
             </div>
 
             {/* Voting Section */}
-            <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm flex-1">
+            <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
               <div className="bg-slate-50 px-5 py-3 border-b border-slate-200">
                 <h3 className="text-sm font-bold text-slate-700">Panel Pemungutan Suara</h3>
               </div>
-              <div className="p-8 flex flex-col items-center justify-center text-center h-[320px]">
-                {!accessSettings.voting_global_enabled ? (
-                  <>
-                    <div className="w-16 h-16 bg-rose-50 rounded-full flex items-center justify-center mb-4 border border-rose-100 text-rose-600 shadow-sm">
-                      <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-alert-circle"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg>
-                    </div>
-                    <h4 className="text-base font-extrabold text-rose-800 mb-2">Bilik Suara Nonaktif</h4>
-                    <p className="text-xs text-slate-500 px-0 sm:px-6 mb-5 max-w-sm leading-relaxed">
-                      Saat ini akses bilik suara elektronik sedang ditutup oleh panitia. Silakan tunggu informasi lebih lanjut.
-                    </p>
-                    
-                    <button 
-                      disabled={true}
-                      className="inline-flex items-center gap-2 px-5 py-2.5 bg-slate-300 border border-slate-300 text-slate-500 rounded-xl text-xs font-bold cursor-not-allowed select-none opacity-60 shadow-none"
-                    >
-                      Bilik suara nonaktif
-                    </button>
-                  </>
-                ) : profile.voting_status === 'sudah' || isAllCompleted ? (
-                  <>
-                    <div className="w-16 h-16 bg-emerald-50 rounded-full flex items-center justify-center mb-4 border border-indigo-100 text-slate-400 shadow-sm shadow-emerald-500/5">
-                      <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-check-circle-2 text-slate-400"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>
-                    </div>
-                    <h4 className="text-base font-extrabold text-slate-750 mb-2">Sesi voting Anda telah berakhir.</h4>
-                    <p className="text-xs text-slate-500 px-0 sm:px-6 mb-5 max-w-sm leading-relaxed">
-                      Terima kasih telah berpartisipasi dalam pemilu.
-                    </p>
-                    
-                    <button 
-                      disabled={true}
-                      className="inline-flex items-center gap-2 px-5 py-2.5 bg-slate-300 border border-slate-300 text-slate-500 rounded-xl text-xs font-bold cursor-not-allowed select-none opacity-60 shadow-none"
-                    >
-                      Masuk Bilik Suara Digital <span className="text-sm">→</span>
-                    </button>
-                  </>
-                ) : profile.account_status !== 'dikonfirmasi' ? (
-                  <>
-                    <div className="w-16 h-16 bg-amber-50 rounded-full flex items-center justify-center mb-4 border border-amber-100 text-amber-500 shadow-sm">
-                      <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-lock"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-                    </div>
-                    <h4 className="text-base font-extrabold text-[#70460c] mb-2">Menunggu Konfirmasi</h4>
-                    <p className="text-xs text-slate-500 px-0 sm:px-6 max-w-sm leading-relaxed">
-                      Akun Anda belum dikonfirmasi panitia. Silakan hubungi panitia d bilik registrasi untuk mengaktifkan status kartu pemilih Anda agar dapat memilih.
-                    </p>
-                  </>
-                ) : (
-                  <>
-                    <div className="w-16 h-16 bg-indigo-50 rounded-full flex items-center justify-center mb-4 border border-indigo-100 text-indigo-600 shadow-sm shadow-indigo-600/5 animate-pulse">
-                      <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-ticket"><path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z"/><path d="M9 5v14"/><path d="M15 5v14"/></svg>
-                    </div>
-                    <h4 className="text-base font-extrabold text-slate-800 mb-2">Bilik Suara Elektronik Dibuka!</h4>
-                    <p className="text-xs text-slate-500 px-0 sm:px-6 mb-5 max-w-sm leading-relaxed">
-                      Silakan masuk ke bilik suara elektronik e-voting sekarang untuk memberikan hak suara Anda secara tertutup, jujur, dan adil.
-                    </p>
-
-                    <Link 
-                      to={`/vote?card_id=${profile.card_id}`}
-                      className="inline-flex items-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition-all shadow-md shadow-indigo-600/10 hover:shadow-indigo-600/20"
-                    >
-                      Masuk Bilik Suara Digital <span className="text-sm">→</span>
-                    </Link>
-                  </>
+              <div className="p-6 space-y-5">
+                
+                {/* Alokasi Sesi */}
+                {isSessionConfigActive && (
+                  <div className="space-y-1 pb-4 border-b border-slate-100">
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Alokasi Sesi</p>
+                    {userSession ? (
+                      <div>
+                        <h4 className="text-sm font-extrabold text-slate-800">{userSession.nama_sesi}</h4>
+                        <p className="text-xs text-slate-500 font-medium">{userSession.jam_mulai} - {userSession.jam_selesai} WIB</p>
+                      </div>
+                    ) : (
+                      <div>
+                        <h4 className="text-sm font-extrabold text-amber-700">Belum Dijadwalkan</h4>
+                      </div>
+                    )}
+                  </div>
                 )}
+
+                {/* Alokasi Dapil */}
+                <div className="space-y-1">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Alokasi Dapil</p>
+                  {userDapil ? (
+                    <div>
+                      <h4 className="text-sm font-extrabold text-slate-800 mb-1">{userDapil.name}</h4>
+                      <p className="text-xs text-slate-500 leading-relaxed font-medium bg-slate-50 p-2.5 rounded-lg border border-slate-100">
+                        {userDapil.eligible_classes && userDapil.eligible_classes.length > 0 
+                          ? userDapil.eligible_classes.join(', ') 
+                          : 'Tidak ada kelompok kelas'}
+                      </p>
+                    </div>
+                  ) : (
+                    <div>
+                      <h4 className="text-sm font-extrabold text-slate-500">Belum Dialokasikan</h4>
+                      <p className="text-xs text-slate-400">Kelas Anda belum terdaftar di Dapil mana pun.</p>
+                    </div>
+                  )}
+                </div>
+
               </div>
             </div>
 

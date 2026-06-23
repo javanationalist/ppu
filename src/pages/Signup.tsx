@@ -163,6 +163,10 @@ export default function Signup() {
       if (errorMsg === '{}' || errorMsg === '[object Object]' || !errorMsg) {
         errorMsg = 'Gagal menyimpan profil ke database Supabase. Ini biasanya terjadi karena RLS Policy (Row Level Security) atau Trigger Database yang bentrok/mengalami infinite recursion. Silakan periksa tab SQL Editor di Supabase Anda.';
       }
+
+      if (errorMsg.includes('already registered') || errorMsg.includes('already exists') || errorMsg.toLowerCase().includes('user already registered')) {
+        errorMsg = 'Email ini sudah terdaftar. Silakan gunakan email lain atau langsung masuk (login) ke akun Anda.';
+      }
       
       setError(errorMsg);
     } finally {
