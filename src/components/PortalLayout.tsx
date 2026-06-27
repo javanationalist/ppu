@@ -1,8 +1,17 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, Outlet, useLocation } from 'react-router-dom';
 import { Menu, X } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
+import { supabase } from '../lib/supabase';
 import WafoSlider from './WafoSlider';
+
+interface NavLinkItem {
+  id: string;
+  name: string;
+  path: string;
+  is_visible: boolean;
+  display_order?: number;
+}
 
 export default function PortalLayout() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -11,14 +20,60 @@ export default function PortalLayout() {
 
   const closeMenu = () => setIsMenuOpen(false);
 
-  const navLinks = [
-    { name: 'Beranda', path: '/' },
-    { name: 'Informasi', path: '/informasi' },
-    { name: 'Tentang', path: '/tentang' },
-    { name: 'Cara Menggunakan', path: '/cara-menggunakan' },
-    { name: 'Login', path: '/login' },
-    { name: 'Sign Up', path: '/signup' },
+  const defaultLinks: NavLinkItem[] = [
+    { id: 'beranda', name: 'Beranda', path: '/', is_visible: true },
+    { id: 'informasi', name: 'Informasi', path: '/informasi', is_visible: true },
+    { id: 'tentang', name: 'Tentang', path: '/tentang', is_visible: true },
+    { id: 'cara_menggunakan', name: 'Cara Menggunakan', path: '/cara-menggunakan', is_visible: true },
+    { id: 'login', name: 'Login', path: '/login', is_visible: true },
+    { id: 'signup', name: 'Sign Up', path: '/signup', is_visible: true },
   ];
+
+  const [navLinks, setNavLinks] = useState<NavLinkItem[]>(defaultLinks);
+
+  useEffect(() => {
+    async function fetchMenuButtons() {
+      try {
+        const { data, error } = await supabase
+          .from('landing_menu_button')
+          .select('*')
+          .order('display_order', { ascending: true });
+
+        if (error) {
+          if (error.code !== '42P01') {
+            console.error('Error fetching landing menu buttons:', error);
+          }
+        } else if (data && data.length > 0) {
+          setNavLinks(data);
+        }
+      } catch (err) {
+        console.error('Exception fetching menu buttons:', err);
+      }
+    }
+
+    fetchMenuButtons();
+
+    const channel = supabase
+      .channel('landing-menu-db-changes')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'landing_menu_button' },
+        () => {
+          fetchMenuButtons();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
+  // Filter only visible links
+  const visibleLinks = navLinks.filter(l => l.is_visible);
+  
+  // Desktop links display path elements that are not Home, Login, or Signup
+  const desktopLinks = visibleLinks.filter(l => l.path !== '/' && l.path !== '/login' && l.path !== '/signup');
 
   return (
     <div className="min-h-screen bg-ppu-surface dark:bg-[#1a1a1a] text-slate-800 dark:text-[#f5f5f5] flex flex-col relative overflow-hidden font-sans transition-colors duration-300">
@@ -58,9 +113,15 @@ export default function PortalLayout() {
             <div className="flex items-center">
               {/* Desktop Nav */}
               <nav className="hidden md:flex gap-6 items-center mr-6">
-                <Link to="/informasi" className={`text-sm font-semibold transition-colors ${location.pathname === '/informasi' ? 'text-ppu-blue dark:text-sky-400 font-bold' : 'text-slate-600 dark:text-[#a3a3a3] hover:text-ppu-blue dark:hover:text-sky-400'}`}>Informasi</Link>
-                <Link to="/tentang" className={`text-sm font-semibold transition-colors ${location.pathname === '/tentang' ? 'text-ppu-blue dark:text-sky-400 font-bold' : 'text-slate-600 dark:text-[#a3a3a3] hover:text-ppu-blue dark:hover:text-sky-400'}`}>Tentang</Link>
-                <Link to="/cara-menggunakan" className={`text-sm font-semibold transition-colors ${location.pathname === '/cara-menggunakan' ? 'text-ppu-blue dark:text-sky-400 font-bold' : 'text-slate-600 dark:text-[#a3a3a3] hover:text-ppu-blue dark:hover:text-sky-400'}`}>Cara Menggunakan</Link>
+                {desktopLinks.map((link) => (
+                  <Link
+                    key={link.id}
+                    to={link.path}
+                    className={`text-sm font-semibold transition-colors ${location.pathname === link.path ? 'text-ppu-blue dark:text-sky-400 font-bold' : 'text-slate-600 dark:text-[#a3a3a3] hover:text-ppu-blue dark:hover:text-sky-400'}`}
+                  >
+                    {link.name}
+                  </Link>
+                ))}
               </nav>
 
               {/* Theme Toggle Button */}
@@ -113,9 +174,9 @@ export default function PortalLayout() {
           </button>
         </div>
         <div className="flex flex-col py-4 px-3 space-y-2">
-          {navLinks.map((link) => (
+          {visibleLinks.map((link) => (
             <Link
-              key={link.name}
+              key={link.id}
               to={link.path}
               onClick={closeMenu}
               className={`px-4 py-3 rounded-xl text-sm font-bold transition-all ${
