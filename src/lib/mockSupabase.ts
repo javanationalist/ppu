@@ -1,4 +1,4 @@
-import { Profile, HelpdeskButton, WafoAnnouncement } from '../types';
+import { Profile, HelpdeskButton, WafoAnnouncement, Countdown } from '../types';
 
 interface MockAuthUser {
   id: string;
@@ -215,6 +215,23 @@ export const seedMockData = () => {
 
   if (!votes) {
     localStorage.setItem('mock_votes', JSON.stringify([]));
+  }
+
+  const countdowns = localStorage.getItem('mock_countdown');
+  if (!countdowns) {
+    const defaultCountdowns: Countdown[] = [
+      {
+        id: 'cd-1',
+        name: 'MPLS 2026',
+        title: 'Pemilihan MPK dan Ketua & Wakil Ketua OSIS\nSMA Negeri 1',
+        target_datetime: '2026-08-17T07:00:00.000Z',
+        finished_text: 'Pemungutan suara sedang berlangsung.',
+        is_active: true,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      }
+    ];
+    localStorage.setItem('mock_countdown', JSON.stringify(defaultCountdowns));
   }
 
   const landingVisibility = localStorage.getItem('mock_landing_page_visibility');

@@ -79,3 +79,15 @@ export interface Vote {
   created_at?: string;
 }
 
+export interface Countdown {
+  id: string;
+  name: string;
+  title: string;
+  target_datetime: string;
+  finished_text: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+

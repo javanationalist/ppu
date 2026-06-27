@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { LogOut, Home, Users, Settings, BarChart, FileText, LifeBuoy, Menu, X, ShieldCheck, Layers, Eye, ShieldAlert, Lock, Clock } from 'lucide-react';
+import { LogOut, Home, Users, Settings, BarChart, FileText, LifeBuoy, Menu, X, ShieldCheck, Layers, Eye, ShieldAlert, Lock, Clock, Timer } from 'lucide-react';
 import { getAdminButtonSettings, AdminButtonSettings } from '../lib/adminButtonService';
 
 export const AdminLayout = () => {
@@ -50,6 +50,7 @@ export const AdminLayout = () => {
     { to: '/admin/konfirmasi', icon: ShieldCheck, label: 'Konfirmasi Pemilih', key: 'konfirmasi_pemilih' },
     { to: '/admin/pemilih', icon: Users, label: 'Kelola Pemilih', key: 'kelola_pemilih' },
     { to: '/admin/wafo', icon: FileText, label: 'WAFO (Warung Informasi)', key: 'wafo' },
+    { to: '/admin/countdown', icon: Timer, label: 'Countdown', key: 'countdown' },
     { to: '/admin/helpdesk', icon: LifeBuoy, label: 'Kelola Helpdesk', key: 'kelola_helpdesk' },
     { to: '/admin/hasil', icon: BarChart, label: 'Hasil Voting', key: 'hasil_voting' },
     { to: '/admin/audit', icon: FileText, label: 'Audit Log', key: 'audit_log' },

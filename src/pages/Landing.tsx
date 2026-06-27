@@ -14,6 +14,44 @@ export default function Landing() {
     cara_menggunakan: true,
   });
   const [loading, setLoading] = useState(true);
+  const [activeCountdown, setActiveCountdown] = useState<any | null>(null);
+  const [serverOffset, setServerOffset] = useState<number>(0);
+  const [timeLeft, setTimeLeft] = useState({
+    months: 0,
+    days: 0,
+    hours: 0,
+    seconds: 0,
+    isExpired: false,
+  });
+
+  // Fetch server time offset
+  useEffect(() => {
+    async function getOffset() {
+      try {
+        const res = await fetch('https://worldtimeapi.org/api/timezone/Etc/UTC', { signal: AbortSignal.timeout(2000) });
+        if (res.ok) {
+          const data = await res.json();
+          if (data && data.utc_datetime) {
+            const serverMs = new Date(data.utc_datetime).getTime();
+            const browserMs = Date.now();
+            setServerOffset(serverMs - browserMs);
+          }
+        }
+      } catch (e) {
+        console.warn('Failed to fetch from worldtimeapi, using fallback method:', e);
+        try {
+          const res = await fetch(window.location.origin, { method: 'HEAD', cache: 'no-cache' });
+          const dateHeader = res.headers.get('date');
+          if (dateHeader) {
+            setServerOffset(new Date(dateHeader).getTime() - Date.now());
+          }
+        } catch (err) {
+          console.warn('Failed to fetch fallback server date header:', err);
+        }
+      }
+    }
+    getOffset();
+  }, []);
 
   useEffect(() => {
     async function fetchVisibility() {
@@ -45,8 +83,92 @@ export default function Landing() {
         setLoading(false);
       }
     }
+
+    async function fetchActiveCountdown() {
+      try {
+        const { data, error } = await supabase
+          .from('countdown')
+          .select('*')
+          .eq('is_active', true);
+
+        if (error) {
+          if (error.code === '42P01') {
+            console.warn('Countdown table does not exist in Supabase yet. Please run the SQL migration in Supabase SQL editor.');
+          } else {
+            console.error('Error fetching countdown:', error);
+          }
+        } else if (data && data.length > 0) {
+          setActiveCountdown(data[0]);
+        } else {
+          setActiveCountdown(null);
+        }
+      } catch (err) {
+        console.error('Exception fetching countdown:', err);
+      }
+    }
+
     fetchVisibility();
+    fetchActiveCountdown();
+
+    const channel = supabase
+      .channel('countdown-landing-db-changes')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'countdown' },
+        () => {
+          fetchActiveCountdown();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
+
+  // Update countdown display every second
+  useEffect(() => {
+    if (!activeCountdown) return;
+
+    const calculateTimeLeft = () => {
+      const targetTime = new Date(activeCountdown.target_datetime).getTime();
+      const currentServerTime = Date.now() + serverOffset;
+      const msDiff = targetTime - currentServerTime;
+
+      if (msDiff <= 0) {
+        setTimeLeft({
+          months: 0,
+          days: 0,
+          hours: 0,
+          seconds: 0,
+          isExpired: true,
+        });
+      } else {
+        const totalSec = Math.floor(msDiff / 1000);
+        const SEC_IN_DAY = 86400;
+        const SEC_IN_MONTH = 30 * SEC_IN_DAY;
+        const SEC_IN_HOUR = 3600;
+
+        const months = Math.floor(totalSec / SEC_IN_MONTH);
+        const days = Math.floor((totalSec % SEC_IN_MONTH) / SEC_IN_DAY);
+        const hours = Math.floor((totalSec % SEC_IN_DAY) / SEC_IN_HOUR);
+        const seconds = totalSec % 60;
+
+        setTimeLeft({
+          months,
+          days,
+          hours,
+          seconds,
+          isExpired: false,
+        });
+      }
+    };
+
+    calculateTimeLeft();
+    const timer = setInterval(calculateTimeLeft, 1000);
+
+    return () => clearInterval(timer);
+  }, [activeCountdown, serverOffset]);
 
   return (
     <div className="flex-1 flex flex-col items-center justify-start py-8 px-4 sm:px-6 lg:px-8 max-w-2xl mx-auto w-full space-y-6">
@@ -166,6 +288,60 @@ export default function Landing() {
           </a>
         </p>
       </div>
+
+      {/* 3.5. COUNTDOWN */}
+      {activeCountdown && (
+        <div className="w-full max-w-lg bg-white dark:bg-[#2a2a2a] border border-slate-200 dark:border-[#333333] rounded-lg p-5 shadow-xs transition-colors text-center space-y-4">
+          <div className="space-y-1">
+            <h4 className="text-slate-800 dark:text-[#f5f5f5] text-base font-extrabold tracking-tight leading-snug whitespace-pre-line">
+              {activeCountdown.title}
+            </h4>
+          </div>
+          
+          {!timeLeft.isExpired ? (
+            <div className="grid grid-cols-4 gap-2 max-w-sm mx-auto pt-2">
+              <div className="flex flex-col items-center p-2 bg-slate-50 dark:bg-[#1a1a1a]/60 rounded-md border border-slate-100 dark:border-[#333333]">
+                <span className="text-xl sm:text-2xl font-black text-ppu-blue dark:text-sky-400 font-mono">
+                  {timeLeft.months}
+                </span>
+                <span className="text-[10px] sm:text-xs font-semibold text-slate-400 dark:text-[#a3a3a3] uppercase tracking-wider mt-1">
+                  Bulan
+                </span>
+              </div>
+              <div className="flex flex-col items-center p-2 bg-slate-50 dark:bg-[#1a1a1a]/60 rounded-md border border-slate-100 dark:border-[#333333]">
+                <span className="text-xl sm:text-2xl font-black text-ppu-blue dark:text-sky-400 font-mono">
+                  {String(timeLeft.days).padStart(2, '0')}
+                </span>
+                <span className="text-[10px] sm:text-xs font-semibold text-slate-400 dark:text-[#a3a3a3] uppercase tracking-wider mt-1">
+                  Hari
+                </span>
+              </div>
+              <div className="flex flex-col items-center p-2 bg-slate-50 dark:bg-[#1a1a1a]/60 rounded-md border border-slate-100 dark:border-[#333333]">
+                <span className="text-xl sm:text-2xl font-black text-ppu-blue dark:text-sky-400 font-mono">
+                  {String(timeLeft.hours).padStart(2, '0')}
+                </span>
+                <span className="text-[10px] sm:text-xs font-semibold text-slate-400 dark:text-[#a3a3a3] uppercase tracking-wider mt-1">
+                  Jam
+                </span>
+              </div>
+              <div className="flex flex-col items-center p-2 bg-slate-50 dark:bg-[#1a1a1a]/60 rounded-md border border-slate-100 dark:border-[#333333]">
+                <span className="text-xl sm:text-2xl font-black text-ppu-blue dark:text-sky-400 font-mono">
+                  {String(timeLeft.seconds).padStart(2, '0')}
+                </span>
+                <span className="text-[10px] sm:text-xs font-semibold text-slate-400 dark:text-[#a3a3a3] uppercase tracking-wider mt-1">
+                  Detik
+                </span>
+              </div>
+            </div>
+          ) : (
+            <div className="p-3.5 bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-100 dark:border-emerald-900/30 rounded-lg">
+              <p className="text-emerald-800 dark:text-emerald-400 text-sm font-semibold leading-relaxed">
+                {activeCountdown.finished_text}
+              </p>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* 4. ILUSTRASI */}
       <div className="w-full max-w-lg overflow-hidden rounded-lg shadow-xs border border-slate-100/60 dark:border-[#2a2a2a] transition-colors">

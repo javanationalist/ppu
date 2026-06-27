@@ -19,6 +19,7 @@ export default function DashboardOverview() {
   const [ticketsCount, setTicketsCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [btnSettings, setBtnSettings] = useState<AdminButtonSettings>({
+    gelombang_voting: true,
     kelola_kategori: true,
     kelola_kandidat: true,
     konfirmasi_pemilih: true,
@@ -30,6 +31,7 @@ export default function DashboardOverview() {
     audit_log: true,
     export_data: true,
     maintenance: true,
+    countdown: true,
   });
 
   useEffect(() => {
@@ -232,6 +234,7 @@ export default function DashboardOverview() {
                     { key: 'konfirmasi_pemilih', label: 'Konfirmasi', icon: ShieldCheck },
                     { key: 'kelola_pemilih', label: 'Kelola Pemilih', icon: Users },
                     { key: 'wafo', label: 'WAFO', icon: FileText },
+                    { key: 'countdown', label: 'Countdown', icon: Clock },
                     { key: 'kelola_helpdesk', label: 'Helpdesk', icon: LifeBuoy },
                     { key: 'visibilitas_user', label: 'Visibilitas', icon: ShieldAlert },
                     { key: 'hasil_voting', label: 'Hasil Voting', icon: BarChart3 },

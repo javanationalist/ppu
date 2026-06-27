@@ -1,6 +1,7 @@
 -- Jalankan script ini di SQL Editor Supabase untuk mengaktifkan fitur On/Off Menu Admin
 -- JIKA TABEL SUDAH ADA, JALANKAN PERINTAH ALTER BERIKUT LANGSUNG:
 -- ALTER TABLE admin_button ADD COLUMN IF NOT EXISTS gelombang_voting BOOLEAN DEFAULT true;
+-- ALTER TABLE admin_button ADD COLUMN IF NOT EXISTS countdown BOOLEAN DEFAULT true;
 
 CREATE TABLE IF NOT EXISTS admin_button (
   id TEXT PRIMARY KEY DEFAULT 'default',
@@ -10,6 +11,7 @@ CREATE TABLE IF NOT EXISTS admin_button (
   konfirmasi_pemilih BOOLEAN DEFAULT true,
   kelola_pemilih BOOLEAN DEFAULT true,
   wafo BOOLEAN DEFAULT true,
+  countdown BOOLEAN DEFAULT true,
   kelola_helpdesk BOOLEAN DEFAULT true,
   visibilitas_user BOOLEAN DEFAULT true,
   hasil_voting BOOLEAN DEFAULT true,

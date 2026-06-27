@@ -13,6 +13,7 @@ export interface AdminButtonSettings {
   audit_log: boolean;
   export_data: boolean;
   maintenance: boolean;
+  countdown: boolean;
 }
 
 const DEFAULT_BUTTON_SETTINGS: AdminButtonSettings = {
@@ -28,6 +29,7 @@ const DEFAULT_BUTTON_SETTINGS: AdminButtonSettings = {
   audit_log: true,
   export_data: true,
   maintenance: true,
+  countdown: true,
 };
 
 const STORAGE_KEY = 'ppu_admin_button_settings';
@@ -95,6 +97,7 @@ export const getAdminButtonSettings = async (): Promise<AdminButtonSettings> => 
       audit_log: data.audit_log !== false,
       export_data: data.export_data !== false,
       maintenance: data.maintenance !== false,
+      countdown: data.countdown !== false,
     };
   } catch (err) {
     console.error('Error fetching admin button settings, falling back to local storage:', err);
@@ -132,6 +135,7 @@ export const saveAdminButtonSettings = async (settings: AdminButtonSettings): Pr
         audit_log: settings.audit_log,
         export_data: settings.export_data,
         maintenance: settings.maintenance,
+        countdown: settings.countdown,
       });
 
     if (error) {

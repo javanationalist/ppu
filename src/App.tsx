@@ -37,6 +37,7 @@ import ExportData from './pages/admin/ExportData';
 import Maintenance from './pages/admin/Maintenance';
 import WafoManager from './pages/admin/WafoManager';
 import GelombangVoting from './pages/admin/GelombangVoting';
+import CountdownManager from './pages/admin/CountdownManager';
 import AksesPro from './pages/admin/AksesPro';
 import NetworkStatus from './components/NetworkStatus';
 
@@ -84,6 +85,7 @@ function AppContent() {
           <Route path="scanner-pro" element={<ScannerPro />} />
           <Route path="pemilih" element={<KelolaPemilih />} />
           <Route path="wafo" element={<WafoManager />} />
+          <Route path="countdown" element={<CountdownManager />} />
           <Route path="helpdesk" element={<HelpdeskManager />} />
           <Route path="pengaturan" element={<PengaturanVoting />} />
           <Route path="maintenance" element={<Maintenance />} />
