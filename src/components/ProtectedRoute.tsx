@@ -35,9 +35,11 @@ export const ProtectedRoute = ({
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
-  if (allowedRoles && !allowedRoles.includes(profile.role)) {
+  const hasAccess = !allowedRoles || allowedRoles.includes(profile.role) || (profile.role === 'creator' && allowedRoles.includes('admin'));
+
+  if (!hasAccess) {
     // Redirect to their respective dashboard if they don't have access
-    if (profile.role === 'admin') {
+    if (profile.role === 'admin' || profile.role === 'creator') {
       return <Navigate to="/admin" replace />;
     }
     return <Navigate to="/dashboard" replace />;

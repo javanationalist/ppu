@@ -42,7 +42,7 @@ export default function Login() {
     }
 
     if (user && profile && isValidSession) {
-      if (profile.role === 'admin') {
+      if (profile.role === 'admin' || profile.role === 'creator') {
         navigate('/admin', { replace: true });
       } else {
         navigate('/dashboard', { replace: true });
@@ -88,7 +88,7 @@ export default function Login() {
         localStorage.setItem('session_expires_at', (Date.now() + 60 * 60 * 1000).toString());
         localStorage.setItem('lastActivity', Date.now().toString());
 
-        const nextPath = profileData?.role === 'admin' ? '/admin' : '/dashboard';
+        const nextPath = (profileData?.role === 'admin' || profileData?.role === 'creator') ? '/admin' : '/dashboard';
         setTargetPath(nextPath);
         setShowSuccess(true);
 

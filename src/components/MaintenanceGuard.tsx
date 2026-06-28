@@ -9,7 +9,7 @@ export default function MaintenanceGuard({ children }: { children: React.ReactNo
   const [loading, setLoading] = useState(true);
   const location = useLocation();
   const { profile } = useAuth();
-  const isAdmin = profile?.role === 'admin';
+  const isAdmin = profile?.role === 'admin' || profile?.role === 'creator';
 
   useEffect(() => {
     async function check() {

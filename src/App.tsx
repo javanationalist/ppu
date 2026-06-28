@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+import React from 'react';
 import { HashRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { ThemeProvider } from './contexts/ThemeContext';
@@ -12,6 +13,7 @@ import MaintenanceGuard from './components/MaintenanceGuard';
 import NotFound from './pages/NotFound';
 import LogoutOverlay from './components/LogoutOverlay';
 import PortalLayout from './components/PortalLayout';
+import ExperimentalControlCenter from './pages/admin/ExperimentalControlCenter';
 
 import Landing from './pages/Landing';
 import Informasi from './pages/Informasi';
@@ -40,6 +42,25 @@ import GelombangVoting from './pages/admin/GelombangVoting';
 import CountdownManager from './pages/admin/CountdownManager';
 import AksesPro from './pages/admin/AksesPro';
 import NetworkStatus from './components/NetworkStatus';
+
+function ExperimentalRoute({ children }: { children: React.ReactNode }) {
+  const { user, profile, loading } = useAuth();
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
+      </div>
+    );
+  }
+
+  // If not logged in, or not having a creator role, render NotFound (pretend it doesn't exist)
+  if (!user || !profile || profile.role !== 'creator') {
+    return <NotFound />;
+  }
+
+  return <>{children}</>;
+}
 
 function AppContent() {
   return (
@@ -94,6 +115,16 @@ function AppContent() {
           <Route path="export" element={<ExportData />} />
           <Route path="akses-pro" element={<AksesPro />} />
         </Route>
+
+        {/* Experimental Route (Creator Only) */}
+        <Route
+          path="/experimental"
+          element={
+            <ExperimentalRoute>
+              <ExperimentalControlCenter />
+            </ExperimentalRoute>
+          }
+        />
 
         {/* Fallback */}
         <Route path="*" element={<NotFound />} />

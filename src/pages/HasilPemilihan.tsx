@@ -133,7 +133,7 @@ export default function HasilPemilihan() {
   }
 
   // Check custom visibility block
-  if (!lihatHasilEnabled && currentUser?.role !== 'admin') {
+  if (!lihatHasilEnabled && currentUser?.role !== 'admin' && currentUser?.role !== 'creator') {
     return (
       <div className="min-h-screen bg-ppu-surface flex flex-col items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
         <div className="max-w-md w-full space-y-8 text-center bg-white p-8 sm:p-12 rounded-3xl shadow-2xl border border-ppu-border relative overflow-hidden">

@@ -1,4 +1,4 @@
-export type Role = 'user' | 'admin';
+export type Role = 'user' | 'admin' | 'creator';
 export type AccountStatus = 'belum_dikonfirmasi' | 'dikonfirmasi';
 export type VotingStatus = 'belum' | 'sudah';
 

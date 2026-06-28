@@ -6,7 +6,7 @@ import { useAuth } from '../contexts/AuthContext';
 export default function NotFound() {
   const { profile } = useAuth();
   const navigate = useNavigate();
-  const isAdmin = profile?.role === 'admin';
+  const isAdmin = profile?.role === 'admin' || profile?.role === 'creator';
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center py-12 px-4 sm:px-6 lg:px-8 text-center">
