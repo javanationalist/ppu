@@ -84,9 +84,9 @@ FOR ALL USING (
   )
 );
 
--- 7. UPDATE POLICY UNTUK TABEL: landing_page_visibility
-DROP POLICY IF EXISTS "Admin memiliki akses penuh terhadap visibilitas tombol" ON landing_page_visibility;
-CREATE POLICY "Admin dan Creator memiliki akses penuh terhadap visibilitas tombol" ON landing_page_visibility 
+-- 7. UPDATE POLICY UNTUK TABEL: landing_visibility
+DROP POLICY IF EXISTS "Admin memiliki akses penuh terhadap visibilitas tombol" ON landing_visibility;
+CREATE POLICY "Admin dan Creator memiliki akses penuh terhadap visibilitas tombol" ON landing_visibility 
 FOR ALL USING (
   auth.role() = 'authenticated' AND 
   EXISTS (
