@@ -1,5 +1,6 @@
 import React from 'react';
 import { Info, Megaphone, AlertCircle, CalendarDays, FileText, Clock } from 'lucide-react';
+import { Skeleton } from '../Skeleton';
 
 interface InformasiTabProps {
   announcements: any[];
@@ -30,9 +31,29 @@ export default function InformasiTab({ announcements, infoLoading }: InformasiTa
 
       <div className="space-y-3 sm:space-y-4">
         {infoLoading ? (
-          <div className="flex flex-col items-center justify-center py-12 gap-3">
-            <div className="w-8 h-8 border-3 border-indigo-600 dark:border-sky-500 border-t-transparent rounded-full animate-spin"></div>
-            <p className="text-xs text-slate-500 dark:text-slate-450 font-bold animate-pulse">Memuat Informasi...</p>
+          <div className="space-y-3 sm:space-y-4">
+            {[1, 2].map((i) => (
+              <div 
+                key={i} 
+                className="bg-white dark:bg-[#2a2a2a] border border-slate-200 dark:border-[#333333] p-4 sm:p-6 rounded-[20px] sm:rounded-2xl relative overflow-hidden"
+              >
+                <div className="absolute top-0 left-0 w-1.5 h-full bg-slate-300 dark:bg-slate-700"></div>
+                
+                <div className="flex items-start gap-3 sm:gap-4">
+                  <Skeleton className="w-8 h-8 sm:w-10 sm:h-10 shrink-0 rounded-lg sm:rounded-xl" />
+                  <div className="flex-1 min-w-0 space-y-3">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5">
+                      <Skeleton className="h-5 w-1/2 rounded" />
+                      <Skeleton className="h-5 w-24 rounded-md shrink-0 animate-pulse" />
+                    </div>
+                    <div className="p-3 sm:p-3.5 rounded-xl border border-dashed border-slate-200 dark:border-[#333333] space-y-2">
+                      <Skeleton className="h-3 w-full rounded" />
+                      <Skeleton className="h-3 w-4/5 rounded" />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
         ) : announcements.length === 0 ? (
           <div className="bg-white dark:bg-[#2a2a2a] border border-slate-200 dark:border-[#333333] p-6 sm:p-8 rounded-[20px] sm:rounded-2xl text-center shadow-sm">

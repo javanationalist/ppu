@@ -146,51 +146,55 @@ export default function VoterCardTab({
             </div>
 
             {/* Card Body */}
-            <div className="relative px-4 sm:px-8 py-2.5 sm:pt-2 sm:pb-16 flex flex-col sm:flex-row gap-4 sm:gap-10">
-              <div className="flex-1 flex flex-col gap-2 sm:gap-2.5 min-w-0">
+            <div className="relative px-4 sm:px-8 py-2.5 sm:pt-2 sm:pb-16 flex flex-col sm:flex-row sm:items-center justify-between gap-4 sm:gap-10">
+              <div className="flex-1 flex flex-col gap-2.5 sm:gap-3.5 min-w-0">
                 <div>
                   <label className="block text-indigo-300 text-[8px] sm:text-[10px] uppercase font-bold tracking-wider mb-0.5 sm:mb-1">Nama Lengkap</label>
-                  <p className="text-white text-base sm:text-2xl font-bold truncate">{profile.full_name}</p>
+                  <p className="text-white text-base sm:text-2xl font-black truncate">{profile.full_name}</p>
                 </div>
                 <div>
                   <label className="block text-indigo-300 text-[8px] sm:text-[10px] uppercase font-bold tracking-wider mb-0.5 sm:mb-1">Email Terdaftar</label>
-                  <p className="text-white text-xs sm:text-lg truncate">{renderBlurredEmail(profile.email)}</p>
+                  <p className="text-white text-xs sm:text-lg font-medium truncate">{renderBlurredEmail(profile.email)}</p>
                 </div>
                 
                 <div className="flex flex-col sm:flex-row sm:gap-12">
                   <div className="flex-1">
                     <label className="block text-indigo-300 text-[8px] sm:text-[10px] uppercase font-bold tracking-wider mb-0.5 sm:mb-1">Kelas</label>
-                    <p className="text-white text-xs sm:text-lg truncate">{profile.class || 'N/A'}</p>
+                    <p className="text-white text-xs sm:text-lg font-black truncate">{profile.class || 'N/A'}</p>
                   </div>
                   <div className="hidden sm:block flex-1">
                     <label className="block text-indigo-300 text-[8px] sm:text-[10px] uppercase font-bold tracking-wider mb-0.5 sm:mb-1">Tanggal Cetak</label>
-                    <p className="text-white text-xs sm:text-sm font-medium">{new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
+                    <p className="text-white text-xs sm:text-sm font-semibold">{new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
                   </div>
                 </div>
 
                 <div className="flex gap-4 sm:gap-8 mt-1 sm:hidden">
                   <div>
                     <label className="block text-indigo-300 text-[8px] sm:text-[10px] uppercase font-bold tracking-wider mb-0.5">Tanggal Cetak</label>
-                    <p className="text-white text-xs font-medium">{new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
-                  </div>
-                  <div className="min-w-0">
-                    <label className="block text-indigo-300 text-[8px] sm:text-[10px] uppercase font-bold tracking-wider mb-0.5">ID Kartu</label>
-                    <p className="text-white text-xs font-medium uppercase truncate">{profile.card_id || 'N/A'}</p>
+                    <p className="text-white text-xs font-semibold">{new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
                   </div>
                 </div>
               </div>
 
-              <div className="flex flex-col items-center sm:items-start shrink-0">
-                <div className="hidden sm:block mb-1.5 self-stretch">
-                  <label className="block text-indigo-300 text-[8px] sm:text-[10px] uppercase font-bold tracking-wider mb-1">ID Kartu</label>
-                  <p className="text-white text-xs sm:text-sm font-semibold uppercase truncate">{profile.card_id || 'N/A'}</p>
+              {/* QR Code Column */}
+              <div className="flex flex-col items-center justify-center shrink-0 gap-2.5 sm:gap-3">
+                <div className="w-52 h-52 sm:w-[150px] sm:h-[150px] md:w-[175px] md:h-[175px] lg:w-[200px] lg:h-[200px] bg-white p-3.5 sm:p-4 rounded-[18px] sm:rounded-[20px] shadow-2xl border-2 border-white/10 flex items-center justify-center shrink-0 transition-all duration-300">
+                  <div className="w-full h-full flex items-center justify-center">
+                    <QRCodeCanvas 
+                      ref={qrRef} 
+                      value={profile.card_id || ''} 
+                      size={512} 
+                      style={{ width: '100%', height: '100%' }} 
+                    />
+                  </div>
                 </div>
 
-                <div className="w-40 h-40 sm:w-[136px] sm:h-[136px] bg-white p-1.5 sm:p-2 rounded-xl shadow-inner flex flex-col items-center justify-center self-center sm:self-start mt-2 sm:mt-0 shrink-0">
-                  <div className="w-full h-full border border-slate-100 flex flex-col items-center justify-center p-1.5 sm:p-2">
-                     <QRCodeCanvas ref={qrRef} value={profile.card_id || ''} size={150} style={{ width: '100%', height: 'calc(100% - 12px)' }} />
-                     <p className="text-[6px] sm:text-[7px] text-slate-400 mt-1.5 sm:mt-2 font-mono">VERIFIED IDENTITY</p>
-                  </div>
+                {/* Card ID Badge right under the QR code */}
+                <div className="bg-indigo-950/40 border border-indigo-500/30 px-3.5 py-1.5 rounded-full flex items-center gap-1.5 shadow-sm">
+                  <span className="text-indigo-200 text-[9px] uppercase font-bold tracking-wider">ID KARTU:</span>
+                  <span className="text-white font-mono text-[11.5px] sm:text-xs font-black tracking-wider uppercase">
+                    {profile.card_id || 'N/A'}
+                  </span>
                 </div>
               </div>
             </div>

@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { getUserAccessSettings } from '../lib/userAccessService';
 import { ALL_CLASSES } from '../lib/classConstants';
+import { Skeleton } from '../components/Skeleton';
 
 // Helper to generate random number
 const getRandomInt = (min: number, max: number) => {
@@ -176,9 +177,40 @@ export default function Signup() {
 
   if (checkingAccess) {
     return (
-      <div className="min-h-screen bg-ppu-surface flex flex-col items-center justify-center p-6">
-        <div className="w-8 h-8 border-4 border-ppu-blue border-t-transparent rounded-full animate-spin"></div>
-        <p className="text-slate-600 font-bold text-xs mt-3">Memeriksa hak akses pendaftaran...</p>
+      <div className="min-h-screen bg-ppu-surface flex flex-col items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-md w-full space-y-8 bg-white p-8 rounded-xl border border-ppu-border shadow-xl">
+          <div className="flex flex-col items-center">
+            {/* Logo skeleton */}
+            <Skeleton className="w-24 h-24 rounded-full mb-6" />
+            {/* Title skeleton */}
+            <Skeleton className="h-8 w-48 rounded mb-2" />
+          </div>
+          
+          <div className="space-y-5 pt-4">
+            <div>
+              <Skeleton className="h-3 w-28 mb-1.5" />
+              <Skeleton className="h-10 w-full rounded-xl" />
+            </div>
+            <div>
+              <Skeleton className="h-3 w-24 mb-1.5" />
+              <Skeleton className="h-10 w-full rounded-xl" />
+            </div>
+            <div>
+              <Skeleton className="h-3 w-24 mb-1.5" />
+              <Skeleton className="h-10 w-full rounded-xl" />
+            </div>
+            <div>
+              <Skeleton className="h-3 w-40 mb-1.5" />
+              <Skeleton className="h-10 w-full rounded-xl" />
+            </div>
+            <div>
+              <Skeleton className="h-3.5 w-full rounded" />
+            </div>
+            <div className="pt-2">
+              <Skeleton className="h-12 w-full rounded-xl" />
+            </div>
+          </div>
+        </div>
       </div>
     );
   }

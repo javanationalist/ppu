@@ -4,6 +4,7 @@ import WafoSlider from '../WafoSlider';
 import { HelpdeskButton, Dapil } from '../../types';
 import { GelombangSesi } from '../../lib/gelombangService';
 import { UserAccessSettings } from '../../lib/userAccessService';
+import { Skeleton } from '../Skeleton';
 
 interface StatusTabProps {
   profile: any;
@@ -13,6 +14,7 @@ interface StatusTabProps {
   userDapil: Dapil | null;
   accessSettings: UserAccessSettings;
   helpdeskButtons: HelpdeskButton[];
+  loading?: boolean;
 }
 
 export default function StatusTab({
@@ -23,7 +25,108 @@ export default function StatusTab({
   userDapil,
   accessSettings,
   helpdeskButtons,
+  loading,
 }: StatusTabProps) {
+  if (loading) {
+    return (
+      <div className="space-y-4 sm:space-y-6 text-left">
+        {/* Information Slider Skeleton */}
+        <Skeleton className="h-[120px] sm:h-[150px] w-full rounded-2xl sm:rounded-3xl" />
+
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-4 sm:gap-6 items-start">
+          {/* Left: Status cards & Voting Panel */}
+          <div className="md:col-span-6 flex flex-col gap-4 sm:gap-6 animate-pulse">
+            <div className="grid grid-cols-2 gap-3 sm:gap-4">
+              <div className="bg-white dark:bg-[#2a2a2a] border border-slate-200 dark:border-[#333333] p-3 sm:p-4 rounded-xl sm:rounded-2xl shadow-sm space-y-2">
+                <Skeleton className="h-3 w-16 rounded" />
+                <div className="flex items-center gap-1.5 sm:gap-2">
+                  <Skeleton className="w-2.5 h-2.5 rounded-full" />
+                  <Skeleton className="h-4 w-24 rounded" />
+                </div>
+              </div>
+              <div className="bg-white dark:bg-[#2a2a2a] border border-slate-200 dark:border-[#333333] p-3 sm:p-4 rounded-xl sm:rounded-2xl shadow-sm space-y-2">
+                <Skeleton className="h-3 w-16 rounded" />
+                <div className="flex items-center gap-1.5 sm:gap-2">
+                  <Skeleton className="w-2.5 h-2.5 rounded-full" />
+                  <Skeleton className="h-4 w-24 rounded" />
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white dark:bg-[#2a2a2a] border border-slate-200 dark:border-[#333333] rounded-[20px] sm:rounded-[24px] shadow-sm overflow-hidden">
+              {/* Header Panel Skeleton */}
+              <div className="p-4 sm:p-6 border-b border-slate-100 dark:border-[#333333] flex items-center gap-3 sm:gap-4 bg-slate-50/30 dark:bg-[#1a1a1a]/10">
+                <Skeleton className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl shrink-0" />
+                <div className="space-y-2 flex-1">
+                  <Skeleton className="h-4 w-1/2 rounded" />
+                  <Skeleton className="h-3 w-3/4 rounded" />
+                </div>
+              </div>
+
+              <div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
+                {/* Card Alokasi Sesi Skeleton */}
+                <div className="space-y-1.5 sm:space-y-2">
+                  <Skeleton className="h-3 w-24 rounded" />
+                  <div className="bg-white dark:bg-[#252525]/40 border border-slate-150 dark:border-[#3a3a3a] rounded-2xl sm:rounded-[20px] p-4 sm:p-5 shadow-[0_2px_12px_rgba(0,0,0,0.02)] grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="flex items-center gap-3">
+                      <Skeleton className="w-10 h-10 sm:w-12 sm:h-12 rounded-full shrink-0" />
+                      <div className="space-y-2 flex-1">
+                        <Skeleton className="h-2.5 w-16 rounded" />
+                        <Skeleton className="h-3 w-24 rounded" />
+                        <Skeleton className="h-4 w-32 rounded" />
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3 sm:pl-6 border-t sm:border-t-0 sm:border-l border-slate-100 dark:border-[#333333] pt-3 sm:pt-0">
+                      <Skeleton className="w-8 h-8 rounded-lg shrink-0" />
+                      <div className="space-y-2 flex-1">
+                        <Skeleton className="h-3 w-16 rounded" />
+                        <Skeleton className="h-4 w-12 rounded" />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Card Wilayah Dapil Skeleton */}
+                <div className="space-y-1.5 sm:space-y-2">
+                  <Skeleton className="h-3 w-24 rounded" />
+                  <div className="bg-gradient-to-br from-indigo-50/70 to-blue-50/40 dark:from-indigo-950/20 dark:to-blue-950/10 border border-indigo-100/70 dark:border-indigo-900/40 rounded-2xl sm:rounded-[20px] p-4 sm:p-5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                    <div className="flex gap-3 items-center flex-1">
+                      <Skeleton className="w-10 h-10 sm:w-14 sm:h-14 rounded-full shrink-0" />
+                      <div className="space-y-2 flex-1">
+                        <Skeleton className="h-3 w-20 rounded" />
+                        <Skeleton className="h-4 w-36 rounded" />
+                        <Skeleton className="h-3 w-full rounded" />
+                      </div>
+                    </div>
+                    <Skeleton className="w-8 h-8 rounded-lg shrink-0" />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Right Side Skeleton */}
+          <div className="md:col-span-6 flex flex-col gap-4 sm:gap-6 h-full animate-pulse">
+            <div className="bg-white dark:bg-[#2a2a2a] border border-slate-200 dark:border-[#333333] rounded-2xl overflow-hidden shadow-sm p-4 sm:p-5 space-y-4">
+              <div className="flex items-center gap-2 border-b border-slate-100 dark:border-[#333333] pb-3">
+                <Skeleton className="w-4 h-4 rounded-full" />
+                <Skeleton className="h-4 w-32 rounded" />
+              </div>
+              <div className="space-y-2">
+                <Skeleton className="h-3 w-full rounded" />
+                <Skeleton className="h-3 w-5/6 rounded" />
+              </div>
+              <div className="grid grid-cols-2 gap-2 sm:gap-3 pt-2">
+                <Skeleton className="h-10 rounded-xl" />
+                <Skeleton className="h-10 rounded-xl" />
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-4 sm:space-y-6 animate-fade-in text-left">
       {/* Information Slider */}
@@ -75,7 +178,7 @@ export default function StatusTab({
                       {/* Left Side */}
                       <div className="flex items-center gap-3 sm:gap-4 text-left">
                         <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-blue-50 dark:bg-blue-950/30 text-blue-600 dark:text-sky-400 flex items-center justify-center shrink-0 border border-blue-100/50 dark:border-blue-900/30 shadow-sm">
-                          <Clock className="w-5 h-5 sm:w-6 sm:h-6 animate-pulse" />
+                          <Clock className="w-5 h-5 sm:w-6 sm:h-6" />
                         </div>
                         <div className="min-w-0">
                           <span className="text-[9px] sm:text-[10px] font-bold text-slate-400 dark:text-[#a3a3a3] uppercase tracking-wider block mb-0.5">Sesi Pemilihan</span>
@@ -98,7 +201,6 @@ export default function StatusTab({
                             {accessSettings.voting_global_enabled ? (
                               <>
                                 <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[9px] sm:text-[10px] font-black bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border border-emerald-100 dark:border-emerald-900/40 shadow-sm">
-                                  <span className="w-1 h-1 sm:w-1.5 sm:h-1.5 rounded-full bg-emerald-500 mr-1 sm:mr-1.5 animate-ping" />
                                   AKTIF
                                 </span>
                                 <p className="text-[9px] sm:text-[10px] text-slate-500 dark:text-[#a3a3a3] font-medium leading-tight">Sesi pemungutan suara sedang berlangsung</p>
@@ -118,7 +220,7 @@ export default function StatusTab({
                   ) : (
                     <div className="bg-white dark:bg-[#252525]/40 border border-slate-150 dark:border-[#3a3a3a] rounded-2xl sm:rounded-[20px] p-4 sm:p-5 shadow-[0_2px_12px_rgba(0,0,0,0.02)] flex items-center gap-3 sm:gap-4 text-left">
                       <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-amber-50 dark:bg-amber-950/30 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0 border border-amber-100 dark:border-amber-900/40">
-                        <Clock className="w-5 h-5 sm:w-6 sm:h-6 animate-pulse" />
+                        <Clock className="w-5 h-5 sm:w-6 sm:h-6" />
                       </div>
                       <div>
                         <span className="text-[9px] sm:text-[10px] font-bold text-slate-400 dark:text-[#a3a3a3] uppercase tracking-wider block mb-0.5">Sesi Pemilihan</span>

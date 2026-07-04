@@ -1,9 +1,18 @@
 import React from 'react';
 import { Crown, ShieldAlert, ArrowLeft, CheckCircle2, Zap } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
+import { Skeleton } from '../../components/Skeleton';
 
 export default function AksesPro() {
   const navigate = useNavigate();
+  const [loading, setLoading] = React.useState(true);
+
+  React.useEffect(() => {
+    const timer = setTimeout(() => {
+      setLoading(false);
+    }, 750);
+    return () => clearTimeout(timer);
+  }, []);
 
   const proFeatures = [
     'Gelombang Voting (Manajemen Gelombang & Sesi Pemilihan Presisi)',
@@ -20,6 +29,44 @@ export default function AksesPro() {
     'Integrasi Sektor WAFO (Manajemen Guru, Staf GTK, & Unit Sekolah)',
     'Dukungan Premium CS Response 24/7 & SLA 99.9%'
   ];
+
+  if (loading) {
+    return (
+      <div className="p-4 sm:p-8 max-w-4xl mx-auto space-y-8 text-left">
+        {/* Top Navigation Back Banner Skeleton */}
+        <div className="flex items-center gap-3">
+          <Skeleton className="h-8 w-40 rounded-lg" />
+        </div>
+
+        {/* Premium Card Skeleton */}
+        <div className="bg-slate-900/5 dark:bg-slate-950/20 border border-slate-200 dark:border-[#2a2a2a] rounded-3xl p-6 sm:p-10 space-y-6">
+          <div className="flex flex-col items-center text-center space-y-4 max-w-2xl mx-auto">
+            <Skeleton className="h-6 w-24 rounded-full" />
+            <Skeleton className="h-10 w-48 rounded-xl" />
+            <Skeleton className="h-4 w-96 rounded" />
+            <div className="w-full max-w-md h-px bg-slate-200/20 my-2" />
+          </div>
+
+          <div className="max-w-xl mx-auto space-y-3">
+            <Skeleton className="h-4 w-40 mx-auto rounded" />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {[1, 2, 3, 4, 5, 6].map((i) => (
+                <div key={i} className="flex gap-2.5 p-3 rounded-2xl border border-dashed border-slate-200/20">
+                  <Skeleton className="w-4 h-4 rounded-full shrink-0" />
+                  <Skeleton className="h-4 w-full rounded" />
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4">
+            <Skeleton className="h-12 w-full sm:w-56 rounded-2xl" />
+            <Skeleton className="h-12 w-full sm:w-28 rounded-2xl" />
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-4 sm:p-8 max-w-4xl mx-auto space-y-8">

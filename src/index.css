@@ -64,3 +64,36 @@
   }
 }
 
+/* Shimmer Loading Effect */
+.animate-shimmer {
+  background: linear-gradient(
+    90deg,
+    #e2e8f0 25%,
+    #f1f5f9 50%,
+    #e2e8f0 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer-effect 1.3s infinite ease-in-out;
+}
+
+.dark .animate-shimmer {
+  background: linear-gradient(
+    90deg,
+    #1e293b 25%,
+    #334155 50%,
+    #1e293b 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer-effect 1.3s infinite ease-in-out;
+}
+
+@keyframes shimmer-effect {
+  0% {
+    background-position: 150% 0;
+  }
+  100% {
+    background-position: -150% 0;
+  }
+}
+
+

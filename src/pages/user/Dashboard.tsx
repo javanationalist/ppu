@@ -4,7 +4,8 @@ import { QRCodeCanvas } from 'qrcode.react';
 import * as htmlToImage from 'html-to-image';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
-import { LogOut, Download, MessageSquare, LifeBuoy, Edit3, X, Info, CalendarDays, FileText, AlertCircle, Megaphone, ChevronRight, Clock, MapPin, Home, CreditCard, QrCode, User } from 'lucide-react';
+import { LogOut, Download, MessageSquare, LifeBuoy, Edit3, X, Info, CalendarDays, FileText, AlertCircle, Megaphone, ChevronRight, Clock, MapPin, Home, CreditCard, QrCode, User, Grid, Menu } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
 import { useNavigate, Link } from 'react-router-dom';
 import { getHelpdeskButtons } from '../../lib/helpdesk';
 import { HelpdeskButton, Dapil } from '../../types';
@@ -27,6 +28,7 @@ export default function UserDashboard() {
   const cardRef = useRef<HTMLDivElement>(null);
   const qrRef = useRef<HTMLCanvasElement>(null);
   const [isDownloading, setIsDownloading] = useState(false);
+  const [dashboardLoading, setDashboardLoading] = useState(true);
   const [helpdeskButtons, setHelpdeskButtons] = useState<HelpdeskButton[]>([]);
   const [isAllCompleted, setIsAllCompleted] = useState(false);
   const [isSessionConfigActive, setIsSessionConfigActive] = useState(false);
@@ -43,6 +45,20 @@ export default function UserDashboard() {
   });
 
   const [activeTab, setActiveTab] = useState<'status' | 'kartu' | 'scan' | 'profil' | 'informasi'>('status');
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [showTooltip, setShowTooltip] = useState(false);
+
+  useEffect(() => {
+    const hasShown = sessionStorage.getItem('has_shown_nav_tooltip');
+    if (!hasShown) {
+      setShowTooltip(true);
+      sessionStorage.setItem('has_shown_nav_tooltip', 'true');
+      const timer = setTimeout(() => {
+        setShowTooltip(false);
+      }, 10000);
+      return () => clearTimeout(timer);
+    }
+  }, []);
   const [announcements, setAnnouncements] = useState<any[]>([]);
   const [infoLoading, setInfoLoading] = useState(true);
 
@@ -218,6 +234,8 @@ export default function UserDashboard() {
         }
       } catch (err) {
         console.error('Failed to load helpdesk or settings:', err);
+      } finally {
+        setDashboardLoading(false);
       }
     };
     fetchHelpdeskAndSettings();
@@ -356,6 +374,7 @@ export default function UserDashboard() {
             userDapil={userDapil}
             accessSettings={accessSettings}
             helpdeskButtons={helpdeskButtons}
+            loading={dashboardLoading}
           />
         )}
 
@@ -393,110 +412,99 @@ export default function UserDashboard() {
         )}
       </main>
 
-      {/* Bottom Navigation */}
-      <nav className="fixed bottom-0 left-0 right-0 bg-white dark:bg-[#1a1a1a] border-t border-slate-200 dark:border-[#2a2a2a] py-2 px-4 shadow-[0_-4px_24px_rgba(0,0,0,0.06)] z-40 transition-colors duration-300">
-        <div className="max-w-md mx-auto flex items-center justify-between">
-          
-          {/* Tab 1: Status */}
-          <button
-            onClick={() => setActiveTab('status')}
-            className="flex flex-col items-center justify-center flex-1 py-1 relative focus:outline-none bg-transparent border-none outline-none"
-            type="button"
-          >
-            <Home className={`w-5 h-5 transition-colors ${
-              activeTab === 'status' ? 'text-ppu-blue dark:text-sky-400' : 'text-slate-400 dark:text-[#a3a3a3]'
-            }`} />
-            <span className={`text-[10px] mt-1 transition-colors font-medium ${
-              activeTab === 'status' ? 'text-ppu-blue dark:text-sky-400 font-bold' : 'text-slate-400 dark:text-[#a3a3a3]'
-            }`}>
-              Status
-            </span>
-            {activeTab === 'status' && (
-              <span className="absolute bottom-0 w-1.5 h-1.5 bg-ppu-blue dark:bg-sky-400 rounded-full" />
-            )}
-          </button>
-
-          {/* Tab 2: Kartu Pemilih */}
-          <button
-            onClick={() => setActiveTab('kartu')}
-            className="flex flex-col items-center justify-center flex-1 py-1 relative focus:outline-none bg-transparent border-none outline-none"
-            type="button"
-          >
-            <CreditCard className={`w-5 h-5 transition-colors ${
-              activeTab === 'kartu' ? 'text-ppu-blue dark:text-sky-400' : 'text-slate-400 dark:text-[#a3a3a3]'
-            }`} />
-            <span className={`text-[10px] mt-1 transition-colors font-medium ${
-              activeTab === 'kartu' ? 'text-ppu-blue dark:text-sky-400 font-bold' : 'text-slate-400 dark:text-[#a3a3a3]'
-            }`}>
-              Kartu
-            </span>
-            {activeTab === 'kartu' && (
-              <span className="absolute bottom-0 w-1.5 h-1.5 bg-ppu-blue dark:bg-sky-400 rounded-full" />
-            )}
-          </button>
-
-          {/* Tab 3: Scan QR (Prominent highlighted button) */}
-          <div className="flex-1 flex justify-center -mt-5">
-            <button
-              onClick={() => setActiveTab('scan')}
-              className="flex flex-col items-center justify-center focus:outline-none bg-transparent border-none outline-none"
-              type="button"
+      {/* Floating Menu Button & Popup Navigation */}
+      <div className="relative">
+        <AnimatePresence>
+          {showTooltip && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9, x: 10 }}
+              animate={{ opacity: 1, scale: 1, x: 0 }}
+              exit={{ opacity: 0, scale: 0.9, x: 10 }}
+              transition={{ duration: 0.3, ease: 'easeOut' }}
+              className="fixed z-50 bottom-[calc(32px+env(safe-area-inset-bottom))] right-[85px] flex items-center pointer-events-none select-none"
             >
-              <div className={`w-14 h-14 rounded-full flex items-center justify-center shadow-lg transition-all transform hover:scale-105 active:scale-95 ${
-                activeTab === 'scan'
-                  ? 'bg-ppu-blue dark:bg-sky-500 text-white ring-4 ring-indigo-100 dark:ring-indigo-950/50'
-                  : 'bg-white dark:bg-[#2a2a2a] border border-slate-200 dark:border-[#333333] text-slate-500 dark:text-[#a3a3a3] hover:text-ppu-blue dark:hover:text-sky-400 shadow-md'
-              }`}>
-                <QrCode className="w-7 h-7" />
+              <div className="bg-white text-slate-800 px-3.5 py-2 rounded-[12px] shadow-xl border border-slate-100 flex items-center gap-1.5 text-xs font-bold whitespace-nowrap">
+                <span>🔥</span>
+                <span>Halaman lainnya</span>
               </div>
-              <span className={`text-[10px] mt-1 transition-colors font-semibold ${
-                activeTab === 'scan' ? 'text-ppu-blue dark:text-sky-400 font-bold' : 'text-slate-400 dark:text-[#a3a3a3]'
-              }`}>
-                Scan QR
-              </span>
-            </button>
-          </div>
+              {/* Arrow pointing right */}
+              <div className="w-2.5 h-2.5 bg-white border-r border-t border-slate-100 transform rotate-45 -ml-1.5" />
+            </motion.div>
+          )}
+        </AnimatePresence>
 
-          {/* Tab 4: Profil */}
-          <button
-            onClick={() => setActiveTab('profil')}
-            className="flex flex-col items-center justify-center flex-1 py-1 relative focus:outline-none bg-transparent border-none outline-none"
-            type="button"
-          >
-            <User className={`w-5 h-5 transition-colors ${
-              activeTab === 'profil' ? 'text-ppu-blue dark:text-sky-400' : 'text-slate-400 dark:text-[#a3a3a3]'
-            }`} />
-            <span className={`text-[10px] mt-1 transition-colors font-medium ${
-              activeTab === 'profil' ? 'text-ppu-blue dark:text-sky-400 font-bold' : 'text-slate-400 dark:text-[#a3a3a3]'
-            }`}>
-              Profil
-            </span>
-            {activeTab === 'profil' && (
-              <span className="absolute bottom-0 w-1.5 h-1.5 bg-ppu-blue dark:bg-sky-400 rounded-full" />
-            )}
-          </button>
+        <AnimatePresence>
+          {isMenuOpen && (
+            <>
+              {/* Backdrop */}
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                onClick={() => setIsMenuOpen(false)}
+                className="fixed inset-0 z-40 bg-black/10 dark:bg-black/30 backdrop-blur-[1px]"
+              />
 
-          {/* Tab 5: Informasi */}
-          <button
-            onClick={() => setActiveTab('informasi')}
-            className="flex flex-col items-center justify-center flex-1 py-1 relative focus:outline-none bg-transparent border-none outline-none"
-            type="button"
-          >
-            <Info className={`w-5 h-5 transition-colors ${
-              activeTab === 'informasi' ? 'text-ppu-blue dark:text-sky-400' : 'text-slate-400 dark:text-[#a3a3a3]'
-            }`} />
-            <span className={`text-[10px] mt-1 transition-colors font-medium ${
-              activeTab === 'informasi' ? 'text-ppu-blue dark:text-sky-400 font-bold' : 'text-slate-400 dark:text-[#a3a3a3]'
-            }`}>
-              Informasi
-            </span>
-            {activeTab === 'informasi' && (
-              <span className="absolute bottom-0 w-1.5 h-1.5 bg-ppu-blue dark:bg-sky-400 rounded-full" />
-            )}
-          </button>
+              {/* Popup Menu (Speed Dial Style) */}
+              <motion.div
+                initial={{ opacity: 0, scale: 0.85, x: 20, y: 20 }}
+                animate={{ opacity: 1, scale: 1, x: 0, y: 0 }}
+                exit={{ opacity: 0, scale: 0.85, x: 20, y: 20 }}
+                transition={{ type: "spring", stiffness: 350, damping: 26 }}
+                className="fixed z-50 w-[210px] bg-white dark:bg-[#2a2a2a] rounded-[18px] shadow-2xl border border-slate-150 dark:border-[#333333] p-1.5 bottom-[calc(20px+env(safe-area-inset-bottom))] right-[90px] flex flex-col gap-1"
+              >
+                {[
+                  { id: 'status', label: 'Status', icon: Home },
+                  { id: 'kartu', label: 'Kartu Pemilih', icon: CreditCard },
+                  { id: 'scan', label: 'Scan QR (Preview)', icon: QrCode },
+                  { id: 'profil', label: 'Profil', icon: User },
+                  { id: 'informasi', label: 'Informasi', icon: Info },
+                ].map((item) => {
+                  const IconComponent = item.icon;
+                  const isActive = activeTab === item.id;
+                  return (
+                    <button
+                      key={item.id}
+                      onClick={() => {
+                        setActiveTab(item.id as any);
+                        setIsMenuOpen(false);
+                      }}
+                      className={`flex items-center gap-3 w-full px-3 h-[48px] rounded-[14px] text-left transition-all duration-200 cursor-pointer select-none relative overflow-hidden group active:scale-95 ${
+                        isActive
+                          ? 'bg-ppu-blue-light dark:bg-sky-500/10 text-ppu-blue dark:text-sky-400 font-extrabold'
+                          : 'text-slate-600 dark:text-[#a3a3a3] hover:bg-slate-50 dark:hover:bg-[#333333]/40'
+                      }`}
+                      type="button"
+                    >
+                      <span className="absolute inset-0 bg-slate-200/20 dark:bg-white/5 opacity-0 group-hover:opacity-100 group-active:opacity-100 transition-opacity duration-150" />
+                      <IconComponent className={`w-5 h-5 shrink-0 transition-transform group-hover:scale-110 duration-200 ${isActive ? 'text-ppu-blue dark:text-sky-400' : 'text-slate-400 dark:text-[#a3a3a3]'}`} />
+                      <span className="text-xs font-semibold tracking-wide">{item.label}</span>
+                    </button>
+                  );
+                })}
+              </motion.div>
+            </>
+          )}
+        </AnimatePresence>
 
-        </div>
-      </nav>
+        {/* Floating Menu Button (FAB) */}
+        <motion.button
+          onClick={() => {
+            setIsMenuOpen(!isMenuOpen);
+            setShowTooltip(false);
+          }}
+          whileTap={{ scale: 0.92 }}
+          className="fixed z-50 flex items-center justify-center rounded-full text-white shadow-xl bg-gradient-to-tr from-ppu-blue to-ppu-blue-dark dark:from-sky-500 dark:to-sky-600 hover:brightness-110 w-[60px] h-[60px] bottom-[calc(20px+env(safe-area-inset-bottom))] right-[20px] cursor-pointer select-none"
+          id="user-fab-button"
+          type="button"
+        >
+          {isMenuOpen ? (
+            <X className="w-6 h-6 transition-transform rotate-0" />
+          ) : (
+            <Grid className="w-6 h-6 transition-transform hover:rotate-90 duration-300" />
+          )}
+        </motion.button>
+      </div>
 
       {/* Edit Profile Modal Dialog */}
       {isEditModalOpen && (

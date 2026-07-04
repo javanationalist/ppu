@@ -169,3 +169,54 @@ FOR ALL USING (
     WHERE profiles.id = auth.uid() AND (profiles.role = 'admin' OR profiles.role = 'creator')
   )
 );
+
+-- 11. UPDATE POLICIES UNTUK TABEL: categories
+DROP POLICY IF EXISTS "Admin dapat menambah kategori" ON categories;
+DROP POLICY IF EXISTS "Admin dan Creator dapat menambah kategori" ON categories;
+CREATE POLICY "Admin dan Creator dapat menambah kategori" ON categories 
+FOR INSERT WITH CHECK (
+  auth.role() = 'authenticated' AND 
+  EXISTS (SELECT 1 FROM profiles WHERE profiles.id = auth.uid() AND (profiles.role = 'admin' OR profiles.role = 'creator'))
+);
+
+DROP POLICY IF EXISTS "Admin dapat mengubah kategori" ON categories;
+DROP POLICY IF EXISTS "Admin dan Creator dapat mengubah kategori" ON categories;
+CREATE POLICY "Admin dan Creator dapat mengubah kategori" ON categories 
+FOR UPDATE USING (
+  auth.role() = 'authenticated' AND 
+  EXISTS (SELECT 1 FROM profiles WHERE profiles.id = auth.uid() AND (profiles.role = 'admin' OR profiles.role = 'creator'))
+);
+
+DROP POLICY IF EXISTS "Admin dapat menghapus kategori" ON categories;
+DROP POLICY IF EXISTS "Admin dan Creator dapat menghapus kategori" ON categories;
+CREATE POLICY "Admin dan Creator dapat menghapus kategori" ON categories 
+FOR DELETE USING (
+  auth.role() = 'authenticated' AND 
+  EXISTS (SELECT 1 FROM profiles WHERE profiles.id = auth.uid() AND (profiles.role = 'admin' OR profiles.role = 'creator'))
+);
+
+-- 12. UPDATE POLICIES UNTUK TABEL: dapils
+DROP POLICY IF EXISTS "Admin dapat menambah dapil" ON dapils;
+DROP POLICY IF EXISTS "Admin dan Creator dapat menambah dapil" ON dapils;
+CREATE POLICY "Admin dan Creator dapat menambah dapil" ON dapils 
+FOR INSERT WITH CHECK (
+  auth.role() = 'authenticated' AND 
+  EXISTS (SELECT 1 FROM profiles WHERE profiles.id = auth.uid() AND (profiles.role = 'admin' OR profiles.role = 'creator'))
+);
+
+DROP POLICY IF EXISTS "Admin dapat mengubah dapil" ON dapils;
+DROP POLICY IF EXISTS "Admin dan Creator dapat mengubah dapil" ON dapils;
+CREATE POLICY "Admin dan Creator dapat mengubah dapil" ON dapils 
+FOR UPDATE USING (
+  auth.role() = 'authenticated' AND 
+  EXISTS (SELECT 1 FROM profiles WHERE profiles.id = auth.uid() AND (profiles.role = 'admin' OR profiles.role = 'creator'))
+);
+
+DROP POLICY IF EXISTS "Admin dapat menghapus dapil" ON dapils;
+DROP POLICY IF EXISTS "Admin dan Creator dapat menghapus dapil" ON dapils;
+CREATE POLICY "Admin dan Creator dapat menghapus dapil" ON dapils 
+FOR DELETE USING (
+  auth.role() = 'authenticated' AND 
+  EXISTS (SELECT 1 FROM profiles WHERE profiles.id = auth.uid() AND (profiles.role = 'admin' OR profiles.role = 'creator'))
+);
+

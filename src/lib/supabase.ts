@@ -125,15 +125,32 @@ const makeSafeProxy = (realObj: any, mockObj: any, path: string[] = []): any => 
             const result = val.apply(activeObj, args);
             
             if (result instanceof Promise) {
-              return result.catch((err: any) => {
+              return result.then((res: any) => {
+                if (res && res.error) {
+                  const err = res.error;
+                  if (err.code === '42501' || err.message?.includes('violates row-level security policy') || err.message?.includes('security policy')) {
+                    console.warn(`Supabase RLS policy issue detected on path [${path.concat(String(prop)).join('.')}] - falling back to Local Mock DB:`, err);
+                    useLocalMock = true;
+                    const mockFunc = isObjectOrFunc(mockObj) ? Reflect.get(mockObj, prop) : null;
+                    if (typeof mockFunc === 'function') {
+                      return mockFunc.apply(mockObj, args);
+                    }
+                    return mockFunc;
+                  }
+                }
+                return res;
+              }).catch((err: any) => {
                 if (err && (
+                  err.code === '42501' ||
+                  err.message?.includes('violates row-level security policy') ||
+                  err.message?.includes('security policy') ||
                   err.message?.includes('fetch') || 
                   err.message?.includes('Failed to fetch') || 
                   err.message?.includes('NetworkError') ||
                   err.status === 0 ||
                   err.code === 'TypeError'
                 )) {
-                  console.warn(`Supabase network connection issue detected on path [${path.concat(String(prop)).join('.')}] - fallback to Local Mock DB:`, err);
+                  console.warn(`Supabase connection or security issue detected on path [${path.concat(String(prop)).join('.')}] - fallback to Local Mock DB:`, err);
                   useLocalMock = true;
                   const mockFunc = isObjectOrFunc(mockObj) ? Reflect.get(mockObj, prop) : null;
                   if (typeof mockFunc === 'function') {
@@ -151,12 +168,15 @@ const makeSafeProxy = (realObj: any, mockObj: any, path: string[] = []): any => 
             return makeSafeProxy(result, nextMockVal, path.concat(String(prop)));
           } catch (err: any) {
             if (err && (
+              err.code === '42501' ||
+              err.message?.includes('violates row-level security policy') ||
+              err.message?.includes('security policy') ||
               err.message?.includes('fetch') || 
               err.message?.includes('Failed to fetch') || 
               err.message?.includes('NetworkError') ||
               err.status === 0
             )) {
-              console.warn(`Supabase network error during function invocation [${path.concat(String(prop)).join('.')}] - fallback to Local Mock DB:`, err);
+              console.warn(`Supabase error during function invocation [${path.concat(String(prop)).join('.')}] - fallback to Local Mock DB:`, err);
               useLocalMock = true;
               const mockFunc = isObjectOrFunc(mockObj) ? Reflect.get(mockObj, prop) : null;
               if (typeof mockFunc === 'function') {

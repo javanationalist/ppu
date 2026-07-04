@@ -3,6 +3,7 @@ import { Info, Megaphone, CalendarDays, FileText, AlertCircle, Clock, ChevronRig
 import { supabase } from '../lib/supabase';
 import { useTheme } from '../contexts/ThemeContext';
 import { WafoAnnouncement } from '../types';
+import { Skeleton } from '../components/Skeleton';
 
 export default function Informasi() {
   const { isDark } = useTheme();
@@ -73,9 +74,40 @@ export default function Informasi() {
 
       <div className="w-full space-y-6">
         {loading ? (
-          <div className="flex flex-col items-center justify-center py-20 gap-4">
-            <div className="w-10 h-10 border-4 border-ppu-blue dark:border-sky-500 border-t-transparent rounded-full animate-spin"></div>
-            <p className="text-slate-500 dark:text-slate-400 font-bold animate-pulse">Memuat Informasi...</p>
+          <div className="space-y-6">
+            {[1, 2].map((i) => (
+              <div 
+                key={i} 
+                className="bg-white dark:bg-[#2a2a2a] border border-ppu-border dark:border-[#333333] p-6 sm:p-8 rounded-2xl shadow-md relative overflow-hidden"
+              >
+                <div className="absolute top-0 left-0 w-2 h-full bg-slate-300 dark:bg-slate-700"></div>
+                
+                <div className="flex items-start gap-4 sm:gap-6">
+                  {/* Icon block skeleton */}
+                  <Skeleton className="w-12 h-12 shrink-0 rounded-xl" />
+                  
+                  <div className="flex-1 min-w-0 space-y-4">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                      {/* Title skeleton */}
+                      <Skeleton className="h-6 w-2/3 rounded" />
+                      {/* Date badge skeleton */}
+                      <Skeleton className="h-6 w-32 rounded-full shrink-0" />
+                    </div>
+                    
+                    {/* Content skeleton */}
+                    <div className="space-y-2 p-4 rounded-xl border border-dashed border-slate-200 dark:border-[#333333]">
+                      <Skeleton className="h-4 w-full rounded" />
+                      <Skeleton className="h-4 w-5/6 rounded" />
+                      <Skeleton className="h-4 w-4/5 rounded" />
+                    </div>
+                    
+                    <div className="flex items-center justify-between pt-2">
+                      <Skeleton className="h-4 w-28 rounded" />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
         ) : announcements.length === 0 ? (
           <div className="bg-white dark:bg-[#2a2a2a] border border-ppu-border dark:border-[#333333] p-12 rounded-3xl text-center shadow-sm transition-colors">

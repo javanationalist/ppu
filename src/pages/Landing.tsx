@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { LogIn, UserPlus, Vote, BarChart3, BookOpen, ExternalLink } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useTheme } from '../contexts/ThemeContext';
+import { Skeleton } from '../components/Skeleton';
 
 export default function Landing() {
   const { isDark } = useTheme();
@@ -14,6 +15,7 @@ export default function Landing() {
     cara_menggunakan: true,
   });
   const [loading, setLoading] = useState(true);
+  const [countdownLoading, setCountdownLoading] = useState(true);
   const [activeCountdown, setActiveCountdown] = useState<any | null>(null);
   const [serverOffset, setServerOffset] = useState<number>(0);
   const [timeLeft, setTimeLeft] = useState({
@@ -104,6 +106,8 @@ export default function Landing() {
         }
       } catch (err) {
         console.error('Exception fetching countdown:', err);
+      } finally {
+        setCountdownLoading(false);
       }
     }
 
@@ -199,9 +203,12 @@ export default function Landing() {
       {/* 2. AREA TOMBOL */}
       <div className="w-full flex justify-center">
         {loading ? (
-          <div className="flex flex-col items-center justify-center py-4 gap-2">
-            <div className="w-6 h-6 border-2 border-ppu-blue dark:border-sky-500 border-t-transparent rounded-full animate-spin"></div>
-            <p className="text-[10px] text-slate-400 dark:text-[#a3a3a3] font-semibold uppercase tracking-wide">Menghubungkan ke verifikasi...</p>
+          <div className="flex flex-row flex-wrap justify-center items-center gap-2 w-full max-w-lg px-2">
+            <Skeleton className="h-9 w-40 rounded-md" />
+            <Skeleton className="h-9 w-36 rounded-md" />
+            <Skeleton className="h-9 w-20 rounded-md" />
+            <Skeleton className="h-9 w-24 rounded-md" />
+            <Skeleton className="h-9 w-44 rounded-md" />
           </div>
         ) : (
           <div className="flex flex-row flex-wrap justify-center items-center gap-2 w-full max-w-lg px-2">
@@ -290,8 +297,40 @@ export default function Landing() {
       </div>
 
       {/* 3.5. COUNTDOWN */}
-      {activeCountdown && (
-        <div className="w-full max-w-lg bg-white dark:bg-[#2a2a2a] border border-slate-200 dark:border-[#333333] rounded-lg p-5 shadow-xs transition-colors text-center space-y-4">
+      {countdownLoading ? (
+        <div className="w-full max-w-lg bg-white dark:bg-[#2a2a2a] border border-slate-200 dark:border-[#333333] rounded-lg p-5 shadow-xs transition-colors text-center space-y-4 animate-fade-in">
+          <div className="space-y-2 flex flex-col items-center">
+            {/* Skeleton untuk Judul Countdown */}
+            <Skeleton className="h-5 w-3/4 mx-auto" />
+            {/* Skeleton untuk Subjudul */}
+            <Skeleton className="h-3.5 w-1/2 mx-auto" />
+          </div>
+          
+          <div className="grid grid-cols-4 gap-2 max-w-sm mx-auto pt-2">
+            {/* Skeleton berbentuk kotak untuk Bulan */}
+            <div className="flex flex-col items-center p-2 bg-slate-50 dark:bg-[#1a1a1a]/60 rounded-md border border-slate-100 dark:border-[#333333] gap-2">
+              <Skeleton className="h-7 w-12" />
+              <Skeleton className="h-3 w-8" />
+            </div>
+            {/* Skeleton berbentuk kotak untuk Hari */}
+            <div className="flex flex-col items-center p-2 bg-slate-50 dark:bg-[#1a1a1a]/60 rounded-md border border-slate-100 dark:border-[#333333] gap-2">
+              <Skeleton className="h-7 w-12" />
+              <Skeleton className="h-3 w-8" />
+            </div>
+            {/* Skeleton berbentuk kotak untuk Jam */}
+            <div className="flex flex-col items-center p-2 bg-slate-50 dark:bg-[#1a1a1a]/60 rounded-md border border-slate-100 dark:border-[#333333] gap-2">
+              <Skeleton className="h-7 w-12" />
+              <Skeleton className="h-3 w-8" />
+            </div>
+            {/* Skeleton berbentuk kotak untuk Detik */}
+            <div className="flex flex-col items-center p-2 bg-slate-50 dark:bg-[#1a1a1a]/60 rounded-md border border-slate-100 dark:border-[#333333] gap-2">
+              <Skeleton className="h-7 w-12" />
+              <Skeleton className="h-3 w-8" />
+            </div>
+          </div>
+        </div>
+      ) : activeCountdown ? (
+        <div className="w-full max-w-lg bg-white dark:bg-[#2a2a2a] border border-slate-200 dark:border-[#333333] rounded-lg p-5 shadow-xs transition-colors text-center space-y-4 animate-fade-in">
           <div className="space-y-1">
             <h4 className="text-slate-800 dark:text-[#f5f5f5] text-base font-extrabold tracking-tight leading-snug whitespace-pre-line">
               {activeCountdown.title}
@@ -341,7 +380,7 @@ export default function Landing() {
             </div>
           )}
         </div>
-      )}
+      ) : null}
 
       {/* 4. ILUSTRASI */}
       <div className="w-full max-w-lg overflow-hidden rounded-lg shadow-xs border border-slate-100/60 dark:border-[#2a2a2a] transition-colors">
