@@ -4,7 +4,7 @@ import { QRCodeCanvas } from 'qrcode.react';
 import * as htmlToImage from 'html-to-image';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
-import { LogOut, Download, MessageSquare, LifeBuoy, Edit3, X, Info, CalendarDays, FileText, AlertCircle, Megaphone, ChevronRight, Clock, MapPin } from 'lucide-react';
+import { LogOut, Download, MessageSquare, LifeBuoy, Edit3, X, Info, CalendarDays, FileText, AlertCircle, Megaphone, ChevronRight, Clock, MapPin, Home, CreditCard, QrCode, User } from 'lucide-react';
 import { useNavigate, Link } from 'react-router-dom';
 import { getHelpdeskButtons } from '../../lib/helpdesk';
 import { HelpdeskButton, Dapil } from '../../types';
@@ -14,6 +14,11 @@ import { getVotingCompletionStatus, getDapils } from '../../lib/votingService';
 import { getGelombangConfigActive, getGelombangSesiList, GelombangSesi } from '../../lib/gelombangService';
 import { ALL_CLASSES } from '../../lib/classConstants';
 import WafoSlider from '../../components/WafoSlider';
+import StatusTab from '../../components/user/StatusTab';
+import VoterCardTab from '../../components/user/VoterCardTab';
+import ScanQrTab from '../../components/user/ScanQrTab';
+import ProfileTab from '../../components/user/ProfileTab';
+import InformasiTab from '../../components/user/InformasiTab';
 
 export default function UserDashboard() {
   const { profile, signOut } = useAuth();
@@ -36,6 +41,37 @@ export default function UserDashboard() {
     maintenance_enabled: false,
     voting_global_enabled: true,
   });
+
+  const [activeTab, setActiveTab] = useState<'status' | 'kartu' | 'scan' | 'profil' | 'informasi'>('status');
+  const [announcements, setAnnouncements] = useState<any[]>([]);
+  const [infoLoading, setInfoLoading] = useState(true);
+
+  const fetchAnnouncements = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('wafo_announcements')
+        .select('*')
+        .eq('is_active', true)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error("Error fetching WAFO inside Dashboard tab:", error);
+      } else {
+        setAnnouncements(data || []);
+      }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setInfoLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === 'informasi') {
+      setInfoLoading(true);
+      fetchAnnouncements();
+    }
+  }, [activeTab]);
 
   const renderBlurredEmail = (email: string) => {
     if (!email) return null;
@@ -248,7 +284,7 @@ export default function UserDashboard() {
   if (!profile) return null;
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-[#1a1a1a] font-sans text-slate-900 dark:text-[#f5f5f5] flex flex-col overflow-hidden transition-colors duration-300">
+    <div className="h-screen bg-slate-50 dark:bg-[#1a1a1a] font-sans text-slate-900 dark:text-[#f5f5f5] flex flex-col overflow-hidden transition-colors duration-300">
       {/* Top Navigation */}
       <nav className="h-16 bg-white dark:bg-[#1a1a1a] border-b border-slate-200 dark:border-[#2a2a2a] px-4 sm:px-8 flex items-center justify-between shadow-sm z-10 shrink-0 transition-colors duration-300">
         <div className="flex items-center gap-3">
@@ -283,17 +319,14 @@ export default function UserDashboard() {
             <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-indigo-100 dark:bg-[#2a2a2a] flex items-center justify-center border border-indigo-200 dark:border-[#333333] text-indigo-700 dark:text-[#f5f5f5] font-bold uppercase transition-colors">
               {profile.full_name.substring(0, 2)}
             </div>
-            <button onClick={handleLogout} className="ml-1 sm:ml-2 text-slate-400 dark:text-[#a3a3a3] hover:text-red-500 dark:hover:text-red-400 group transition-colors" title="Logout">
+            <button onClick={handleLogout} className="ml-1 sm:ml-2 text-slate-400 dark:text-[#a3a3a3] hover:text-red-500 dark:hover:text-red-400 group transition-colors focus:outline-none" title="Logout">
               <LogOut className="w-5 h-5 group-hover:stroke-red-500 dark:group-hover:stroke-red-400" />
             </button>
           </div>
         </div>
       </nav>
 
-      {/* Information Slider (Copied from Landing) */}
-      <WafoSlider />
-
-      {/* Alert if Profile is Incomplete */}
+      {/* Alert if Profile is Incomplete (Always visible on top of scrollable area, if incomplete) */}
       {accessSettings.edit_profil_enabled && (!profile.full_name || !profile.class) && (
         <div className="bg-amber-50 dark:bg-amber-950/40 border-b border-amber-200 dark:border-amber-900/50 px-4 py-3 sm:px-8 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 z-10 shrink-0 select-none animate-fade-in transition-colors">
           <div className="flex items-center gap-3">
@@ -305,360 +338,165 @@ export default function UserDashboard() {
           <button 
             type="button"
             onClick={() => setIsEditModalOpen(true)}
-            className="text-xs font-bold text-amber-900 dark:text-amber-350 hover:text-amber-700 dark:hover:text-amber-200 underline shrink-0 transition-colors"
+            className="text-xs font-bold text-amber-900 dark:text-amber-350 hover:text-amber-700 dark:hover:text-amber-200 underline shrink-0 transition-colors focus:outline-none"
           >
             Lengkapi Profil Sekarang &rarr;
           </button>
         </div>
       )}
 
-      {/* Main Content Layout */}
-      <main className="flex-1 p-4 sm:p-8 overflow-y-auto w-full max-w-7xl mx-auto">
-        <div className="grid grid-cols-1 md:grid-cols-12 gap-8 items-start">
-          
-          {/* Left Column: Status & Voting */}
-          <div className="col-span-1 md:col-span-4 flex flex-col gap-6">
-            {/* Status Cards */}
-            <div className="grid grid-cols-2 gap-4">
-              <div className="bg-white dark:bg-[#2a2a2a] border border-slate-200 dark:border-[#333333] p-4 rounded-xl shadow-sm transition-colors">
-                <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-[#a3a3a3] mb-1">Status Akun</p>
-                <div className="flex items-center gap-2">
-                  <div className={`w-2 h-2 rounded-full ${profile.account_status === 'dikonfirmasi' ? 'bg-emerald-500' : 'bg-red-500'}`}></div>
-                  <span className={`text-sm font-bold ${profile.account_status === 'dikonfirmasi' ? 'text-emerald-700 dark:text-emerald-400' : 'text-red-700 dark:text-rose-400'} transition-colors`}>{profile.account_status === 'dikonfirmasi' ? 'Dikonfirmasi' : 'Belum Dikonfirmasi'}</span>
-                </div>
-              </div>
-              <div className="bg-white dark:bg-[#2a2a2a] border border-slate-200 dark:border-[#333333] p-4 rounded-xl shadow-sm transition-colors">
-                <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-[#a3a3a3] mb-1">Status PU</p>
-                <div className="flex items-center gap-2">
-                  <div className={`w-2 h-2 rounded-full ${(profile.voting_status === 'sudah' || isAllCompleted) ? 'bg-emerald-500' : 'bg-amber-500'}`}></div>
-                  <span className={`text-sm font-bold truncate transition-colors ${(!accessSettings.voting_global_enabled) ? 'text-rose-700 dark:text-rose-400' : (profile.voting_status === 'sudah' || isAllCompleted) ? 'text-emerald-700 dark:text-emerald-400' : 'text-amber-700 dark:text-amber-400'}`}>{!accessSettings.voting_global_enabled ? 'Bilik Nonaktif' : (profile.voting_status === 'sudah' || isAllCompleted) ? 'Sudah Memilih' : 'Belum Memilih'}</span>
-                </div>
-              </div>
-            </div>
+      {/* Main Scrollable Area */}
+      <main className="flex-1 overflow-y-auto p-4 sm:p-8 pb-28 w-full max-w-7xl mx-auto transition-all duration-300">
+        {activeTab === 'status' && (
+          <StatusTab
+            profile={profile}
+            isAllCompleted={isAllCompleted}
+            isSessionConfigActive={isSessionConfigActive}
+            userSession={userSession}
+            userDapil={userDapil}
+            accessSettings={accessSettings}
+            helpdeskButtons={helpdeskButtons}
+          />
+        )}
 
-            {/* Voting Section */}
-            <div className="bg-white dark:bg-[#2a2a2a] border border-slate-200 dark:border-[#333333] rounded-xl overflow-hidden shadow-sm transition-colors">
-              <div className="bg-slate-50 dark:bg-[#1a1a1a]/50 px-5 py-3 border-b border-slate-200 dark:border-[#333333] transition-colors">
-                <h3 className="text-sm font-bold text-slate-700 dark:text-[#f5f5f5]">Panel Pemungutan Suara</h3>
-              </div>
-              <div className="p-6 space-y-5">
-                
-                {/* Alokasi Sesi */}
-                {isSessionConfigActive && (
-                  <div className="space-y-1 pb-4 border-b border-slate-100 dark:border-[#333333]">
-                    <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-[#a3a3a3]">Alokasi Sesi</p>
-                    {userSession ? (
-                      <div>
-                        <h4 className="text-sm font-extrabold text-slate-800 dark:text-[#f5f5f5] transition-colors">{userSession.nama_sesi}</h4>
-                        <p className="text-xs text-slate-500 dark:text-[#a3a3a3] font-medium transition-colors">{userSession.jam_mulai} - {userSession.jam_selesai} WIB</p>
-                      </div>
-                    ) : (
-                      <div>
-                        <h4 className="text-sm font-extrabold text-amber-750 dark:text-amber-400 transition-colors">Belum Dijadwalkan</h4>
-                      </div>
-                    )}
-                  </div>
-                )}
+        {activeTab === 'kartu' && (
+          <VoterCardTab
+            profile={profile}
+            isAllCompleted={isAllCompleted}
+            accessSettings={accessSettings}
+            isDownloading={isDownloading}
+            handleDownload={handleDownload}
+            cardRef={cardRef}
+            qrRef={qrRef}
+            renderBlurredEmail={renderBlurredEmail}
+          />
+        )}
 
-                {/* Alokasi Dapil */}
-                <div className="space-y-1">
-                  <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-[#a3a3a3]">Alokasi Dapil</p>
-                  {userDapil ? (
-                    <div>
-                      <h4 className="text-sm font-extrabold text-slate-800 dark:text-[#f5f5f5] mb-1 transition-colors">{userDapil.name}</h4>
-                      <p className="text-xs text-slate-500 dark:text-[#a3a3a3] leading-relaxed font-medium bg-slate-50 dark:bg-[#1a1a1a]/50 p-2.5 rounded-lg border border-slate-100 dark:border-[#333333]/50 transition-colors">
-                        {userDapil.eligible_classes && userDapil.eligible_classes.length > 0 
-                          ? userDapil.eligible_classes.join(', ') 
-                          : 'Tidak ada kelompok kelas'}
-                      </p>
-                    </div>
-                  ) : (
-                    <div>
-                      <h4 className="text-sm font-extrabold text-slate-500 dark:text-[#a3a3a3] transition-colors">Belum Dialokasikan</h4>
-                      <p className="text-xs text-slate-400 dark:text-[#a3a3a3] transition-colors">Kelas Anda belum terdaftar di Dapil mana pun.</p>
-                    </div>
-                  )}
-                </div>
+        {activeTab === 'scan' && (
+          <ScanQrTab />
+        )}
 
-              </div>
-            </div>
+        {activeTab === 'profil' && (
+          <ProfileTab
+            profile={profile}
+            accessSettings={accessSettings}
+            setIsEditModalOpen={setIsEditModalOpen}
+            isAllCompleted={isAllCompleted}
+          />
+        )}
 
-            {/* Helpdesk Section */}
-            <div className="bg-white dark:bg-[#2a2a2a] border border-slate-200 dark:border-[#333333] rounded-xl overflow-hidden shadow-sm transition-colors">
-              <div className="bg-slate-50 dark:bg-[#1a1a1a]/50 px-5 py-3 border-b border-slate-200 dark:border-[#333333] flex items-center justify-between transition-colors">
-                <h3 className="text-sm font-bold text-slate-700 dark:text-[#f5f5f5] flex items-center gap-2">
-                  <LifeBuoy className="w-4 h-4 text-indigo-600 dark:text-indigo-400 animate-pulse" />
-                  Layanan Bantuan
-                </h3>
-              </div>
-              <div className="p-5 space-y-4">
-                <p className="text-xs text-slate-500 dark:text-[#a3a3a3] leading-relaxed transition-colors">
-                  Jika ada kendala atau membutuhkan informasi, silakan hubungi panitia melalui kanal berikut.
-                </p>
-                <div className="grid grid-cols-2 gap-3">
-                  {helpdeskButtons.map((btn) => (
-                    <a
-                      key={btn.id}
-                      href={btn.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center justify-center gap-2 px-3 py-2.5 border border-slate-200 dark:border-[#333333] hover:border-indigo-100 dark:hover:border-indigo-550 hover:bg-slate-50 dark:hover:bg-[#1a1a1a] text-slate-700 dark:text-[#a3a3a3] hover:text-indigo-700 dark:hover:text-[#a3a3a3] rounded-xl text-xs font-bold transition-all shadow-sm group"
-                    >
-                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 group-hover:scale-125 transition-transform" />
-                      {btn.label}
-                    </a>
-                  ))}
-                  {helpdeskButtons.length === 0 && (
-                    <p className="col-span-2 text-center text-xs text-slate-400 dark:text-[#a3a3a3] italic py-2">
-                      Layanan bantuan belum tersedia.
-                    </p>
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Right Column: Digital Voter Card */}
-          <div className="col-span-1 md:col-span-8 flex flex-col gap-4">
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-3 mb-2">
-              <div>
-                <h2 className="text-2xl font-bold text-slate-800 dark:text-[#f5f5f5] transition-colors">Kartu Pemilih Digital</h2>
-                <p className="text-slate-500 dark:text-[#a3a3a3] text-sm transition-colors">Identitas untuk Pemilihan Umum</p>
-              </div>
-              <div className="flex gap-2 w-full sm:w-auto">
-                {accessSettings.edit_profil_enabled && (
-                  <button 
-                    onClick={() => setIsEditModalOpen(true)} 
-                    className="flex-1 sm:flex-initial flex items-center justify-center gap-2 bg-slate-200 dark:bg-[#2a2a2a] hover:bg-slate-300 dark:hover:bg-[#333333] text-slate-700 dark:text-[#f5f5f5] px-4 py-2 rounded-lg text-sm font-bold transition-all shrink-0"
-                    type="button"
-                  >
-                    <Edit3 className="w-4 h-4" />
-                    <span>Edit Profil</span>
-                  </button>
-                )}
-                {accessSettings.download_kartu_enabled && accessSettings.visibilitas_kartu_enabled && !(profile?.card_visibility === false && (profile?.voting_status === 'sudah' || isAllCompleted)) && (
-                  <button 
-                    onClick={handleDownload} 
-                    disabled={isDownloading}
-                    className="flex-1 sm:flex-initial flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 dark:hover:bg-indigo-500 text-white px-4 py-2 rounded-lg text-sm font-bold transition-colors shadow-lg shadow-indigo-100 dark:shadow-none shrink-0 disabled:opacity-50"
-                    type="button"
-                  >
-                    <Download className={`w-4 h-4 ${isDownloading ? 'animate-bounce' : ''}`} />
-                    <span>{isDownloading ? 'Sedang mengunduh...' : 'Download PNG'}</span>
-                  </button>
-                )}
-              </div>
-            </div>
-
-            {/* THE KARTU PU (VOTERS CARD) */}
-            {profile?.card_visibility === false && (profile?.voting_status === 'sudah' || isAllCompleted) ? (
-              <div className="w-full bg-white dark:bg-[#2a2a2a] border border-slate-200 dark:border-[#333333] rounded-2xl p-6 sm:p-8 shadow-sm space-y-6 transition-colors">
-                <div className="border-b border-slate-100 dark:border-[#333333] pb-4">
-                  <h3 className="text-lg font-black text-slate-800 dark:text-[#f5f5f5] tracking-tight transition-colors">Informasi Pemilih</h3>
-                  <p className="text-slate-450 dark:text-[#a3a3a3] text-xs mt-1 transition-colors">Status penggunaan kartu pemilih digital Anda</p>
-                  <div className="mt-4 p-3.5 bg-red-50 dark:bg-red-950/30 border border-red-100 dark:border-red-900/50 rounded-xl text-xs flex flex-col gap-1.5 shadow-sm transition-colors">
-                    <div className="flex items-center gap-2">
-                      <span className="w-2.5 h-2.5 rounded-full bg-red-600 animate-pulse"></span>
-                      <span className="text-red-700 dark:text-red-400 font-extrabold uppercase tracking-widest text-[10px] transition-colors">Kartu Expired</span>
-                    </div>
-                    <p className="text-slate-700 dark:text-[#f5f5f5] font-semibold leading-relaxed transition-colors">
-                      Hak pilih Anda telah digunakan. <br className="hidden sm:inline"/>
-                      Terima kasih telah berpartisipasi dalam pemilu.
-                    </p>
-                  </div>
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                  <div className="space-y-1">
-                    <span className="block text-[10px] font-bold text-slate-400 dark:text-[#a3a3a3] uppercase tracking-widest">Nama Lengkap</span>
-                    <span className="block text-slate-800 dark:text-[#f5f5f5] text-base font-extrabold truncate transition-colors">{profile.full_name}</span>
-                  </div>
-                  <div className="space-y-1">
-                    <span className="block text-[10px] font-bold text-slate-400 dark:text-[#a3a3a3] uppercase tracking-widest">Email Terdaftar</span>
-                    <span className="block text-slate-800 dark:text-[#f5f5f5] text-sm font-semibold truncate transition-colors">{renderBlurredEmail(profile.email)}</span>
-                  </div>
-                  <div className="space-y-1 sm:col-span-2">
-                    <span className="block text-[10px] font-bold text-slate-400 dark:text-[#a3a3a3] uppercase tracking-widest">Kelas DPT</span>
-                    <span className="block text-slate-800 dark:text-[#f5f5f5] text-sm font-black transition-colors">{profile.class || 'N/A'}</span>
-                  </div>
-                </div>
-              </div>
-            ) : !accessSettings.visibilitas_kartu_enabled ? (
-              <div className="w-full bg-white dark:bg-[#2a2a2a] border border-slate-200 dark:border-[#333333] rounded-2xl p-6 sm:p-8 shadow-sm space-y-6 transition-colors">
-                <div className="border-b border-slate-100 dark:border-[#333333] pb-4">
-                  <h3 className="text-lg font-black text-slate-800 dark:text-[#f5f5f5] tracking-tight transition-colors">Informasi Pemilih</h3>
-                  <p className="text-slate-400 dark:text-[#a3a3a3] text-xs mt-1 transition-colors">Data identitas Anda untuk verifikasi manual oleh panitia kesiswaan</p>
-                  <div className="mt-4 p-3 bg-rose-50 dark:bg-rose-950/30 border border-rose-100 dark:border-rose-900/50 rounded-lg text-rose-600 dark:text-rose-450 text-xs font-bold flex items-center gap-2 transition-colors">
-                    <span className="w-2 h-2 rounded-full bg-rose-500"></span>
-                    Kartu pemilih digital belum diterbitkan.
-                  </div>
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                  <div className="space-y-1">
-                    <span className="block text-[10px] font-bold text-slate-450 dark:text-[#a3a3a3] uppercase tracking-widest">Nama Lengkap</span>
-                    <span className="block text-slate-800 dark:text-[#f5f5f5] text-base font-extrabold truncate transition-colors">{profile.full_name}</span>
-                  </div>
-                  <div className="space-y-1">
-                    <span className="block text-[10px] font-bold text-slate-450 dark:text-[#a3a3a3] uppercase tracking-widest">Email Terdaftar</span>
-                    <span className="block text-slate-800 dark:text-[#f5f5f5] text-sm font-semibold truncate transition-colors">{renderBlurredEmail(profile.email)}</span>
-                  </div>
-                  <div className="space-y-1 sm:col-span-2">
-                    <span className="block text-[10px] font-bold text-slate-450 dark:text-[#a3a3a3] uppercase tracking-widest">Kelas DPT</span>
-                    <span className="block text-slate-800 dark:text-[#f5f5f5] text-sm font-black transition-colors">{profile.class || 'N/A'}</span>
-                  </div>
-                </div>
-              </div>
-            ) : (
-              <div className="w-full overflow-hidden flex justify-center bg-gray-100 sm:bg-transparent rounded-2xl">
-                <div 
-                  ref={cardRef} 
-                  className="relative w-full max-w-[800px] aspect-[0.6/1] sm:aspect-[1.586/1] bg-gradient-to-br from-indigo-900 to-indigo-800 sm:rounded-2xl overflow-hidden sm:shadow-2xl sm:border-4 border-indigo-700 shrink-0 flex flex-col sm:block" 
-                  style={{ backgroundColor: '#312e81' /* fallback color for image export */ }}
-                >
-                  {/* Card Background Pattern Overlay */}
-                  <div className="absolute inset-0 opacity-10">
-                    <svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
-                      <defs>
-                        <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
-                          <path d="M 40 0 L 0 0 0 40" fill="none" stroke="white" strokeWidth="1"/>
-                        </pattern>
-                      </defs>
-                      <rect width="100%" height="100%" fill="url(#grid)" />
-                    </svg>
-                  </div>
-
-                  {/* Card Header */}
-                  <div className="relative p-6 sm:p-8 flex justify-between items-start gap-4">
-                    <div className="flex items-center gap-3 sm:gap-4 min-w-0 flex-1">
-                      <div className="w-10 h-10 sm:w-12 sm:h-12 bg-white rounded-lg flex items-center justify-center shadow-md shrink-0 p-1">
-                        <img 
-                          src="https://bfuuuzmcrkfjblancewz.supabase.co/storage/v1/object/public/official%20logo/PPU.webp" 
-                          alt="PPU Logo" 
-                          className="w-full h-full object-contain" 
-                          crossOrigin="anonymous" 
-                          referrerPolicy="no-referrer"
-                        />
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <h3 className="text-white font-black tracking-[0.15em] sm:tracking-[0.2em] text-lg sm:text-2xl truncate">VOTERS CARD</h3>
-                        <p className="text-indigo-300 text-[9px] sm:text-xs font-bold uppercase tracking-widest leading-tight truncate">Portal Pemilihan Umum</p>
-                      </div>
-                    </div>
-                    <div className="text-right shrink-0 ml-2">
-                      <p className="text-indigo-200 text-[8px] sm:text-[10px] font-bold uppercase tracking-wider">Document Serial</p>
-                      <p className="text-white font-mono text-[9px] sm:text-xs md:text-sm whitespace-nowrap overflow-visible">
-                        PPU-26-{(profile.class || '').toUpperCase().replace(/[^A-Z0-9]/g, '')}{profile.card_id || '0000'}
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Card Body */}
-                  <div className="relative px-6 sm:px-8 py-4 sm:pt-2 sm:pb-16 flex flex-col sm:flex-row gap-6 sm:gap-10">
-                    <div className="flex-1 flex flex-col gap-3 sm:gap-2.5 min-w-0">
-                      <div>
-                        <label className="block text-indigo-300 text-[10px] uppercase font-bold tracking-wider mb-1">Nama Lengkap</label>
-                        <p className="text-white text-xl sm:text-2xl font-bold truncate">{profile.full_name}</p>
-                      </div>
-                      <div>
-                        <label className="block text-indigo-300 text-[10px] uppercase font-bold tracking-wider mb-1">Email Terdaftar</label>
-                        <p className="text-white text-md sm:text-lg truncate">{renderBlurredEmail(profile.email)}</p>
-                      </div>
-                      
-                      {/* Kelas & Tanggal Cetak (Desktop Layout) */}
-                      <div className="flex flex-col sm:flex-row sm:gap-12">
-                        <div className="flex-1">
-                          <label className="block text-indigo-300 text-[10px] uppercase font-bold tracking-wider mb-1">Kelas</label>
-                          <p className="text-white text-md sm:text-lg truncate">{profile.class || 'N/A'}</p>
-                        </div>
-                        {/* Tanggal Cetak (Desktop Only) */}
-                        <div className="hidden sm:block flex-1">
-                          <label className="block text-indigo-300 text-[10px] uppercase font-bold tracking-wider mb-1">Tanggal Cetak</label>
-                          <p className="text-white text-sm font-medium">{new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
-                        </div>
-                      </div>
-
-                      {/* Tanggal Cetak & ID Kartu (Mobile Only) */}
-                      <div className="flex gap-8 mt-1 sm:hidden">
-                        <div>
-                          <label className="block text-indigo-300 text-[10px] uppercase font-bold tracking-wider mb-1">Tanggal Cetak</label>
-                          <p className="text-white text-sm font-medium">{new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
-                        </div>
-                        <div className="min-w-0">
-                          <label className="block text-indigo-300 text-[10px] uppercase font-bold tracking-wider mb-1">ID Kartu</label>
-                          <p className="text-white text-sm font-medium uppercase truncate">{profile.card_id || 'N/A'}</p>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Right Side Control: ID Kartu and QR Code container */}
-                    <div className="flex flex-col items-center sm:items-start shrink-0">
-                      {/* ID Kartu (Desktop Only, rendered above QR) */}
-                      <div className="hidden sm:block mb-1.5 self-stretch">
-                        <label className="block text-indigo-300 text-[10px] uppercase font-bold tracking-wider mb-1">ID Kartu</label>
-                        <p className="text-white text-sm font-semibold uppercase truncate">{profile.card_id || 'N/A'}</p>
-                      </div>
-
-                      {/* QR Code */}
-                      <div className="w-48 h-48 sm:w-[136px] sm:h-[136px] bg-white p-2 sm:p-2 rounded-xl shadow-inner flex flex-col items-center justify-center self-center sm:self-start mt-3 sm:mt-0 shrink-0">
-                        <div className="w-full h-full border-2 border-slate-100 flex flex-col items-center justify-center p-2">
-                           <QRCodeCanvas ref={qrRef} value={profile.card_id || ''} size={150} style={{ width: '100%', height: 'calc(100% - 14px)' }} />
-                           <p className="text-[7px] text-slate-400 mt-2 font-mono">VERIFIED IDENTITY</p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Card Footer */}
-                  <div className="sm:absolute bottom-0 left-0 right-0 h-auto sm:h-16 mt-auto sm:mt-0 bg-black/20 backdrop-blur-sm p-4 sm:px-8 flex items-center border-t border-white/10">
-                    <p className="text-white/60 text-[10px] sm:text-[11px] leading-relaxed italic text-center sm:text-left">
-                      Tunjukkan kartu ini kepada panitia di tempat pemilihan untuk melakukan pemilihan. Kartu ini merupakan bukti identitas sah dalam sistem PPU Digital.
-                    </p>
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Call to action for full Information Page */}
-        <div className="mt-12 pt-10 border-t border-slate-200 dark:border-[#2a2a2a] transition-colors">
-          <div className="bg-gradient-to-r from-indigo-900 to-indigo-800 rounded-3xl p-8 sm:p-12 text-center relative overflow-hidden shadow-xl">
-            {/* Background Decorative */}
-            <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -mr-20 -mt-20 blur-3xl pointer-events-none"></div>
-            <div className="absolute bottom-0 left-0 w-48 h-48 bg-indigo-500/10 rounded-full -ml-16 -mb-16 blur-2xl pointer-events-none"></div>
-
-            <div className="relative z-10">
-               <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-white/10 border border-white/20 mb-6 shadow-lg backdrop-blur-sm">
-                <Megaphone className="w-8 h-8 text-indigo-300" />
-              </div>
-              <h2 className="text-2xl sm:text-3xl font-black text-white tracking-tight uppercase mb-4">
-                Pusat Informasi WAFO
-              </h2>
-              <p className="text-indigo-100 font-medium text-sm sm:text-base max-w-2xl mx-auto leading-relaxed mb-8">
-                Dapatkan update terbaru, pengumuman resmi, dan panduan lengkap seputar pelaksanaan pemilihan umum digital melalui halaman Informasi terpadu.
-              </p>
-              <Link 
-                to="/informasi"
-                className="inline-flex items-center gap-3 px-8 py-4 bg-white text-indigo-900 rounded-2xl font-black text-sm uppercase tracking-widest hover:bg-slate-50 transition-all shadow-xl hover:scale-105 active:scale-95 group"
-              >
-                <span>Lihat Seluruh Informasi</span>
-                <ChevronRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-              </Link>
-            </div>
-          </div>
-        </div>
+        {activeTab === 'informasi' && (
+          <InformasiTab
+            announcements={announcements}
+            infoLoading={infoLoading}
+          />
+        )}
       </main>
 
-      {/* Bottom Info Bar */}
-      <footer className="h-10 bg-slate-100 dark:bg-[#1a1a1a] border-t border-slate-200 dark:border-[#2a2a2a] px-4 sm:px-8 flex items-center justify-between text-[8px] sm:text-[10px] text-slate-500 dark:text-[#a3a3a3] uppercase tracking-widest shrink-0 transition-colors duration-300">
-        <div className="flex gap-2 sm:gap-4">
-          <span>Version 1.0.4 Foundation</span>
-          <span className="hidden sm:inline">&bull;</span>
-          <span className="hidden sm:inline">Secure Node: Jakarta-S-01</span>
+      {/* Bottom Navigation */}
+      <nav className="fixed bottom-0 left-0 right-0 bg-white dark:bg-[#1a1a1a] border-t border-slate-200 dark:border-[#2a2a2a] py-2 px-4 shadow-[0_-4px_24px_rgba(0,0,0,0.06)] z-40 transition-colors duration-300">
+        <div className="max-w-md mx-auto flex items-center justify-between">
+          
+          {/* Tab 1: Status */}
+          <button
+            onClick={() => setActiveTab('status')}
+            className="flex flex-col items-center justify-center flex-1 py-1 relative focus:outline-none bg-transparent border-none outline-none"
+            type="button"
+          >
+            <Home className={`w-5 h-5 transition-colors ${
+              activeTab === 'status' ? 'text-ppu-blue dark:text-sky-400' : 'text-slate-400 dark:text-[#a3a3a3]'
+            }`} />
+            <span className={`text-[10px] mt-1 transition-colors font-medium ${
+              activeTab === 'status' ? 'text-ppu-blue dark:text-sky-400 font-bold' : 'text-slate-400 dark:text-[#a3a3a3]'
+            }`}>
+              Status
+            </span>
+            {activeTab === 'status' && (
+              <span className="absolute bottom-0 w-1.5 h-1.5 bg-ppu-blue dark:bg-sky-400 rounded-full" />
+            )}
+          </button>
+
+          {/* Tab 2: Kartu Pemilih */}
+          <button
+            onClick={() => setActiveTab('kartu')}
+            className="flex flex-col items-center justify-center flex-1 py-1 relative focus:outline-none bg-transparent border-none outline-none"
+            type="button"
+          >
+            <CreditCard className={`w-5 h-5 transition-colors ${
+              activeTab === 'kartu' ? 'text-ppu-blue dark:text-sky-400' : 'text-slate-400 dark:text-[#a3a3a3]'
+            }`} />
+            <span className={`text-[10px] mt-1 transition-colors font-medium ${
+              activeTab === 'kartu' ? 'text-ppu-blue dark:text-sky-400 font-bold' : 'text-slate-400 dark:text-[#a3a3a3]'
+            }`}>
+              Kartu
+            </span>
+            {activeTab === 'kartu' && (
+              <span className="absolute bottom-0 w-1.5 h-1.5 bg-ppu-blue dark:bg-sky-400 rounded-full" />
+            )}
+          </button>
+
+          {/* Tab 3: Scan QR (Prominent highlighted button) */}
+          <div className="flex-1 flex justify-center -mt-5">
+            <button
+              onClick={() => setActiveTab('scan')}
+              className="flex flex-col items-center justify-center focus:outline-none bg-transparent border-none outline-none"
+              type="button"
+            >
+              <div className={`w-14 h-14 rounded-full flex items-center justify-center shadow-lg transition-all transform hover:scale-105 active:scale-95 ${
+                activeTab === 'scan'
+                  ? 'bg-ppu-blue dark:bg-sky-500 text-white ring-4 ring-indigo-100 dark:ring-indigo-950/50'
+                  : 'bg-white dark:bg-[#2a2a2a] border border-slate-200 dark:border-[#333333] text-slate-500 dark:text-[#a3a3a3] hover:text-ppu-blue dark:hover:text-sky-400 shadow-md'
+              }`}>
+                <QrCode className="w-7 h-7" />
+              </div>
+              <span className={`text-[10px] mt-1 transition-colors font-semibold ${
+                activeTab === 'scan' ? 'text-ppu-blue dark:text-sky-400 font-bold' : 'text-slate-400 dark:text-[#a3a3a3]'
+              }`}>
+                Scan QR
+              </span>
+            </button>
+          </div>
+
+          {/* Tab 4: Profil */}
+          <button
+            onClick={() => setActiveTab('profil')}
+            className="flex flex-col items-center justify-center flex-1 py-1 relative focus:outline-none bg-transparent border-none outline-none"
+            type="button"
+          >
+            <User className={`w-5 h-5 transition-colors ${
+              activeTab === 'profil' ? 'text-ppu-blue dark:text-sky-400' : 'text-slate-400 dark:text-[#a3a3a3]'
+            }`} />
+            <span className={`text-[10px] mt-1 transition-colors font-medium ${
+              activeTab === 'profil' ? 'text-ppu-blue dark:text-sky-400 font-bold' : 'text-slate-400 dark:text-[#a3a3a3]'
+            }`}>
+              Profil
+            </span>
+            {activeTab === 'profil' && (
+              <span className="absolute bottom-0 w-1.5 h-1.5 bg-ppu-blue dark:bg-sky-400 rounded-full" />
+            )}
+          </button>
+
+          {/* Tab 5: Informasi */}
+          <button
+            onClick={() => setActiveTab('informasi')}
+            className="flex flex-col items-center justify-center flex-1 py-1 relative focus:outline-none bg-transparent border-none outline-none"
+            type="button"
+          >
+            <Info className={`w-5 h-5 transition-colors ${
+              activeTab === 'informasi' ? 'text-ppu-blue dark:text-sky-400' : 'text-slate-400 dark:text-[#a3a3a3]'
+            }`} />
+            <span className={`text-[10px] mt-1 transition-colors font-medium ${
+              activeTab === 'informasi' ? 'text-ppu-blue dark:text-sky-400 font-bold' : 'text-slate-400 dark:text-[#a3a3a3]'
+            }`}>
+              Informasi
+            </span>
+            {activeTab === 'informasi' && (
+              <span className="absolute bottom-0 w-1.5 h-1.5 bg-ppu-blue dark:bg-sky-400 rounded-full" />
+            )}
+          </button>
+
         </div>
-        <div>
-          Copyright &copy; 2026 PPU Digital
-        </div>
-      </footer>
+      </nav>
 
       {/* Edit Profile Modal Dialog */}
       {isEditModalOpen && (
