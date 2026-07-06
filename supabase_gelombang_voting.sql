@@ -27,21 +27,22 @@ DROP POLICY IF EXISTS "Allow authenticated read for gelombang_voting" ON gelomba
 CREATE POLICY "Allow authenticated read for gelombang_voting" ON gelombang_voting
   FOR SELECT USING (auth.role() = 'authenticated');
 
--- Policy Admin CRUD Bebas
+-- Policy Admin & Creator CRUD Bebas
 DROP POLICY IF EXISTS "Allow admin CRUD for gelombang_voting" ON gelombang_voting;
-CREATE POLICY "Allow admin CRUD for gelombang_voting" ON gelombang_voting
+DROP POLICY IF EXISTS "Allow admin and creator CRUD for gelombang_voting" ON gelombang_voting;
+CREATE POLICY "Allow admin and creator CRUD for gelombang_voting" ON gelombang_voting
   FOR ALL USING (
     EXISTS (
       SELECT 1 FROM profiles 
       WHERE profiles.id = auth.uid() 
-      AND profiles.role = 'admin'
+      AND (profiles.role = 'admin' OR profiles.role = 'creator')
     )
   )
   WITH CHECK (
     EXISTS (
       SELECT 1 FROM profiles 
       WHERE profiles.id = auth.uid() 
-      AND profiles.role = 'admin'
+      AND (profiles.role = 'admin' OR profiles.role = 'creator')
     )
   );
 
@@ -53,21 +54,22 @@ DROP POLICY IF EXISTS "Allow authenticated read for gelombang_config" ON gelomba
 CREATE POLICY "Allow authenticated read for gelombang_config" ON gelombang_config
   FOR SELECT USING (auth.role() = 'authenticated');
 
--- Policy Admin Update/Manage Config
+-- Policy Admin & Creator Update/Manage Config
 DROP POLICY IF EXISTS "Allow admin CRUD for gelombang_config" ON gelombang_config;
-CREATE POLICY "Allow admin CRUD for gelombang_config" ON gelombang_config
+DROP POLICY IF EXISTS "Allow admin and creator CRUD for gelombang_config" ON gelombang_config;
+CREATE POLICY "Allow admin and creator CRUD for gelombang_config" ON gelombang_config
   FOR ALL USING (
     EXISTS (
       SELECT 1 FROM profiles 
       WHERE profiles.id = auth.uid() 
-      AND profiles.role = 'admin'
+      AND (profiles.role = 'admin' OR profiles.role = 'creator')
     )
   )
   WITH CHECK (
     EXISTS (
       SELECT 1 FROM profiles 
       WHERE profiles.id = auth.uid() 
-      AND profiles.role = 'admin'
+      AND (profiles.role = 'admin' OR profiles.role = 'creator')
     )
   );
 

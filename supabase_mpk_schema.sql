@@ -20,26 +20,26 @@ ON candidates_mpk
 FOR SELECT 
 USING (true);
 
--- 4. Policy untuk Admin (Bisa membuat, mengubah, menghapus kandidat MPK)
-CREATE POLICY "Admin dapat menambah kandidat mpk" 
+-- 4. Policy untuk Admin & Creator (Bisa membuat, mengubah, menghapus kandidat MPK)
+CREATE POLICY "Admin dan Creator dapat menambah kandidat mpk" 
 ON candidates_mpk FOR INSERT 
 WITH CHECK (
   auth.role() = 'authenticated' AND 
-  EXISTS (SELECT 1 FROM profiles WHERE profiles.id = auth.uid() AND profiles.role = 'admin')
+  EXISTS (SELECT 1 FROM profiles WHERE profiles.id = auth.uid() AND (profiles.role = 'admin' OR profiles.role = 'creator'))
 );
 
-CREATE POLICY "Admin dapat mengubah kandidat mpk" 
+CREATE POLICY "Admin dan Creator dapat mengubah kandidat mpk" 
 ON candidates_mpk FOR UPDATE 
 USING (
   auth.role() = 'authenticated' AND 
-  EXISTS (SELECT 1 FROM profiles WHERE profiles.id = auth.uid() AND profiles.role = 'admin')
+  EXISTS (SELECT 1 FROM profiles WHERE profiles.id = auth.uid() AND (profiles.role = 'admin' OR profiles.role = 'creator'))
 );
 
-CREATE POLICY "Admin dapat menghapus kandidat mpk" 
+CREATE POLICY "Admin dan Creator dapat menghapus kandidat mpk" 
 ON candidates_mpk FOR DELETE 
 USING (
   auth.role() = 'authenticated' AND 
-  EXISTS (SELECT 1 FROM profiles WHERE profiles.id = auth.uid() AND profiles.role = 'admin')
+  EXISTS (SELECT 1 FROM profiles WHERE profiles.id = auth.uid() AND (profiles.role = 'admin' OR profiles.role = 'creator'))
 );
 
 -- 5. Aktifkan Realtime untuk candidates_mpk

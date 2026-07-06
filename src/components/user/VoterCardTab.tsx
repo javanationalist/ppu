@@ -179,13 +179,32 @@ export default function VoterCardTab({
               {/* QR Code Column */}
               <div className="flex flex-col items-center justify-center shrink-0 gap-2.5 sm:gap-3">
                 <div className="w-52 h-52 sm:w-[150px] sm:h-[150px] md:w-[175px] md:h-[175px] lg:w-[200px] lg:h-[200px] bg-white p-3.5 sm:p-4 rounded-[18px] sm:rounded-[20px] shadow-2xl border-2 border-white/10 flex items-center justify-center shrink-0 transition-all duration-300">
-                  <div className="w-full h-full flex items-center justify-center">
+                  <div className="w-full h-full flex items-center justify-center relative">
                     <QRCodeCanvas 
                       ref={qrRef} 
                       value={profile.card_id || ''} 
                       size={512} 
+                      level="H"
+                      includeMargin={false}
+                      imageSettings={{
+                        src: "https://bfuuuzmcrkfjblancewz.supabase.co/storage/v1/object/public/official%20logo/PPU.webp",
+                        height: 80,
+                        width: 80,
+                        excavate: true,
+                        crossOrigin: "anonymous"
+                      }}
                       style={{ width: '100%', height: '100%' }} 
                     />
+                    {/* Floating watermark circle to give the logo a perfect rounded/white background with quiet area */}
+                    <div className="absolute w-[18%] h-[18%] bg-white rounded-full flex items-center justify-center p-[2%] shadow-[0_2px_8px_rgba(0,0,0,0.15)] border border-slate-100/60 select-none pointer-events-none">
+                      <img 
+                        src="https://bfuuuzmcrkfjblancewz.supabase.co/storage/v1/object/public/official%20logo/PPU.webp" 
+                        alt="PPU Logo Watermark" 
+                        className="w-full h-full object-contain"
+                        crossOrigin="anonymous"
+                        referrerPolicy="no-referrer"
+                      />
+                    </div>
                   </div>
                 </div>
 

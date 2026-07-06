@@ -29,21 +29,22 @@ DROP POLICY IF EXISTS "Allow authenticated read access" ON admin_button;
 CREATE POLICY "Allow authenticated read access" ON admin_button
   FOR SELECT USING (auth.role() = 'authenticated');
 
--- Policy Manage (Admin Only)
+-- Policy Manage (Admin & Creator)
 DROP POLICY IF EXISTS "Allow admin to manage settings" ON admin_button;
-CREATE POLICY "Allow admin to manage settings" ON admin_button
+DROP POLICY IF EXISTS "Allow admin and creator to manage settings" ON admin_button;
+CREATE POLICY "Allow admin and creator to manage settings" ON admin_button
   FOR ALL USING (
     EXISTS (
       SELECT 1 FROM profiles 
       WHERE profiles.id = auth.uid() 
-      AND profiles.role = 'admin'
+      AND (profiles.role = 'admin' OR profiles.role = 'creator')
     )
   )
   WITH CHECK (
     EXISTS (
       SELECT 1 FROM profiles 
       WHERE profiles.id = auth.uid() 
-      AND profiles.role = 'admin'
+      AND (profiles.role = 'admin' OR profiles.role = 'creator')
     )
   );
 

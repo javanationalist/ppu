@@ -19,39 +19,39 @@ ON countdown
 FOR SELECT 
 USING (true);
 
--- 2. Policy untuk Admin (Dapat menambah data)
-CREATE POLICY "Admin dapat menambah countdown" 
+-- 2. Policy untuk Admin & Creator (Dapat menambah data)
+CREATE POLICY "Admin dan Creator dapat menambah countdown" 
 ON countdown 
 FOR INSERT 
 WITH CHECK (
   auth.role() = 'authenticated' AND 
   EXISTS (
     SELECT 1 FROM profiles 
-    WHERE profiles.id = auth.uid() AND profiles.role = 'admin'
+    WHERE profiles.id = auth.uid() AND (profiles.role = 'admin' OR profiles.role = 'creator')
   )
 );
 
--- 3. Policy untuk Admin (Dapat mengubah data)
-CREATE POLICY "Admin dapat mengubah countdown" 
+-- 3. Policy untuk Admin & Creator (Dapat mengubah data)
+CREATE POLICY "Admin dan Creator dapat mengubah countdown" 
 ON countdown 
 FOR UPDATE 
 USING (
   auth.role() = 'authenticated' AND 
   EXISTS (
     SELECT 1 FROM profiles 
-    WHERE profiles.id = auth.uid() AND profiles.role = 'admin'
+    WHERE profiles.id = auth.uid() AND (profiles.role = 'admin' OR profiles.role = 'creator')
   )
 );
 
--- 4. Policy untuk Admin (Dapat menghapus data)
-CREATE POLICY "Admin dapat menghapus countdown" 
+-- 4. Policy untuk Admin & Creator (Dapat menghapus data)
+CREATE POLICY "Admin dan Creator dapat menghapus countdown" 
 ON countdown 
 FOR DELETE 
 USING (
   auth.role() = 'authenticated' AND 
   EXISTS (
     SELECT 1 FROM profiles 
-    WHERE profiles.id = auth.uid() AND profiles.role = 'admin'
+    WHERE profiles.id = auth.uid() AND (profiles.role = 'admin' OR profiles.role = 'creator')
   )
 );
 

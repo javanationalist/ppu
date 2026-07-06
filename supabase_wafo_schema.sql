@@ -17,51 +17,51 @@ ON wafo_announcements
 FOR SELECT 
 USING (is_active = true);
 
--- 2. Policy untuk Admin (Bisa melihat seluruh informasi termasuk yang nonaktif)
-CREATE POLICY "Admin dapat melihat semua informasi" 
+-- 2. Policy untuk Admin & Creator (Bisa melihat seluruh informasi termasuk yang nonaktif)
+CREATE POLICY "Admin dan Creator dapat melihat semua informasi" 
 ON wafo_announcements 
 FOR SELECT 
 USING (
   auth.role() = 'authenticated' AND 
   EXISTS (
     SELECT 1 FROM profiles 
-    WHERE profiles.id = auth.uid() AND profiles.role = 'admin'
+    WHERE profiles.id = auth.uid() AND (profiles.role = 'admin' OR profiles.role = 'creator')
   )
 );
 
--- 3. Policy untuk Admin (Bisa membuat informasi baru)
-CREATE POLICY "Admin dapat menambah informasi" 
+-- 3. Policy untuk Admin & Creator (Bisa membuat informasi baru)
+CREATE POLICY "Admin dan Creator dapat menambah informasi" 
 ON wafo_announcements 
 FOR INSERT 
 WITH CHECK (
   auth.role() = 'authenticated' AND 
   EXISTS (
     SELECT 1 FROM profiles 
-    WHERE profiles.id = auth.uid() AND profiles.role = 'admin'
+    WHERE profiles.id = auth.uid() AND (profiles.role = 'admin' OR profiles.role = 'creator')
   )
 );
 
--- 4. Policy untuk Admin (Bisa mengupdate informasi)
-CREATE POLICY "Admin dapat mengubah informasi" 
+-- 4. Policy untuk Admin & Creator (Bisa mengupdate informasi)
+CREATE POLICY "Admin dan Creator dapat mengubah informasi" 
 ON wafo_announcements 
 FOR UPDATE 
 USING (
   auth.role() = 'authenticated' AND 
   EXISTS (
     SELECT 1 FROM profiles 
-    WHERE profiles.id = auth.uid() AND profiles.role = 'admin'
+    WHERE profiles.id = auth.uid() AND (profiles.role = 'admin' OR profiles.role = 'creator')
   )
 );
 
--- 5. Policy untuk Admin (Bisa menghapus informasi)
-CREATE POLICY "Admin dapat menghapus informasi" 
+-- 5. Policy untuk Admin & Creator (Bisa menghapus informasi)
+CREATE POLICY "Admin dan Creator dapat menghapus informasi" 
 ON wafo_announcements 
 FOR DELETE 
 USING (
   auth.role() = 'authenticated' AND 
   EXISTS (
     SELECT 1 FROM profiles 
-    WHERE profiles.id = auth.uid() AND profiles.role = 'admin'
+    WHERE profiles.id = auth.uid() AND (profiles.role = 'admin' OR profiles.role = 'creator')
   )
 );
 

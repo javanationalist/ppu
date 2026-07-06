@@ -369,7 +369,7 @@ export default function StatusTab({
       {/* Bottom Info Bar */}
       <footer className="mt-6 sm:mt-8 pt-4 border-t border-slate-200 dark:border-[#2a2a2a] flex flex-col sm:flex-row items-center justify-between text-[8px] sm:text-[10px] text-slate-500 dark:text-[#a3a3a3] uppercase tracking-widest gap-2 transition-colors duration-300">
         <div className="flex gap-2 sm:gap-4">
-          <span>Version 1.0.4 Foundation</span>
+          <span>v1.1.0 Genesis</span>
           <span>&bull;</span>
           <span>Secure Node: Jakarta-S-01</span>
         </div>

@@ -16,15 +16,15 @@ ON landing_menu_button
 FOR SELECT 
 USING (true);
 
--- 2. Policy untuk Admin (Akses penuh)
-CREATE POLICY "Admin memiliki akses penuh terhadap menu landing" 
+-- 2. Policy untuk Admin & Creator (Akses penuh)
+CREATE POLICY "Admin dan Creator memiliki akses penuh terhadap menu landing" 
 ON landing_menu_button 
 FOR ALL
 USING (
   auth.role() = 'authenticated' AND 
   EXISTS (
     SELECT 1 FROM profiles 
-    WHERE profiles.id = auth.uid() AND profiles.role = 'admin'
+    WHERE profiles.id = auth.uid() AND (profiles.role = 'admin' OR profiles.role = 'creator')
   )
 );
 

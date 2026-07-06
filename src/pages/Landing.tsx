@@ -395,7 +395,7 @@ export default function Landing() {
       {/* 5. FOOTER */}
       <footer className="w-full text-center border-t border-slate-200/40 dark:border-[#2a2a2a] pt-4 mt-2 select-none transition-colors">
         <p className="text-[11px] text-slate-400 dark:text-[#a3a3a3] leading-normal transition-colors">
-          © 2026 | Tim Pelaksana Pemilihan. v1.0.4 Foundation. Illustration by{' '}
+          © 2026 | Tim Pelaksana Pemilihan. v1.1.0 Genesis. Illustration by{' '}
           <a
             href="https://www.magnific.com/author/pch-vector"
             target="_blank"

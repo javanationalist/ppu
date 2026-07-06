@@ -13,15 +13,15 @@ ON landing_page_visibility
 FOR SELECT 
 USING (true);
 
--- 2. Policy untuk Admin agar bisa melakukan semua operasi (INSERT, UPDATE, DELETE)
-CREATE POLICY "Admin memiliki akses penuh terhadap visibilitas tombol" 
+-- 2. Policy untuk Admin & Creator agar bisa melakukan semua operasi (INSERT, UPDATE, DELETE)
+CREATE POLICY "Admin dan Creator memiliki akses penuh terhadap visibilitas tombol" 
 ON landing_page_visibility 
 FOR ALL
 USING (
   auth.role() = 'authenticated' AND 
   EXISTS (
     SELECT 1 FROM profiles 
-    WHERE profiles.id = auth.uid() AND profiles.role = 'admin'
+    WHERE profiles.id = auth.uid() AND (profiles.role = 'admin' OR profiles.role = 'creator')
   )
 );
 
