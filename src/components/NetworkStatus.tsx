@@ -5,20 +5,20 @@ type ConnectionStatus = 'online' | 'offline' | 'weak' | 'checking';
 
 export default function NetworkStatus() {
   const [status, setStatus] = useState<ConnectionStatus>(navigator.onLine ? 'online' : 'offline');
-  const [showGreen, setShowGreen] = useState(false);
-  const [isManualExpanded, setIsManualExpanded] = useState(false);
-  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const [isExpandedState, setIsExpandedState] = useState(false);
+  const [opacityState, setOpacityState] = useState(1);
+  const [isHovered, setIsHovered] = useState(false);
+
+  const timerScaleRef = useRef<NodeJS.Timeout | null>(null);
+  const timerFadeRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     const handleOnline = () => {
       setStatus('online');
-      setShowGreen(true);
-      setTimeout(() => setShowGreen(false), 3000);
     };
     
     const handleOffline = () => {
       setStatus('offline');
-      setShowGreen(false);
     };
 
     const checkConnectionQuality = () => {
@@ -43,39 +43,79 @@ export default function NetworkStatus() {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
       clearInterval(qualityInterval);
-      if (timeoutRef.current) clearTimeout(timeoutRef.current);
     };
   }, []);
 
-  const handleMobileClick = () => {
-    if (timeoutRef.current) clearTimeout(timeoutRef.current);
-    setIsManualExpanded(true);
-    timeoutRef.current = setTimeout(() => {
-      setIsManualExpanded(false);
+  const triggerSequence = () => {
+    // Cancel any active timers
+    if (timerScaleRef.current) clearTimeout(timerScaleRef.current);
+    if (timerFadeRef.current) clearTimeout(timerFadeRef.current);
+
+    // 1. Reset state to visible and expanded (membesar)
+    setOpacityState(1);
+    setIsExpandedState(true);
+
+    // 2. Wait 3 seconds in expanded state
+    timerScaleRef.current = setTimeout(() => {
+      // 3. Shrink to normal size
+      setIsExpandedState(false);
+
+      // 4. Wait 500ms for shrink animation to finish, then start 3-second fade out
+      timerFadeRef.current = setTimeout(() => {
+        setOpacityState(0);
+      }, 500); // Wait for the shrink animation to finish
     }, 3000);
+  };
+
+  useEffect(() => {
+    if (status === 'online') {
+      triggerSequence();
+    } else {
+      // For offline or weak, cancel sequence timers and keep it visible & expanded
+      if (timerScaleRef.current) clearTimeout(timerScaleRef.current);
+      if (timerFadeRef.current) clearTimeout(timerFadeRef.current);
+      setIsExpandedState(true);
+      setOpacityState(1);
+    }
+
+    return () => {
+      if (timerScaleRef.current) clearTimeout(timerScaleRef.current);
+      if (timerFadeRef.current) clearTimeout(timerFadeRef.current);
+    };
+  }, [status]);
+
+  const handleStatusClick = () => {
+    triggerSequence();
   };
 
   const isRed = status === 'offline';
   const isYellow = status === 'weak';
-  const isGreenActive = (status === 'online' && (showGreen || (!isRed && !isYellow)));
+  const isGreenActive = status === 'online';
   
-  // Expanded logic: either auto-notifying (showGreen), manual interaction, or critical status (offline/weak)
-  const isExpanded = isManualExpanded || showGreen || isRed || isYellow;
+  // Expanded if: auto-expanding, hovered (and visible), or offline/weak
+  const isExpanded = isExpandedState || (isHovered && opacityState > 0) || isRed || isYellow;
 
   return (
     <div className="fixed bottom-4 left-4 z-[9999] pointer-events-auto select-none">
       <motion.div 
-        onMouseEnter={() => setIsManualExpanded(true)}
-        onMouseLeave={() => setIsManualExpanded(false)}
-        onClick={handleMobileClick}
+        onMouseEnter={() => setIsHovered(true)}
+        onMouseLeave={() => setIsHovered(false)}
+        onClick={handleStatusClick}
         animate={{ 
-          scale: isExpanded ? 1.15 : 0.8
+          scale: isExpanded ? 1.15 : 0.8,
+          opacity: opacityState
         }}
         transition={{ 
-          type: "spring", 
-          stiffness: 400, 
-          damping: 15,
-          mass: 1
+          scale: {
+            type: "spring", 
+            stiffness: 400, 
+            damping: 15,
+            mass: 1
+          },
+          opacity: {
+            duration: opacityState === 0 ? 3 : 0.2,
+            ease: "easeInOut"
+          }
         }}
         className="bg-slate-900/80 backdrop-blur-md px-2 py-3 rounded-full border border-slate-700/50 flex flex-col gap-3 shadow-2xl origin-bottom-left cursor-pointer"
       >
