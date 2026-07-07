@@ -45,20 +45,6 @@ export default function UserDashboard() {
   });
 
   const [activeTab, setActiveTab] = useState<'status' | 'kartu' | 'scan' | 'profil' | 'informasi'>('status');
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [showTooltip, setShowTooltip] = useState(false);
-
-  useEffect(() => {
-    const hasShown = sessionStorage.getItem('has_shown_nav_tooltip');
-    if (!hasShown) {
-      setShowTooltip(true);
-      sessionStorage.setItem('has_shown_nav_tooltip', 'true');
-      const timer = setTimeout(() => {
-        setShowTooltip(false);
-      }, 10000);
-      return () => clearTimeout(timer);
-    }
-  }, []);
   const [announcements, setAnnouncements] = useState<any[]>([]);
   const [infoLoading, setInfoLoading] = useState(true);
 
@@ -344,6 +330,64 @@ export default function UserDashboard() {
         </div>
       </nav>
 
+      {/* Dashboard Navigation */}
+      <div className="w-full bg-white dark:bg-[#1a1a1a] border-b border-slate-200 dark:border-[#2a2a2a] shrink-0 z-10 transition-colors duration-300">
+        <div className="max-w-7xl mx-auto px-4 sm:px-8">
+          <div className="flex items-center justify-start sm:justify-center overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] py-2 gap-2 sm:gap-3 select-none">
+            {[
+              { id: 'status', label: 'Status', icon: Home },
+              { id: 'kartu', label: 'Kartu Pemilih', icon: CreditCard },
+              { id: 'scan', label: 'Scan QR', icon: QrCode },
+              { id: 'profil', label: 'Profil', icon: User },
+              { id: 'informasi', label: 'Informasi', icon: Info },
+            ].map((item) => {
+              const IconComponent = item.icon;
+              const isActive = activeTab === item.id;
+              const isScan = item.id === 'scan';
+
+              return (
+                <button
+                  key={item.id}
+                  onClick={() => setActiveTab(item.id as any)}
+                  className={`relative flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full text-xs sm:text-sm font-semibold transition-all duration-300 select-none outline-none shrink-0 cursor-pointer ${
+                    isScan
+                      ? isActive
+                        ? 'bg-ppu-blue text-white dark:bg-sky-500 dark:text-slate-950 font-bold shadow-sm shadow-ppu-blue/15 scale-102'
+                        : 'bg-ppu-blue-light/60 border border-ppu-blue/20 text-ppu-blue dark:bg-sky-500/10 dark:border-sky-500/25 dark:text-sky-400 font-semibold'
+                      : isActive
+                        ? 'text-ppu-blue dark:text-sky-400 font-bold'
+                        : 'text-slate-500 hover:text-slate-800 hover:bg-slate-100/50 dark:text-slate-400 dark:hover:text-slate-200 dark:hover:bg-[#2a2a2a]/40'
+                  }`}
+                  type="button"
+                >
+                  {/* Shared layout active indicator for non-scan active items */}
+                  {!isScan && isActive && (
+                    <motion.div
+                      layoutId="activeTabIndicator"
+                      className="absolute inset-0 bg-ppu-blue-light dark:bg-sky-500/10 rounded-full -z-10"
+                      transition={{ type: "spring", stiffness: 380, damping: 30 }}
+                    />
+                  )}
+
+                  <IconComponent
+                    className={`shrink-0 transition-all duration-200 ${
+                      isScan
+                        ? isActive
+                          ? 'w-5 h-5 sm:w-5.5 sm:h-5.5 text-white dark:text-slate-950 scale-110'
+                          : 'w-4.5 h-4.5 sm:w-5 sm:h-5 text-ppu-blue dark:text-sky-400'
+                        : isActive
+                          ? 'w-4 h-4 sm:w-4.5 sm:h-4.5 text-ppu-blue dark:text-sky-400'
+                          : 'w-4 h-4 sm:w-4.5 sm:h-4.5 text-slate-400 dark:text-[#a3a3a3]'
+                    }`}
+                  />
+                  <span>{item.label}</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+
       {/* Alert if Profile is Incomplete (Always visible on top of scrollable area, if incomplete) */}
       {accessSettings.edit_profil_enabled && (!profile.full_name || !profile.class) && (
         <div className="bg-amber-50 dark:bg-amber-950/40 border-b border-amber-200 dark:border-amber-900/50 px-4 py-3 sm:px-8 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 z-10 shrink-0 select-none animate-fade-in transition-colors">
@@ -364,7 +408,7 @@ export default function UserDashboard() {
       )}
 
       {/* Main Scrollable Area */}
-      <main className="flex-1 overflow-y-auto p-4 sm:p-8 pb-28 w-full max-w-7xl mx-auto transition-all duration-300">
+      <main className="flex-1 overflow-y-auto p-4 sm:p-8 pb-12 w-full max-w-7xl mx-auto transition-all duration-300">
         {activeTab === 'status' && (
           <StatusTab
             profile={profile}
@@ -412,101 +456,6 @@ export default function UserDashboard() {
         )}
       </main>
 
-      {/* Floating Menu Button & Popup Navigation */}
-      <div className="relative">
-        <AnimatePresence>
-          {showTooltip && (
-            <motion.div
-              initial={{ opacity: 0, scale: 0.9, x: 10 }}
-              animate={{ opacity: 1, scale: 1, x: 0 }}
-              exit={{ opacity: 0, scale: 0.9, x: 10 }}
-              transition={{ duration: 0.3, ease: 'easeOut' }}
-              className="fixed z-50 bottom-[calc(32px+env(safe-area-inset-bottom))] right-[85px] flex items-center pointer-events-none select-none"
-            >
-              <div className="bg-white text-slate-800 px-3.5 py-2 rounded-[12px] shadow-xl border border-slate-100 flex items-center gap-1.5 text-xs font-bold whitespace-nowrap">
-                <span>🔥</span>
-                <span>Halaman lainnya</span>
-              </div>
-              {/* Arrow pointing right */}
-              <div className="w-2.5 h-2.5 bg-white border-r border-t border-slate-100 transform rotate-45 -ml-1.5" />
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        <AnimatePresence>
-          {isMenuOpen && (
-            <>
-              {/* Backdrop */}
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                onClick={() => setIsMenuOpen(false)}
-                className="fixed inset-0 z-40 bg-black/10 dark:bg-black/30 backdrop-blur-[1px]"
-              />
-
-              {/* Popup Menu (Speed Dial Style) */}
-              <motion.div
-                initial={{ opacity: 0, scale: 0.85, x: 20, y: 20 }}
-                animate={{ opacity: 1, scale: 1, x: 0, y: 0 }}
-                exit={{ opacity: 0, scale: 0.85, x: 20, y: 20 }}
-                transition={{ type: "spring", stiffness: 350, damping: 26 }}
-                className="fixed z-50 w-[210px] bg-white dark:bg-[#2a2a2a] rounded-[18px] shadow-2xl border border-slate-150 dark:border-[#333333] p-1.5 bottom-[calc(20px+env(safe-area-inset-bottom))] right-[90px] flex flex-col gap-1"
-              >
-                {[
-                  { id: 'status', label: 'Status', icon: Home },
-                  { id: 'kartu', label: 'Kartu Pemilih', icon: CreditCard },
-                  { id: 'scan', label: 'Scan QR (Preview)', icon: QrCode },
-                  { id: 'profil', label: 'Profil', icon: User },
-                  { id: 'informasi', label: 'Informasi', icon: Info },
-                ].map((item) => {
-                  const IconComponent = item.icon;
-                  const isActive = activeTab === item.id;
-                  return (
-                    <button
-                      key={item.id}
-                      onClick={() => {
-                        setActiveTab(item.id as any);
-                        setIsMenuOpen(false);
-                      }}
-                      className={`flex items-center gap-3 w-full px-3 h-[48px] rounded-[14px] text-left transition-all duration-200 cursor-pointer select-none relative overflow-hidden group active:scale-95 ${
-                        isActive
-                          ? 'bg-ppu-blue-light dark:bg-sky-500/10 text-ppu-blue dark:text-sky-400 font-extrabold'
-                          : 'text-slate-600 dark:text-[#a3a3a3] hover:bg-slate-50 dark:hover:bg-[#333333]/40'
-                      }`}
-                      type="button"
-                    >
-                      <span className="absolute inset-0 bg-slate-200/20 dark:bg-white/5 opacity-0 group-hover:opacity-100 group-active:opacity-100 transition-opacity duration-150" />
-                      <IconComponent className={`w-5 h-5 shrink-0 transition-transform group-hover:scale-110 duration-200 ${isActive ? 'text-ppu-blue dark:text-sky-400' : 'text-slate-400 dark:text-[#a3a3a3]'}`} />
-                      <span className="text-xs font-semibold tracking-wide">{item.label}</span>
-                    </button>
-                  );
-                })}
-              </motion.div>
-            </>
-          )}
-        </AnimatePresence>
-
-        {/* Floating Menu Button (FAB) */}
-        <motion.button
-          onClick={() => {
-            setIsMenuOpen(!isMenuOpen);
-            setShowTooltip(false);
-          }}
-          whileTap={{ scale: 0.92 }}
-          className="fixed z-50 flex items-center justify-center rounded-full text-white shadow-xl bg-gradient-to-tr from-ppu-blue to-ppu-blue-dark dark:from-sky-500 dark:to-sky-600 hover:brightness-110 w-[60px] h-[60px] bottom-[calc(20px+env(safe-area-inset-bottom))] right-[20px] cursor-pointer select-none"
-          id="user-fab-button"
-          type="button"
-        >
-          {isMenuOpen ? (
-            <X className="w-6 h-6 transition-transform rotate-0" />
-          ) : (
-            <Grid className="w-6 h-6 transition-transform hover:rotate-90 duration-300" />
-          )}
-        </motion.button>
-      </div>
-
-      {/* Edit Profile Modal Dialog */}
       {isEditModalOpen && (
         <div className="fixed inset-0 bg-slate-900/60 dark:bg-black/70 flex items-center justify-center p-4 z-50">
           <div className="bg-white dark:bg-[#2a2a2a] rounded-2xl max-w-md w-full shadow-2xl border border-slate-100 dark:border-[#333333] overflow-hidden animate-scale-up transition-colors">
