@@ -14,6 +14,8 @@ import { getUserAccessSettings, UserAccessSettings } from '../../lib/userAccessS
 import { getVotingCompletionStatus, getDapils } from '../../lib/votingService';
 import { getGelombangConfigActive, getGelombangSesiList, GelombangSesi } from '../../lib/gelombangService';
 import { ALL_CLASSES } from '../../lib/classConstants';
+import { getVoteMode } from '../../lib/voteModeService';
+import { checkSessionActive } from '../../lib/sessionService';
 import WafoSlider from '../../components/WafoSlider';
 import StatusTab from '../../components/user/StatusTab';
 import VoterCardTab from '../../components/user/VoterCardTab';
@@ -45,8 +47,18 @@ export default function UserDashboard() {
   });
 
   const [activeTab, setActiveTab] = useState<'status' | 'kartu' | 'scan' | 'profil' | 'informasi'>('status');
+  const [voteMode, setVoteMode] = useState<'regular' | 'booth'>('regular');
   const [announcements, setAnnouncements] = useState<any[]>([]);
   const [infoLoading, setInfoLoading] = useState(true);
+  const [isVoting, setIsVoting] = useState(false);
+
+  useEffect(() => {
+    const persistedId = localStorage.getItem('ppu_active_voting_session_id');
+    if (persistedId) {
+      setActiveTab('scan');
+      setIsVoting(true);
+    }
+  }, []);
 
   const fetchAnnouncements = async () => {
     try {
@@ -175,16 +187,21 @@ export default function UserDashboard() {
   useEffect(() => {
     const fetchHelpdeskAndSettings = async () => {
       try {
-        const [data, s] = await Promise.all([
+        const [data, s, mode] = await Promise.all([
           getHelpdeskButtons(),
-          getUserAccessSettings()
+          getUserAccessSettings(),
+          getVoteMode()
         ]);
         setHelpdeskButtons(data);
         setAccessSettings(s);
+        setVoteMode(mode);
 
         if (profile?.id) {
           const status = await getVotingCompletionStatus(profile.id);
           setIsAllCompleted(status.allCompleted);
+
+          // Keep active tab as 'status' by default as requested
+          setActiveTab('status');
 
           // AUDIT RUNTIME
           console.log("=== DASHBOARD USER AUDIT ===");
@@ -305,10 +322,11 @@ export default function UserDashboard() {
           {/* Theme Toggle Button */}
           <button
             type="button"
-            className="text-slate-600 dark:text-[#a3a3a3] hover:text-ppu-blue dark:hover:text-sky-400 p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-[#2a2a2a] transition-colors focus:outline-none flex items-center justify-center"
-            onClick={toggleTheme}
+            className={`text-slate-600 dark:text-[#a3a3a3] hover:text-ppu-blue dark:hover:text-sky-400 p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-[#2a2a2a] transition-colors focus:outline-none flex items-center justify-center ${isVoting ? 'opacity-40 cursor-not-allowed' : ''}`}
+            onClick={isVoting ? undefined : toggleTheme}
+            disabled={isVoting}
             aria-label="Toggle theme"
-            title={theme === 'dark' ? 'Aktifkan Mode Terang' : 'Aktifkan Mode Gelap'}
+            title={isVoting ? 'Sesi Voting Aktif' : (theme === 'dark' ? 'Aktifkan Mode Terang' : 'Aktifkan Mode Gelap')}
           >
             <span className="css-icon-container" aria-hidden="true">
               <span className={theme === 'dark' ? 'css-icon-moon' : 'css-icon-sun'} />
@@ -318,12 +336,17 @@ export default function UserDashboard() {
           <div className="flex items-center gap-3">
             <div className="text-right hidden sm:block">
               <p className="text-xs font-semibold leading-none text-slate-800 dark:text-[#f5f5f5] transition-colors">{profile.full_name}</p>
-              <p className="text-[10px] text-slate-400 dark:text-[#a3a3a3]">User ID: {(profile.id || '').split('-')[0].toUpperCase()}</p>
+              <p className="text-[10px] text-slate-450 dark:text-[#a3a3a3]">User ID: {(profile.id || '').split('-')[0].toUpperCase()}</p>
             </div>
             <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-indigo-100 dark:bg-[#2a2a2a] flex items-center justify-center border border-indigo-200 dark:border-[#333333] text-indigo-700 dark:text-[#f5f5f5] font-bold uppercase transition-colors">
               {profile.full_name.substring(0, 2)}
             </div>
-            <button onClick={handleLogout} className="ml-1 sm:ml-2 text-slate-400 dark:text-[#a3a3a3] hover:text-red-500 dark:hover:text-red-400 group transition-colors focus:outline-none" title="Logout">
+            <button 
+              onClick={isVoting ? undefined : handleLogout} 
+              disabled={isVoting}
+              className={`ml-1 sm:ml-2 text-slate-400 dark:text-[#a3a3a3] hover:text-red-500 dark:hover:text-red-400 group transition-colors focus:outline-none ${isVoting ? 'opacity-30 cursor-not-allowed' : 'cursor-pointer'}`} 
+              title={isVoting ? 'Tidak dapat logout saat sedang memilih' : 'Logout'}
+            >
               <LogOut className="w-5 h-5 group-hover:stroke-red-500 dark:group-hover:stroke-red-400" />
             </button>
           </div>
@@ -344,26 +367,34 @@ export default function UserDashboard() {
               const IconComponent = item.icon;
               const isActive = activeTab === item.id;
               const isScan = item.id === 'scan';
+              const isScanDisabled = isScan && voteMode !== 'booth';
+              const isTabLocked = isVoting && item.id !== 'scan';
 
               return (
                 <button
                   key={item.id}
-                  onClick={() => setActiveTab(item.id as any)}
-                  className={`relative flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full text-xs sm:text-sm font-semibold transition-all duration-300 select-none outline-none shrink-0 cursor-pointer ${
-                    isScan
-                      ? isActive
-                        ? 'bg-ppu-blue text-white dark:bg-sky-500 dark:text-slate-950 font-bold shadow-sm shadow-ppu-blue/15 scale-102'
-                        : 'bg-ppu-blue-light/60 border border-ppu-blue/20 text-ppu-blue dark:bg-sky-500/10 dark:border-sky-500/25 dark:text-sky-400 font-semibold'
-                      : isActive
-                        ? 'text-ppu-blue dark:text-sky-400 font-bold'
-                        : 'text-slate-500 hover:text-slate-800 hover:bg-slate-100/50 dark:text-slate-400 dark:hover:text-slate-200 dark:hover:bg-[#2a2a2a]/40'
+                  onClick={() => {
+                    if (isScanDisabled || isTabLocked) return;
+                    setActiveTab(item.id as any);
+                  }}
+                  className={`relative flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full text-xs sm:text-sm font-semibold transition-all duration-300 select-none outline-none shrink-0 ${
+                    isScanDisabled || isTabLocked
+                      ? 'opacity-40 cursor-not-allowed bg-slate-100 dark:bg-neutral-850 text-slate-450 dark:text-slate-550'
+                      : isScan
+                        ? isActive
+                          ? 'bg-ppu-blue text-white dark:bg-sky-500 dark:text-slate-950 font-bold shadow-sm shadow-ppu-blue/15 scale-102 cursor-pointer'
+                          : 'bg-ppu-blue-light/60 border border-ppu-blue/20 text-ppu-blue dark:bg-sky-500/10 dark:border-sky-500/25 dark:text-sky-400 font-semibold cursor-pointer'
+                        : isActive
+                          ? 'text-ppu-blue dark:text-sky-400 font-bold cursor-pointer'
+                          : 'text-slate-500 hover:text-slate-800 hover:bg-slate-100/50 dark:text-slate-400 dark:hover:text-slate-200 dark:hover:bg-[#2a2a2a]/40 cursor-pointer'
                   }`}
                   type="button"
+                  disabled={isScanDisabled || isTabLocked}
                 >
                   {/* Shared layout active indicator for non-scan active items */}
                   {!isScan && isActive && (
                     <motion.div
-                      layoutId="activeTabIndicator"
+                       layoutId="activeTabIndicator"
                       className="absolute inset-0 bg-ppu-blue-light dark:bg-sky-500/10 rounded-full -z-10"
                       transition={{ type: "spring", stiffness: 380, damping: 30 }}
                     />
@@ -371,13 +402,15 @@ export default function UserDashboard() {
 
                   <IconComponent
                     className={`shrink-0 transition-all duration-200 ${
-                      isScan
-                        ? isActive
-                          ? 'w-5 h-5 sm:w-5.5 sm:h-5.5 text-white dark:text-slate-950 scale-110'
-                          : 'w-4.5 h-4.5 sm:w-5 sm:h-5 text-ppu-blue dark:text-sky-400'
-                        : isActive
-                          ? 'w-4 h-4 sm:w-4.5 sm:h-4.5 text-ppu-blue dark:text-sky-400'
-                          : 'w-4 h-4 sm:w-4.5 sm:h-4.5 text-slate-400 dark:text-[#a3a3a3]'
+                      isScanDisabled || isTabLocked
+                        ? 'text-slate-400 dark:text-slate-600'
+                        : isScan
+                          ? isActive
+                            ? 'w-5 h-5 sm:w-5.5 sm:h-5.5 text-white dark:text-slate-950 scale-110'
+                            : 'w-4.5 h-4.5 sm:w-5 sm:h-5 text-ppu-blue dark:text-sky-400'
+                          : isActive
+                            ? 'w-4 h-4 sm:w-4.5 sm:h-4.5 text-ppu-blue dark:text-sky-400'
+                            : 'w-4 h-4 sm:w-4.5 sm:h-4.5 text-slate-400 dark:text-[#a3a3a3]'
                     }`}
                   />
                   <span>{item.label}</span>
@@ -419,6 +452,7 @@ export default function UserDashboard() {
             accessSettings={accessSettings}
             helpdeskButtons={helpdeskButtons}
             loading={dashboardLoading}
+            voteMode={voteMode}
           />
         )}
 
@@ -436,7 +470,12 @@ export default function UserDashboard() {
         )}
 
         {activeTab === 'scan' && (
-          <ScanQrTab />
+          <ScanQrTab 
+            isAllCompleted={isAllCompleted} 
+            onStateChange={(state) => {
+              setIsVoting(state === 'voting');
+            }}
+          />
         )}
 
         {activeTab === 'profil' && (

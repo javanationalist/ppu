@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { LogOut, Home, Users, Settings, BarChart, FileText, LifeBuoy, Menu, X, ShieldCheck, Layers, Eye, ShieldAlert, Lock, Clock, Timer } from 'lucide-react';
+import { LogOut, Home, Users, Settings, BarChart, FileText, LifeBuoy, Menu, X, ShieldCheck, Layers, Eye, ShieldAlert, Lock, Clock, Timer, Monitor } from 'lucide-react';
 import { getAdminButtonSettings, AdminButtonSettings } from '../lib/adminButtonService';
 
 export const AdminLayout = () => {
@@ -10,6 +10,7 @@ export const AdminLayout = () => {
   const location = useLocation();
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [btnSettings, setBtnSettings] = useState<AdminButtonSettings | null>(null);
+  const [voteMode, setVoteMode] = useState<'regular' | 'booth'>('regular');
 
   useEffect(() => {
     const loadBtnSettings = async () => {
@@ -20,8 +21,21 @@ export const AdminLayout = () => {
         console.error('Failed to load admin button settings', err);
       }
     };
+    const loadVoteMode = async () => {
+      try {
+        const { getVoteMode } = await import('../lib/voteModeService');
+        const mode = await getVoteMode();
+        setVoteMode(mode);
+      } catch (err) {
+        console.error('Failed to load vote mode', err);
+      }
+    };
     loadBtnSettings();
-    const interval = setInterval(loadBtnSettings, 4000);
+    loadVoteMode();
+    const interval = setInterval(() => {
+      loadBtnSettings();
+      loadVoteMode();
+    }, 4000);
     return () => clearInterval(interval);
   }, []);
 
@@ -44,7 +58,9 @@ export const AdminLayout = () => {
 
   const navLinks = [
     { to: '/admin', icon: Home, label: 'Dashboard' },
+    ...(voteMode === 'booth' ? [{ to: '/admin/bilik', icon: Monitor, label: 'Kelola Bilik Suara' }] : []),
     { to: '/admin/gelombang', icon: Clock, label: 'Gelombang Voting', key: 'gelombang_voting' },
+    { to: '/admin/mode-vote', icon: Settings, label: 'Mode Vote' },
     { to: '/admin/pengaturan', icon: Settings, label: 'Kelola Kategori', key: 'kelola_kategori' },
     { to: '/admin/kandidat', icon: Layers, label: 'Kelola Kandidat', key: 'kelola_kandidat' },
     { to: '/admin/konfirmasi', icon: ShieldCheck, label: 'Konfirmasi Pemilih', key: 'konfirmasi_pemilih' },

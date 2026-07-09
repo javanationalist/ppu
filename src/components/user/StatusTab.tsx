@@ -1,4 +1,5 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 import { LifeBuoy, Users, Clock, Calendar, MapPin, GraduationCap, Vote } from 'lucide-react';
 import WafoSlider from '../WafoSlider';
 import { HelpdeskButton, Dapil } from '../../types';
@@ -15,6 +16,7 @@ interface StatusTabProps {
   accessSettings: UserAccessSettings;
   helpdeskButtons: HelpdeskButton[];
   loading?: boolean;
+  voteMode?: 'regular' | 'booth';
 }
 
 export default function StatusTab({
@@ -26,6 +28,7 @@ export default function StatusTab({
   accessSettings,
   helpdeskButtons,
   loading,
+  voteMode = 'regular',
 }: StatusTabProps) {
   if (loading) {
     return (
@@ -158,14 +161,26 @@ export default function StatusTab({
 
           <div className="bg-white dark:bg-[#2a2a2a] border border-slate-200 dark:border-[#333333] rounded-[20px] sm:rounded-[24px] shadow-sm overflow-hidden transition-all duration-300 hover:shadow-md animate-fade-in">
             {/* 1. Header Panel */}
-            <div className="p-4 sm:p-6 border-b border-slate-100 dark:border-[#333333] flex items-center gap-3 sm:gap-4 bg-slate-50/30 dark:bg-[#1a1a1a]/10 transition-colors">
-              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-blue-100 dark:bg-blue-950/50 text-blue-600 dark:text-sky-400 rounded-xl sm:rounded-2xl flex items-center justify-center shrink-0 shadow-sm border border-blue-100/50 dark:border-blue-900/30">
-                <Vote className="w-5 h-5 sm:w-6 sm:h-6" />
+            <div className="p-4 sm:p-6 border-b border-slate-100 dark:border-[#333333] flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-slate-50/30 dark:bg-[#1a1a1a]/10 transition-colors">
+              <div className="flex items-center gap-3 sm:gap-4 text-left">
+                <div className="w-10 h-10 sm:w-12 sm:h-12 bg-blue-100 dark:bg-blue-950/50 text-blue-600 dark:text-sky-400 rounded-xl sm:rounded-2xl flex items-center justify-center shrink-0 shadow-sm border border-blue-100/50 dark:border-blue-900/30">
+                  <Vote className="w-5 h-5 sm:w-6 sm:h-6" />
+                </div>
+                <div className="text-left">
+                  <h3 className="text-sm sm:text-lg font-black text-slate-800 dark:text-[#f5f5f5] tracking-tight transition-colors">Panel Pemungutan Suara</h3>
+                  <p className="text-slate-400 dark:text-[#a3a3a3] text-[11px] sm:text-xs transition-colors font-medium mt-0.5">Informasi wilayah dan alokasi pemilih Anda</p>
+                </div>
               </div>
-              <div className="text-left">
-                <h3 className="text-sm sm:text-lg font-black text-slate-800 dark:text-[#f5f5f5] tracking-tight transition-colors">Panel Pemungutan Suara</h3>
-                <p className="text-slate-400 dark:text-[#a3a3a3] text-[11px] sm:text-xs transition-colors font-medium mt-0.5">Informasi wilayah dan alokasi pemilih Anda</p>
-              </div>
+
+              {voteMode === 'regular' && !isAllCompleted && accessSettings.voting_global_enabled && (
+                <Link
+                  to="/vote"
+                  className="w-full sm:w-auto px-5 py-2.5 bg-ppu-blue hover:bg-ppu-blue-dark dark:bg-sky-650 dark:hover:bg-sky-500 text-white rounded-xl text-xs sm:text-sm font-bold flex items-center justify-center gap-2 transition-all shadow-md hover:shadow-lg focus:outline-none shrink-0"
+                >
+                  <Vote className="w-4 h-4 shrink-0" />
+                  <span>Mulai Pemilihan</span>
+                </Link>
+              )}
             </div>
 
             <div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
@@ -369,7 +384,7 @@ export default function StatusTab({
       {/* Bottom Info Bar */}
       <footer className="mt-6 sm:mt-8 pt-4 border-t border-slate-200 dark:border-[#2a2a2a] flex flex-col sm:flex-row items-center justify-between text-[8px] sm:text-[10px] text-slate-500 dark:text-[#a3a3a3] uppercase tracking-widest gap-2 transition-colors duration-300">
         <div className="flex gap-2 sm:gap-4">
-          <span>v1.1.0 Genesis</span>
+          <span>v1.3.4 Genesis</span>
           <span>&bull;</span>
           <span>Secure Node: Jakarta-S-01</span>
         </div>

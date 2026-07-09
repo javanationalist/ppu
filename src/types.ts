@@ -1,6 +1,6 @@
-export type Role = 'user' | 'admin' | 'creator';
+export type Role = 'user' | 'admin' | 'creator' | 'vote';
 export type AccountStatus = 'belum_dikonfirmasi' | 'dikonfirmasi';
-export type VotingStatus = 'belum' | 'sudah';
+export type VotingStatus = 'belum' | 'sudah' | 'waiting' | 'connected' | 'voting' | 'offline';
 
 export interface Profile {
   id: string; // references auth.users.id
@@ -15,6 +15,7 @@ export interface Profile {
   is_deleted?: boolean;
   deleted_at?: string | null;
   card_visibility?: boolean;
+  booth_code?: string;
 }
 
 export interface AuditLog {

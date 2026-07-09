@@ -34,6 +34,9 @@ import DashboardOverview from './pages/admin/DashboardOverview';
 import KelolaKandidat from './pages/admin/KelolaKandidat';
 import KelolaKategori from './pages/admin/KelolaKategori';
 import PengaturanVoting from './pages/admin/PengaturanVoting';
+import ModeVote from './pages/admin/ModeVote';
+import KelolaBilik from './pages/admin/KelolaBilik';
+import BilikPage from './pages/Bilik';
 import HasilAdmin from './pages/admin/HasilAdmin';
 import ExportData from './pages/admin/ExportData';
 import Maintenance from './pages/admin/Maintenance';
@@ -78,6 +81,14 @@ function AppContent() {
         <Route path="/signup" element={<Signup />} />
         <Route path="/hasil" element={<HasilPemilihan />} />
         <Route path="/vote" element={<VotePage />} />
+        <Route
+          path="/bilik"
+          element={
+            <ProtectedRoute allowedRoles={['vote']}>
+              <BilikPage />
+            </ProtectedRoute>
+          }
+        />
 
         {/* User Routes */}
         <Route
@@ -99,7 +110,9 @@ function AppContent() {
           }
         >
           <Route index element={<DashboardOverview />} />
+          <Route path="bilik" element={<KelolaBilik />} />
           <Route path="gelombang" element={<GelombangVoting />} />
+          <Route path="mode-vote" element={<ModeVote />} />
           <Route path="kandidat" element={<KelolaKandidat />} />
           <Route path="kategori" element={<KelolaKategori />} />
           <Route path="konfirmasi" element={<KonfirmasiPemilih />} />

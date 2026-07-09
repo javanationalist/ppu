@@ -7,6 +7,42 @@ import { getAllProfiles, getAuditLogs } from '../../lib/adminService';
 import { getCategories, getAllVotes } from '../../lib/votingService';
 import { Profile, AuditLog, Vote } from '../../types';
 
+const getAcademicYear = (): string => {
+  const date = new Date();
+  const year = date.getFullYear();
+  const month = date.getMonth(); // 0-indexed: 0 is Jan, 6 is July
+  if (month >= 6) {
+    return `${year}/${year + 1}`;
+  } else {
+    return `${year - 1}/${year}`;
+  }
+};
+
+const getIndonesianDay = (): string => {
+  const days = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
+  return days[new Date().getDay()];
+};
+
+const getFormattedDate = (): string => {
+  const date = new Date();
+  const day = String(date.getDate()).padStart(2, '0');
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const year = date.getFullYear();
+  return `${day}/${month}/${year}`;
+};
+
+const getIndonesianFormattedDate = (): string => {
+  const date = new Date();
+  const day = date.getDate();
+  const months = [
+    'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+    'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
+  ];
+  const month = months[date.getMonth()];
+  const year = date.getFullYear();
+  return `${day} ${month} ${year}`;
+};
+
 export default function ExportData() {
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
@@ -96,6 +132,13 @@ export default function ExportData() {
       {/* Print-only CSS style */}
       <style>{`
         @media print {
+          @page {
+            size: A4 portrait;
+            margin: 3cm 3cm 3cm 3cm;
+          }
+          body {
+            background: white;
+          }
           body * {
             visibility: hidden;
           }
@@ -103,10 +146,14 @@ export default function ExportData() {
             visibility: visible;
           }
           #print-area {
-            position: absolute;
-            left: 0;
-            top: 0;
-            width: 100%;
+            position: absolute !important;
+            left: 0 !important;
+            top: 0 !important;
+            width: 100% !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            border: none !important;
+            box-shadow: none !important;
           }
           .no-print {
             display: none !important;
@@ -194,53 +241,66 @@ export default function ExportData() {
       </div>
 
       {/* Printable Area - Designed cleanly as a formal document */}
-      <div id="print-area" className="bg-white p-8 rounded-2xl border border-slate-200 shadow-sm space-y-8 text-black font-sans">
+      <div id="print-area" className="bg-white p-8 sm:p-12 md:p-16 rounded-2xl border border-slate-200 shadow-sm text-black" style={{ fontFamily: '"Times New Roman", Times, serif' }}>
+        <style>{`
+          #print-area, #print-area * {
+            font-family: 'Times New Roman', Times, serif !important;
+          }
+        `}</style>
+
         {/* Official Header bar */}
-        <div className="border-b-4 border-double border-black pb-4 text-center">
-          <h2 className="text-xl font-extrabold uppercase tracking-wide">ORGANISASI SISWA INTRA SEKOLAH (OSIS)</h2>
-          <h3 className="text-lg font-bold uppercase mt-1">PANITIA PEMILIHAN INTRA SEKOLAH (PPU)</h3>
-          <p className="text-xs text-slate-500 font-mono mt-0.5">SISTEM E-VOTING PEMILU DIGITAL REAL-TIME</p>
+        <div style={{ textAlign: 'center', fontWeight: 'bold' }}>
+          <div style={{ fontSize: '16pt', marginBottom: '1cm', lineHeight: 'normal' }}>HASIL REKAPITULASI SUARA</div>
+          <div style={{ fontSize: '16pt', marginBottom: '1cm', lineHeight: 'normal' }}>PEMILIHAN ANGGOTA MPK DAN KETUA OSIS</div>
+          <div style={{ fontSize: '14pt', marginBottom: '1cm', lineHeight: 'normal' }}>SMA NEGERI 1 BANGSAL</div>
+          <div style={{ fontSize: '14pt', marginBottom: '1cm', lineHeight: 'normal' }}>TAHUN AJARAN {getAcademicYear()}</div>
         </div>
 
-        {/* Info detail */}
-        <div className="space-y-4">
-          <div className="flex justify-between border-b pb-2 text-sm">
-            <span className="font-bold">JENIS SISTEM:</span>
-            <span>PEMILU RAYA DIGITAL PERSISTISI</span>
-          </div>
-          <div className="flex justify-between border-b pb-2 text-sm">
-            <span className="font-bold">WAKTU REKAPITULASI DIBUAT:</span>
-            <span>{new Date().toLocaleString('id-ID')}</span>
-          </div>
-          <div className="flex justify-between border-b pb-2 text-sm">
-            <span className="font-bold">STATUS AUDIT:</span>
-            <span className="font-mono text-emerald-600 font-bold">TERPROSES (VALID)</span>
-          </div>
+        <hr style={{ border: 'none', borderTop: '2px solid black', marginTop: '0', marginBottom: '1cm' }} />
+
+        {/* Judul Isi */}
+        <div style={{ textAlign: 'center', fontSize: '14pt', fontWeight: 'bold', marginBottom: '1cm', lineHeight: 'normal' }}>
+          Hasil Rekapitulasi Suara
+        </div>
+
+        {/* Info detail / Isi Dokumen */}
+        <div style={{ textAlign: 'left', fontSize: '12pt', fontWeight: 'normal', lineHeight: 'normal', marginBottom: '1cm' }}>
+          <p style={{ marginBottom: '0.5cm' }}>
+            Pada hari {getIndonesianDay()}, tanggal {getIndonesianFormattedDate()}, telah dilaksanakan Pemilihan Anggota MPK dan Ketua OSIS SMA Negeri 1 Bangsal Tahun Ajaran {getAcademicYear()}.
+          </p>
+          <p>
+            Berdasarkan hasil pemungutan suara yang dilakukan melalui Platform PPU Digital, berikut merupakan hasil rekapitulasi suara yang telah diverifikasi dan dinyatakan sesuai dengan data yang tersimpan pada sistem.
+          </p>
         </div>
 
         {/* Statistical columns inside printed report */}
-        <div className="grid grid-cols-2 gap-4 pt-4 border-t border-black/20">
-          <div className="p-4 border rounded-xl space-y-2">
-            <span className="text-xs font-bold text-slate-500 uppercase tracking-widest block">Ringkasan Pemilih Tetap (DPT)</span>
-            <div className="text-2xl font-black">{voters.length} SISWA</div>
-            <p className="text-[10px] text-slate-500">Total pemilih terdaftar resmi dalam platform database kesiswaan.</p>
+        <div className="grid grid-cols-2 gap-4 pt-4 border-t border-black/20" style={{ fontSize: '12pt', fontWeight: 'normal' }}>
+          <div className="p-4 border rounded-xl" style={{ fontWeight: 'normal' }}>
+            <span style={{ fontSize: '10pt', display: 'block', color: '#64748b', marginBottom: '0.2cm', fontWeight: 'normal' }}>RINGKASAN PEMILIH TETAP (DPT)</span>
+            <div style={{ fontSize: '18pt', fontWeight: 'normal', color: 'black' }}>{voters.length} SISWA</div>
+            <p style={{ fontSize: '10pt', color: '#64748b', marginTop: '0.2cm', fontWeight: 'normal' }}>Total pemilih terdaftar resmi dalam platform database kesiswaan.</p>
           </div>
-          <div className="p-4 border rounded-xl space-y-2">
-            <span className="text-xs font-bold text-slate-500 uppercase tracking-widest block">Akumulasi Kertas Suara</span>
-            <div className="text-2xl font-black">{votes.length} SUARA</div>
-            <p className="text-[10px] text-slate-500">Jumlah total pilihan sah terhitung di sistem bilik e-voting.</p>
+          <div className="p-4 border rounded-xl" style={{ fontWeight: 'normal' }}>
+            <span style={{ fontSize: '10pt', display: 'block', color: '#64748b', marginBottom: '0.2cm', fontWeight: 'normal' }}>AKUMULASI KERTAS SUARA</span>
+            <div style={{ fontSize: '18pt', fontWeight: 'normal', color: 'black' }}>{votes.length} SUARA</div>
+            <p style={{ fontSize: '10pt', color: '#64748b', marginTop: '0.2cm', fontWeight: 'normal' }}>Jumlah total pilihan sah terhitung di sistem bilik e-voting.</p>
           </div>
         </div>
 
+        {/* Penutup */}
+        <div style={{ fontSize: '12pt', fontWeight: 'normal', lineHeight: 'normal', textAlign: 'left', marginTop: '1cm', marginBottom: '1.5cm' }}>
+          <p>Demikian hasil rekapitulasi suara ini dibuat agar dapat dipergunakan sebagaimana mestinya.</p>
+        </div>
+
         {/* Signatures section for verification */}
-        <div className="grid grid-cols-2 gap-8 pt-16 text-center text-sm">
-          <div className="space-y-12">
-            <span>Ketua Panitia Pelaksana,</span>
-            <div className="font-bold border-b border-black w-2/3 mx-auto pb-1 mt-10">________________________</div>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2cm', marginTop: '1.5cm', fontSize: '12pt', fontWeight: 'normal', lineHeight: 'normal' }}>
+          <div style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+            <span style={{ display: 'block', marginBottom: '3.5cm' }}>Ketua Pelaksana</span>
+            <span style={{ display: 'block' }}>(........................................)</span>
           </div>
-          <div className="space-y-12">
-            <span>Pembina OSIS / Perwakilan Sekolah,</span>
-            <div className="font-bold border-b border-black w-2/3 mx-auto pb-1 mt-10">________________________</div>
+          <div style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+            <span style={{ display: 'block', marginBottom: '3.5cm' }}>Penanggung Jawab</span>
+            <span style={{ display: 'block' }}>(........................................)</span>
           </div>
         </div>
       </div>

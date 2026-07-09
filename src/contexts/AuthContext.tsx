@@ -1,7 +1,8 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useState, useRef } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
 import { Profile } from '../types';
+import { clearSessionInDb, updateLastSeen } from '../lib/sessionService';
 
 interface AuthContextType {
   user: User | null;
@@ -27,6 +28,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+
+  // Refs for tracking profile and throttling database updates in window listeners
+  const profileRef = useRef<Profile | null>(null);
+  const lastDbUpdateRef = useRef<number>(0);
+
+  useEffect(() => {
+    profileRef.current = profile;
+  }, [profile]);
 
   const fetchProfile = async (userId: string) => {
     try {
@@ -58,12 +67,20 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const signOut = async () => {
     setIsLoggingOut(true);
     try {
+      const currentProfile = profileRef.current;
+      if (currentProfile) {
+        const localToken = localStorage.getItem('current_session_token');
+        if (localToken) {
+          await clearSessionInDb(currentProfile.id, localToken, currentProfile.role);
+        }
+      }
       await supabase.auth.signOut();
     } catch (err) {
       console.error('Error during signOut:', err);
     } finally {
       localStorage.removeItem('session_expires_at');
       localStorage.removeItem('lastActivity');
+      localStorage.removeItem('current_session_token');
       setSession(null);
       setUser(null);
       setProfile(null);

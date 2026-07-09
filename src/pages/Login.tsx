@@ -2,7 +2,8 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
-import { CheckCircle2 } from 'lucide-react';
+import { CheckCircle2, AlertCircle } from 'lucide-react';
+import { registerSession, checkSessionActive } from '../lib/sessionService';
 
 export default function Login() {
   const [email, setEmail] = useState('');
@@ -11,9 +12,10 @@ export default function Login() {
   const [error, setError] = useState<string | null>(null);
   const [showSuccess, setShowSuccess] = useState(false);
   const [targetPath, setTargetPath] = useState<string | null>(null);
+  const [bilikSessionConflict, setBilikSessionConflict] = useState<{ deviceName: string; boothCode: string } | null>(null);
   const timerRef = React.useRef<NodeJS.Timeout | null>(null);
   const navigate = useNavigate();
-  const { user, profile, loading: authLoading } = useAuth();
+  const { user, profile, loading: authLoading, signOut } = useAuth();
 
   const handleRedirect = React.useCallback((path: string) => {
     if (timerRef.current) {
@@ -44,11 +46,92 @@ export default function Login() {
     if (user && profile && isValidSession) {
       if (profile.role === 'admin' || profile.role === 'creator') {
         navigate('/admin', { replace: true });
+      } else if (profile.role === 'vote') {
+        const checkVoteRoleSession = async () => {
+          const { getVoteMode } = await import('../lib/voteModeService');
+          const mode = await getVoteMode();
+          if (mode === 'regular') {
+            await signOut();
+            navigate('/login', { replace: true });
+          } else {
+            const localToken = localStorage.getItem('current_session_token');
+            const checkResult = await checkSessionActive(profile.id, localToken);
+            if (!checkResult.allowed && checkResult.reason === 'active_on_other_device') {
+              setBilikSessionConflict({
+                deviceName: checkResult.profile?.device_name || 'Perangkat Lain',
+                boothCode: profile.booth_code || '01',
+              });
+            } else {
+              // Register if not already registered with this token
+              if (!localToken || checkResult.profile?.session_token !== localToken) {
+                const regResult = await registerSession(profile.id, 'vote');
+                if (!regResult.success) {
+                  setBilikSessionConflict({
+                    deviceName: regResult.existingProfile?.device_name || 'Perangkat Lain',
+                    boothCode: profile.booth_code || '01',
+                  });
+                  return;
+                }
+              }
+              setBilikSessionConflict(null);
+              navigate('/bilik', { replace: true });
+            }
+          }
+        };
+        checkVoteRoleSession();
       } else {
         navigate('/dashboard', { replace: true });
       }
     }
   }, [user, profile, navigate, showSuccess]);
+
+  const handleRetryCheck = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      if (user && profile) {
+        const { getVoteMode } = await import('../lib/voteModeService');
+        const mode = await getVoteMode();
+        if (mode === 'regular') {
+          await signOut();
+          setBilikSessionConflict(null);
+          setLoading(false);
+          return;
+        }
+
+        const localToken = localStorage.getItem('current_session_token');
+        const checkResult = await checkSessionActive(profile.id, localToken);
+        if (!checkResult.allowed && checkResult.reason === 'active_on_other_device') {
+          setBilikSessionConflict({
+            deviceName: checkResult.profile?.device_name || 'Perangkat Lain',
+            boothCode: profile.booth_code || '01',
+          });
+        } else {
+          // Register if not already registered with this token
+          if (!localToken || checkResult.profile?.session_token !== localToken) {
+            const regResult = await registerSession(profile.id, 'vote');
+            if (!regResult.success) {
+              setBilikSessionConflict({
+                deviceName: regResult.existingProfile?.device_name || 'Perangkat Lain',
+                boothCode: profile.booth_code || '01',
+              });
+              setLoading(false);
+              return;
+            }
+          }
+          setBilikSessionConflict(null);
+          navigate('/bilik', { replace: true });
+        }
+      } else {
+        setBilikSessionConflict(null);
+      }
+    } catch (err: any) {
+      setError(err.message || 'Gagal memeriksa sesi aktif.');
+      setBilikSessionConflict(null);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -73,7 +156,7 @@ export default function Login() {
         // Fetch role and is_deleted to determine redirect
         const { data: profileData, error: profileError } = await supabase
           .from('profiles')
-          .select('role, is_deleted')
+          .select('role, is_deleted, booth_code')
           .eq('id', data.user.id)
           .single();
           
@@ -84,11 +167,41 @@ export default function Login() {
           throw new Error('Akun Anda dinonaktifkan atau dihapus oleh administrator.');
         }
 
+        if (profileData?.role === 'vote') {
+          const { getVoteMode } = await import('../lib/voteModeService');
+          const mode = await getVoteMode();
+          if (mode === 'regular') {
+            await supabase.auth.signOut();
+            throw new Error('Akun terminal Bilik Suara tidak diizinkan masuk saat sistem berada dalam Mode Vote Reguler.');
+          }
+        }
+
         // Set session expiration upon successful login
         localStorage.setItem('session_expires_at', (Date.now() + 60 * 60 * 1000).toString());
         localStorage.setItem('lastActivity', Date.now().toString());
 
-        const nextPath = (profileData?.role === 'admin' || profileData?.role === 'creator') ? '/admin' : '/dashboard';
+        // Try registering the session (Single Active Session check)
+        const regResult = await registerSession(data.user.id, profileData.role || 'user');
+        if (!regResult.success) {
+          if (profileData.role === 'vote') {
+            setBilikSessionConflict({
+              deviceName: regResult.existingProfile?.device_name || 'Perangkat Lain',
+              boothCode: profileData.booth_code || '01',
+            });
+            setLoading(false);
+            return;
+          } else if (profileData.role === 'user') {
+            // Keep local token rejected so that they are intercepted by User Dashboard checking
+            localStorage.setItem('current_session_token', 'sess_rejected');
+          }
+        }
+
+        let nextPath = '/dashboard';
+        if (profileData?.role === 'admin' || profileData?.role === 'creator') {
+          nextPath = '/admin';
+        } else if (profileData?.role === 'vote') {
+          nextPath = '/bilik';
+        }
         setTargetPath(nextPath);
         setShowSuccess(true);
 
@@ -112,6 +225,60 @@ export default function Login() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-ppu-surface">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-ppu-blue"></div>
+      </div>
+    );
+  }
+
+  if (bilikSessionConflict) {
+    return (
+      <div className="min-h-screen bg-[#0d0f14] flex flex-col items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-md w-full bg-[#161b22] border-2 border-rose-900/40 p-8 rounded-2xl shadow-2xl text-center space-y-6">
+          <div className="flex flex-col items-center">
+            <div className="w-16 h-16 bg-rose-500/10 text-rose-500 rounded-full flex items-center justify-center mb-4 ring-8 ring-rose-500/5">
+              <AlertCircle className="w-10 h-10 animate-pulse" />
+            </div>
+            
+            <span className="text-[11px] font-black tracking-widest text-rose-500 uppercase">Error</span>
+            <h1 className="text-2xl font-black text-white tracking-tight mt-1 font-mono">
+              QR Gagal.
+            </h1>
+            <p className="text-sm font-semibold text-slate-400 mt-2">
+              Akun ini sedang masuk di perangkat lain.
+            </p>
+          </div>
+
+          <div className="bg-[#0d0f14]/80 border border-[#21262d] rounded-xl p-4 text-left space-y-2 font-mono">
+            <div className="flex flex-col text-xs space-y-1">
+              <span className="font-bold text-[#8b949e] uppercase tracking-wider">Nama Perangkat :</span>
+              <span className="font-extrabold text-[#f0f6fc]">{bilikSessionConflict.deviceName}</span>
+            </div>
+            <div className="flex flex-col text-xs space-y-1 pt-2">
+              <span className="font-bold text-[#8b949e] uppercase tracking-wider">Kode Akun :</span>
+              <span className="font-extrabold text-amber-400">CC {bilikSessionConflict.boothCode}</span>
+            </div>
+          </div>
+
+          <p className="text-xs font-semibold text-[#8b949e] leading-relaxed text-center px-2">
+            Silakan logout dari perangkat sebelumnya atau tunggu hingga perangkat tersebut offline.
+          </p>
+
+          <div className="pt-4">
+            <button
+              onClick={handleRetryCheck}
+              disabled={loading}
+              className="w-full py-3 bg-rose-650 hover:bg-rose-700 disabled:opacity-55 active:scale-[0.98] transition-all text-white rounded-xl font-bold text-xs uppercase tracking-wider cursor-pointer font-mono flex items-center justify-center gap-2"
+            >
+              {loading ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  Memeriksa...
+                </>
+              ) : (
+                'Coba Lagi'
+              )}
+            </button>
+          </div>
+        </div>
       </div>
     );
   }

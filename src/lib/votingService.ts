@@ -584,11 +584,24 @@ export const resetAllVotingData = async (adminEmail: string): Promise<boolean> =
 
 // Verify voter profile by card_id
 export const verifyVoterByCardId = async (cardId: string): Promise<Profile | null> => {
+  if (!isSupabaseConfigured) {
+    try {
+      const localProfilesStr = localStorage.getItem('mock_profiles') || '[]';
+      const profiles: Profile[] = JSON.parse(localProfilesStr);
+      const found = profiles.find(p => p.card_id === cardId && p.role === 'user');
+      return found || null;
+    } catch (err) {
+      console.error('Error verifying mock voter by card id:', err);
+      return null;
+    }
+  }
+
   try {
     const { data, error } = await supabase
       .from('profiles')
       .select('*')
       .eq('card_id', cardId)
+      .eq('role', 'user')
       .maybeSingle();
 
     if (error) throw error;

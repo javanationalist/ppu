@@ -245,6 +245,16 @@ export const seedMockData = () => {
     ];
     localStorage.setItem('mock_landing_page_visibility', JSON.stringify(defaultVisibility));
   }
+
+  const voteMode = localStorage.getItem('mock_vote_mode');
+  if (!voteMode) {
+    localStorage.setItem('mock_vote_mode', JSON.stringify([{ id: 'current', mode: 'regular' }]));
+  }
+
+  const boothSessions = localStorage.getItem('mock_booth_sessions');
+  if (!boothSessions) {
+    localStorage.setItem('mock_booth_sessions', JSON.stringify([]));
+  }
 };
 
 const getTableData = (table: string): any[] => {
