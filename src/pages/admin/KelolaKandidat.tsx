@@ -645,7 +645,7 @@ export default function KelolaPemilihan() {
             </div>
             <div className="flex items-center gap-2 w-full md:w-auto">
               <button
-                onClick={loadWorkspaceData}
+                onClick={() => loadWorkspaceData()}
                 className="p-2.5 rounded-xl text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 border border-slate-200 bg-white transition-all cursor-pointer"
                 title="Muat Ulang"
               >
@@ -778,7 +778,7 @@ export default function KelolaPemilihan() {
             </div>
             <div className="flex items-center gap-2 w-full md:w-auto">
               <button
-                onClick={loadWorkspaceData}
+                onClick={() => loadWorkspaceData()}
                 className="p-2.5 rounded-xl text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 border border-slate-200 bg-white transition-all cursor-pointer"
                 title="Muat Ulang"
               >

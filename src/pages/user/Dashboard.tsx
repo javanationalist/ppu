@@ -16,7 +16,6 @@ import { getGelombangConfigActive, getGelombangSesiList, GelombangSesi } from '.
 import { ALL_CLASSES } from '../../lib/classConstants';
 import { getVoteMode } from '../../lib/voteModeService';
 import { checkSessionActive } from '../../lib/sessionService';
-import WafoSlider from '../../components/WafoSlider';
 import StatusTab from '../../components/user/StatusTab';
 import VoterCardTab from '../../components/user/VoterCardTab';
 import ScanQrTab from '../../components/user/ScanQrTab';
@@ -184,65 +183,91 @@ export default function UserDashboard() {
     }
   }, [profile]);
 
-  useEffect(() => {
-    const fetchHelpdeskAndSettings = async () => {
-      try {
-        const [data, s, mode] = await Promise.all([
-          getHelpdeskButtons(),
-          getUserAccessSettings(),
-          getVoteMode()
-        ]);
-        setHelpdeskButtons(data);
-        setAccessSettings(s);
-        setVoteMode(mode);
+  const fetchHelpdeskAndSettings = async (isBackground = false) => {
+    try {
+      const [data, s, mode] = await Promise.all([
+        getHelpdeskButtons(),
+        getUserAccessSettings(),
+        getVoteMode()
+      ]);
+      setHelpdeskButtons(data);
+      setAccessSettings(prev => {
+        if (JSON.stringify(prev) !== JSON.stringify(s)) return s;
+        return prev;
+      });
+      setVoteMode(mode);
 
-        if (profile?.id) {
-          const status = await getVotingCompletionStatus(profile.id);
-          setIsAllCompleted(status.allCompleted);
+      if (profile?.id) {
+        const status = await getVotingCompletionStatus(profile.id);
+        setIsAllCompleted(prev => {
+          if (prev !== status.allCompleted) return status.allCompleted;
+          return prev;
+        });
 
-          // Keep active tab as 'status' by default as requested
-          setActiveTab('status');
-
-          // AUDIT RUNTIME
+        // AUDIT RUNTIME
+        if (!isBackground) {
           console.log("=== DASHBOARD USER AUDIT ===");
           console.log("VOTER ID:", profile.id);
           console.log("ALL COMPLETED:", status.allCompleted);
           console.log("DASHBOARD STATUS SAAT INI (SOURCE profile.voting_status):", profile.voting_status === 'sudah' ? 'Sudah Memilih' : 'Belum Memilih');
           console.log("STATUS YANG SEHARUSNYA:", status.allCompleted ? 'Sudah Memilih' : 'Belum Memilih');
           console.log("============================");
-
-          const voterClass = profile.class || '';
-
-          // 1. Fetch Session allocation
-          try {
-            const sessionActive = await getGelombangConfigActive();
-            setIsSessionConfigActive(sessionActive);
-            if (sessionActive) {
-              const listSesi = await getGelombangSesiList();
-              const foundSesi = listSesi.find(s => s.kelas.includes(voterClass));
-              setUserSession(foundSesi || null);
-            }
-          } catch (sessionErr) {
-            console.error('Failed to fetch session configurations:', sessionErr);
-          }
-
-          // 2. Fetch Dapil allocation
-          try {
-            const listDapil = await getDapils();
-            const foundDapil = listDapil.find(d => d.eligible_classes.includes(voterClass));
-            setUserDapil(foundDapil || null);
-          } catch (dapilErr) {
-            console.error('Failed to fetch dapils:', dapilErr);
-          }
         }
-      } catch (err) {
-        console.error('Failed to load helpdesk or settings:', err);
-      } finally {
+
+        const voterClass = profile.class || '';
+
+        // 1. Fetch Session allocation
+        try {
+          const sessionActive = await getGelombangConfigActive();
+          setIsSessionConfigActive(sessionActive);
+          if (sessionActive) {
+            const listSesi = await getGelombangSesiList();
+            const foundSesi = listSesi.find(s => s.kelas.includes(voterClass));
+            setUserSession(prev => {
+              if (JSON.stringify(prev) !== JSON.stringify(foundSesi)) return foundSesi || null;
+              return prev;
+            });
+          }
+        } catch (sessionErr) {
+          console.error('Failed to fetch session configurations:', sessionErr);
+        }
+
+        // 2. Fetch Dapil allocation
+        try {
+          const listDapil = await getDapils();
+          const foundDapil = listDapil.find(d => d.eligible_classes.includes(voterClass));
+          setUserDapil(prev => {
+            if (JSON.stringify(prev) !== JSON.stringify(foundDapil)) return foundDapil || null;
+            return prev;
+          });
+        } catch (dapilErr) {
+          console.error('Failed to fetch dapils:', dapilErr);
+        }
+      }
+    } catch (err) {
+      console.error('Failed to load helpdesk or settings:', err);
+    } finally {
+      if (!isBackground) {
         setDashboardLoading(false);
       }
-    };
-    fetchHelpdeskAndSettings();
+    }
+  };
+
+  useEffect(() => {
+    fetchHelpdeskAndSettings(false);
   }, [profile]);
+
+  useEffect(() => {
+    if (!profile?.id) return;
+
+    const interval = setInterval(() => {
+      if (document.visibilityState === 'visible') {
+        fetchHelpdeskAndSettings(true);
+      }
+    }, 3000);
+
+    return () => clearInterval(interval);
+  }, [profile?.id]);
 
   const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -307,7 +332,8 @@ export default function UserDashboard() {
   return (
     <div className="h-screen bg-slate-50 dark:bg-[#1a1a1a] font-sans text-slate-900 dark:text-[#f5f5f5] flex flex-col overflow-hidden transition-colors duration-300">
       {/* Top Navigation */}
-      <nav className="h-16 bg-white dark:bg-[#1a1a1a] border-b border-slate-200 dark:border-[#2a2a2a] px-4 sm:px-8 flex items-center justify-between shadow-sm z-10 shrink-0 transition-colors duration-300">
+      <nav className="h-16 bg-white dark:bg-[#1a1a1a] border-b border-slate-200 dark:border-[#2a2a2a] px-4 sm:px-8 flex items-center justify-between shadow-sm z-10 shrink-0 transition-colors duration-300 animate-fade-in">
+        {/* Left: Logo PPU Digital */}
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 bg-white dark:bg-[#2a2a2a] border border-slate-200 dark:border-[#333333] rounded-sm overflow-hidden flex items-center justify-center shadow-sm shrink-0">
             <img 
@@ -316,40 +342,35 @@ export default function UserDashboard() {
               className="w-full h-full object-contain p-0.5" 
             />
           </div>
-          <span className="font-bold text-lg tracking-tight text-slate-800 dark:text-slate-150 transition-colors">PPU <span className="hidden sm:inline font-normal text-slate-500 dark:text-[#a3a3a3] text-sm ml-2">Portal Pemilihan Umum</span></span>
+          <span className="font-bold text-lg tracking-tight text-slate-800 dark:text-slate-150 transition-colors">
+            PPU Digital
+          </span>
         </div>
-        <div className="flex items-center gap-4 sm:gap-6">
-          {/* Theme Toggle Button */}
-          <button
-            type="button"
-            className={`text-slate-600 dark:text-[#a3a3a3] hover:text-ppu-blue dark:hover:text-sky-400 p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-[#2a2a2a] transition-colors focus:outline-none flex items-center justify-center ${isVoting ? 'opacity-40 cursor-not-allowed' : ''}`}
-            onClick={isVoting ? undefined : toggleTheme}
-            disabled={isVoting}
-            aria-label="Toggle theme"
-            title={isVoting ? 'Sesi Voting Aktif' : (theme === 'dark' ? 'Aktifkan Mode Terang' : 'Aktifkan Mode Gelap')}
-          >
-            <span className="css-icon-container" aria-hidden="true">
-              <span className={theme === 'dark' ? 'css-icon-moon' : 'css-icon-sun'} />
-            </span>
-          </button>
 
-          <div className="flex items-center gap-3">
-            <div className="text-right hidden sm:block">
-              <p className="text-xs font-semibold leading-none text-slate-800 dark:text-[#f5f5f5] transition-colors">{profile.full_name}</p>
-              <p className="text-[10px] text-slate-450 dark:text-[#a3a3a3]">User ID: {(profile.id || '').split('-')[0].toUpperCase()}</p>
+        {/* Center: Badge Status Konfirmasi Akun */}
+        <div className="flex items-center">
+          {profile.account_status === 'dikonfirmasi' ? (
+            <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold bg-emerald-50 dark:bg-emerald-950/45 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-900/30 shadow-sm transition-all duration-200">
+              <span className="text-xs">🟢</span> Profil Terkonfirmasi
             </div>
-            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-indigo-100 dark:bg-[#2a2a2a] flex items-center justify-center border border-indigo-200 dark:border-[#333333] text-indigo-700 dark:text-[#f5f5f5] font-bold uppercase transition-colors">
-              {profile.full_name.substring(0, 2)}
+          ) : (
+            <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold bg-amber-50 dark:bg-amber-950/45 text-amber-750 dark:text-amber-400 border border-amber-200 dark:border-amber-900/30 shadow-sm transition-all duration-200">
+              <span className="text-xs animate-pulse">🟡</span> Menunggu Konfirmasi
             </div>
-            <button 
-              onClick={isVoting ? undefined : handleLogout} 
-              disabled={isVoting}
-              className={`ml-1 sm:ml-2 text-slate-400 dark:text-[#a3a3a3] hover:text-red-500 dark:hover:text-red-400 group transition-colors focus:outline-none ${isVoting ? 'opacity-30 cursor-not-allowed' : 'cursor-pointer'}`} 
-              title={isVoting ? 'Tidak dapat logout saat sedang memilih' : 'Logout'}
-            >
-              <LogOut className="w-5 h-5 group-hover:stroke-red-500 dark:group-hover:stroke-red-400" />
-            </button>
-          </div>
+          )}
+        </div>
+
+        {/* Right: Tombol Logout */}
+        <div className="flex items-center">
+          <button 
+            onClick={isVoting ? undefined : handleLogout} 
+            disabled={isVoting}
+            className={`px-3 py-1.5 sm:px-4 sm:py-2 bg-red-50 hover:bg-red-100 dark:bg-red-950/20 dark:hover:bg-red-950/40 text-red-650 dark:text-red-400 hover:text-red-750 dark:hover:text-red-300 border border-red-200 dark:border-red-900/30 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all duration-200 ${isVoting ? 'opacity-35 cursor-not-allowed' : 'cursor-pointer'}`} 
+            title={isVoting ? 'Tidak dapat logout saat sedang memilih' : 'Logout'}
+          >
+            <LogOut className="w-4 h-4" />
+            <span className="hidden sm:inline">Keluar</span>
+          </button>
         </div>
       </nav>
 
@@ -360,14 +381,18 @@ export default function UserDashboard() {
             {[
               { id: 'status', label: 'Status', icon: Home },
               { id: 'kartu', label: 'Kartu Pemilih', icon: CreditCard },
-              { id: 'scan', label: 'Scan QR', icon: QrCode },
+              { 
+                id: 'scan', 
+                label: voteMode === 'regular' ? 'Alokasi' : 'Scan QR', 
+                icon: voteMode === 'regular' ? MapPin : QrCode 
+              },
               { id: 'profil', label: 'Profil', icon: User },
               { id: 'informasi', label: 'Informasi', icon: Info },
             ].map((item) => {
               const IconComponent = item.icon;
               const isActive = activeTab === item.id;
               const isScan = item.id === 'scan';
-              const isScanDisabled = isScan && voteMode !== 'booth';
+              const isScanDisabled = false;
               const isTabLocked = isVoting && item.id !== 'scan';
 
               return (
@@ -442,57 +467,74 @@ export default function UserDashboard() {
 
       {/* Main Scrollable Area */}
       <main className="flex-1 overflow-y-auto p-4 sm:p-8 pb-12 w-full max-w-7xl mx-auto transition-all duration-300">
-        {activeTab === 'status' && (
-          <StatusTab
-            profile={profile}
-            isAllCompleted={isAllCompleted}
-            isSessionConfigActive={isSessionConfigActive}
-            userSession={userSession}
-            userDapil={userDapil}
-            accessSettings={accessSettings}
-            helpdeskButtons={helpdeskButtons}
-            loading={dashboardLoading}
-            voteMode={voteMode}
-          />
-        )}
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={activeTab}
+            initial={{ opacity: 0, y: 4 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -4 }}
+            transition={{ duration: 0.15, ease: 'easeInOut' }}
+            className="w-full h-full"
+          >
+            {activeTab === 'status' && (
+              <StatusTab
+                profile={profile}
+                isAllCompleted={isAllCompleted}
+                isSessionConfigActive={isSessionConfigActive}
+                userSession={userSession}
+                userDapil={userDapil}
+                accessSettings={accessSettings}
+                helpdeskButtons={helpdeskButtons}
+                loading={dashboardLoading}
+                voteMode={voteMode}
+                isVoting={isVoting}
+                setIsEditModalOpen={setIsEditModalOpen}
+              />
+            )}
 
-        {activeTab === 'kartu' && (
-          <VoterCardTab
-            profile={profile}
-            isAllCompleted={isAllCompleted}
-            accessSettings={accessSettings}
-            isDownloading={isDownloading}
-            handleDownload={handleDownload}
-            cardRef={cardRef}
-            qrRef={qrRef}
-            renderBlurredEmail={renderBlurredEmail}
-          />
-        )}
+            {activeTab === 'kartu' && (
+              <VoterCardTab
+                profile={profile}
+                isAllCompleted={isAllCompleted}
+                accessSettings={accessSettings}
+                isDownloading={isDownloading}
+                handleDownload={handleDownload}
+                cardRef={cardRef}
+                qrRef={qrRef}
+                renderBlurredEmail={renderBlurredEmail}
+              />
+            )}
 
-        {activeTab === 'scan' && (
-          <ScanQrTab 
-            isAllCompleted={isAllCompleted} 
-            onStateChange={(state) => {
-              setIsVoting(state === 'voting');
-            }}
-          />
-        )}
+            {activeTab === 'scan' && (
+              <ScanQrTab 
+                isAllCompleted={isAllCompleted} 
+                onStateChange={(state) => {
+                  setIsVoting(state === 'voting');
+                }}
+                isSessionConfigActive={isSessionConfigActive}
+                userSession={userSession}
+                userDapil={userDapil}
+                helpdeskButtons={helpdeskButtons}
+              />
+            )}
 
-        {activeTab === 'profil' && (
-          <ProfileTab
-            profile={profile}
-            accessSettings={accessSettings}
-            setIsEditModalOpen={setIsEditModalOpen}
-            isAllCompleted={isAllCompleted}
-          />
-        )}
+            {activeTab === 'profil' && (
+              <ProfileTab
+                profile={profile}
+                accessSettings={accessSettings}
+                setIsEditModalOpen={setIsEditModalOpen}
+                isAllCompleted={isAllCompleted}
+              />
+            )}
 
-        {activeTab === 'informasi' && (
-          <InformasiTab
-            announcements={announcements}
-            infoLoading={infoLoading}
-          />
-        )}
+            {activeTab === 'informasi' && (
+              <InformasiTab
+                announcements={announcements}
+                infoLoading={infoLoading}
+              />
+            )}
+          </motion.div>
+        </AnimatePresence>
       </main>
 
       {isEditModalOpen && (

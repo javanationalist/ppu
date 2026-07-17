@@ -70,6 +70,7 @@ export interface WafoAnnouncement {
   is_active: boolean;
   created_at: string;
   updated_at?: string;
+  type?: string;
 }
 
 export interface Vote {

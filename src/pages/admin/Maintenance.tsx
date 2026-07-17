@@ -15,6 +15,7 @@ export default function Maintenance() {
     download_kartu_enabled: true,
     visibilitas_kartu_enabled: true,
     maintenance_enabled: false,
+    voting_global_enabled: true,
   });
 
   const [toast, setToast] = useState<{ type: 'success' | 'error'; text: string } | null>(null);

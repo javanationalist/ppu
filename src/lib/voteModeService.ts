@@ -266,6 +266,54 @@ export const getBoothSession = async (sessionId: string): Promise<BoothSession |
   }
 };
 
+export const getActiveBoothSessionForCC = async (cc: string): Promise<BoothSession | null> => {
+  if (!isSupabaseConfigured) {
+    // Check localStorage
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && key.startsWith(SESSION_STORAGE_KEY_PREFIX)) {
+        const sid = key.substring(SESSION_STORAGE_KEY_PREFIX.length);
+        if (sid.startsWith(`PPU-${cc}-`)) {
+          try {
+            const sDataStr = localStorage.getItem(key);
+            if (sDataStr) {
+              const sData = JSON.parse(sDataStr) as BoothSession;
+              if (sData.status === 'waiting' || sData.status === 'connected') {
+                return sData;
+              }
+            }
+          } catch (e) {
+            // ignore
+          }
+        }
+      }
+    }
+    return null;
+  }
+
+  try {
+    const { data, error } = await supabase
+      .from('booth_sessions')
+      .select('*')
+      .like('id', `PPU-${cc}-%`)
+      .in('status', ['waiting', 'connected'])
+      .order('id', { ascending: false })
+      .limit(1);
+
+    if (error || !data || data.length === 0) {
+      return null;
+    }
+    
+    // Cache to local storage
+    const latest = data[0] as BoothSession;
+    localStorage.setItem(`${SESSION_STORAGE_KEY_PREFIX}${latest.id}`, JSON.stringify(latest));
+    return latest;
+  } catch (err) {
+    console.error('Error fetching active session by CC:', err);
+    return null;
+  }
+};
+
 export const connectVoterToBooth = async (
   sessionId: string,
   voterInfo: Omit<BoothSession, 'id' | 'status'>

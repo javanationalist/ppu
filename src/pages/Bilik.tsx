@@ -10,7 +10,8 @@ import {
   BoothSession, 
   getVoteMode, 
   updateBoothStatus,
-  getBoothCode
+  getBoothCode,
+  getActiveBoothSessionForCC
 } from '../lib/voteModeService';
 import { useAuth } from '../contexts/AuthContext';
 import { updateLastSeen } from '../lib/sessionService';
@@ -37,6 +38,12 @@ export default function BilikPage() {
   const [sessionConflict, setSessionConflict] = useState<{ deviceName: string; boothCode: string } | null>(null);
   
   const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const profileRef = useRef(profile);
+  const hasInitializedRef = useRef(false);
+
+  useEffect(() => {
+    profileRef.current = profile;
+  }, [profile]);
 
   const updateSession = (s: BoothSession | null) => {
     setSession(s);
@@ -45,6 +52,12 @@ export default function BilikPage() {
 
   // Generate a new session
   const startNewSession = async () => {
+    const curProf = profileRef.current;
+    if (!curProf) {
+      console.warn('startNewSession: No profile available yet.');
+      return;
+    }
+
     // Check first if vote mode is booth
     try {
       const activeMode = await getVoteMode();
@@ -62,16 +75,14 @@ export default function BilikPage() {
     
     if (pollingIntervalRef.current) clearInterval(pollingIntervalRef.current);
 
-    const cc = getBoothCode(profile);
+    const cc = getBoothCode(curProf);
     const xxxx = generateRandomSessionCode();
     const newId = `PPU-${cc}-${xxxx}`;
     
     try {
       const newSession = await createBoothSession(newId);
       updateSession(newSession);
-      if (profile) {
-        await updateBoothStatus(profile.id, 'waiting');
-      }
+      await updateBoothStatus(curProf.id, 'waiting');
       
       // Start polling
       pollingIntervalRef.current = setInterval(async () => {
@@ -80,9 +91,7 @@ export default function BilikPage() {
           clearInterval(pollingIntervalRef.current!);
           updateSession(latestSession);
           setIsConnected(true);
-          if (profile) {
-            await updateBoothStatus(profile.id, 'connected');
-          }
+          await updateBoothStatus(curProf.id, 'connected');
         }
       }, 1000);
       
@@ -94,25 +103,92 @@ export default function BilikPage() {
     }
   };
 
+  // Restore an existing active session or start a new one
+  const restoreOrStartNewSession = async () => {
+    const curProf = profileRef.current;
+    if (!curProf) {
+      setLoading(false);
+      return;
+    }
+
+    try {
+      // Check first if vote mode is booth
+      const activeMode = await getVoteMode();
+      if (activeMode !== 'booth') {
+        setError('Halaman bilik tidak aktif karena sistem saat ini berjalan dalam Mode Vote Reguler.');
+        setLoading(false);
+        return;
+      }
+
+      setLoading(true);
+
+      const cc = getBoothCode(curProf);
+      // Try to find any active session for this booth terminal
+      const activeSession = await getActiveBoothSessionForCC(cc);
+
+      if (activeSession) {
+        console.log('Restoring active session:', activeSession);
+        updateSession(activeSession);
+        
+        if (activeSession.status === 'connected') {
+          setIsConnected(true);
+          await updateBoothStatus(curProf.id, 'connected');
+          setLoading(false);
+          return;
+        } else {
+          // It's in 'waiting' status
+          setIsConnected(false);
+          await updateBoothStatus(curProf.id, 'waiting');
+          
+          // Poll for voter connection on this existing session
+          if (pollingIntervalRef.current) clearInterval(pollingIntervalRef.current);
+          pollingIntervalRef.current = setInterval(async () => {
+            const latestSession = await getBoothSession(activeSession.id);
+            if (latestSession && latestSession.status === 'connected') {
+              clearInterval(pollingIntervalRef.current!);
+              updateSession(latestSession);
+              setIsConnected(true);
+              await updateBoothStatus(curProf.id, 'connected');
+            }
+          }, 1000);
+          
+          setLoading(false);
+          return;
+        }
+      }
+    } catch (err) {
+      console.error('Error during session restoration:', err);
+    }
+
+    // No active session found, or restoration failed, start a brand new one
+    await startNewSession();
+  };
+
   useEffect(() => {
-    startNewSession();
+    if (!profile) return;
+    if (hasInitializedRef.current) return;
+    hasInitializedRef.current = true;
+
+    restoreOrStartNewSession();
 
     // Send initial heartbeat
     const initialToken = localStorage.getItem('current_session_token');
-    if (profile && initialToken) {
+    if (initialToken) {
       updateLastSeen(profile.id, initialToken);
     }
 
     // Periodic heartbeat every 15 seconds
     const heartbeatInterval = setInterval(() => {
       const token = localStorage.getItem('current_session_token');
-      if (profile && token) {
-        updateLastSeen(profile.id, token);
+      const curProf = profileRef.current;
+      if (curProf && token) {
+        updateLastSeen(curProf.id, token);
       }
     }, 15000);
 
     const checkRemoteControlInterval = setInterval(async () => {
-      if (!profile) return;
+      const curProf = profileRef.current;
+      if (!curProf) return;
       try {
         // 1. Check if vote mode was changed to regular by administrator
         const activeMode = await getVoteMode();
@@ -123,9 +199,7 @@ export default function BilikPage() {
           if (sessionRef.current) {
             await cancelBoothSession(sessionRef.current.id);
           }
-          if (profile) {
-            await updateBoothStatus(profile.id, 'offline');
-          }
+          await updateBoothStatus(curProf.id, 'offline');
           setError('Halaman bilik tidak aktif karena sistem saat ini berjalan dalam Mode Vote Reguler.');
           return;
         }
@@ -136,12 +210,12 @@ export default function BilikPage() {
         if (!isSupabaseConfigured) {
           const localProfilesStr = localStorage.getItem('mock_profiles') || '[]';
           const profiles = JSON.parse(localProfilesStr);
-          currentProfile = profiles.find((p: any) => p.id === profile.id);
+          currentProfile = profiles.find((p: any) => p.id === curProf.id);
         } else {
           const { data } = await supabase
             .from('profiles')
             .select('voting_status, is_deleted, session_token')
-            .eq('id', profile.id)
+            .eq('id', curProf.id)
             .maybeSingle();
           currentProfile = data;
         }
@@ -158,7 +232,7 @@ export default function BilikPage() {
           }
           setSessionConflict({
             deviceName: currentProfile.device_name || 'Perangkat Lain',
-            boothCode: profile?.booth_code || '01',
+            boothCode: curProf?.booth_code || '01',
           });
           return;
         }
@@ -187,11 +261,13 @@ export default function BilikPage() {
       if (pollingIntervalRef.current) clearInterval(pollingIntervalRef.current);
       clearInterval(checkRemoteControlInterval);
       clearInterval(heartbeatInterval);
-      if (sessionRef.current) {
-        cancelBoothSession(sessionRef.current.id);
+      
+      const activeSession = sessionRef.current;
+      if (activeSession && (activeSession.status === 'waiting' || activeSession.status === 'connected')) {
+        cancelBoothSession(activeSession.id);
       }
     };
-  }, [profile]);
+  }, [profile?.id]);
 
   if (error) {
     return (

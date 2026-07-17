@@ -43,18 +43,29 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         .from('profiles')
         .select('*')
         .eq('id', userId)
-        .single();
+        .maybeSingle();
 
       if (error) {
         console.error('Error fetching profile:', error);
-      } else {
+      } else if (data) {
         const prof = data as Profile;
         if (prof.is_deleted) {
           console.warn('Soft-deleted voter account tried to login: signing out');
           await supabase.auth.signOut();
           setProfile(null);
         } else {
-          setProfile(prof);
+          setProfile(prev => {
+            if (!prev || 
+                prev.full_name !== prof.full_name || 
+                prev.class !== prof.class || 
+                prev.account_status !== prof.account_status || 
+                prev.voting_status !== prof.voting_status || 
+                prev.card_visibility !== prof.card_visibility ||
+                prev.is_deleted !== prof.is_deleted) {
+              return prof;
+            }
+            return prev;
+          });
         }
       }
     } catch (e) {
@@ -189,6 +200,52 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       clearInterval(interval);
     };
   }, []);
+
+  // Realtime Supabase Database Listener + Fallback polling for user profile
+  useEffect(() => {
+    if (!user?.id) return;
+
+    // Realtime channel for profile changes
+    const channel = supabase
+      .channel(`profile_realtime_${user.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'profiles',
+          filter: `id=eq.${user.id}`,
+        },
+        (payload) => {
+          if (payload.new) {
+            const prof = payload.new as Profile;
+            setProfile(prev => {
+              if (!prev || 
+                  prev.full_name !== prof.full_name || 
+                  prev.class !== prof.class || 
+                  prev.account_status !== prof.account_status || 
+                  prev.voting_status !== prof.voting_status || 
+                  prev.card_visibility !== prof.card_visibility ||
+                  prev.is_deleted !== prof.is_deleted) {
+                return prof;
+              }
+              return prev;
+            });
+          }
+        }
+      )
+      .subscribe();
+
+    // Fast polling fallback (every 3 seconds) for robust multi-tab and offline-reconnect support
+    const pollInterval = setInterval(() => {
+      fetchProfile(user.id);
+    }, 3000);
+
+    return () => {
+      channel.unsubscribe();
+      clearInterval(pollInterval);
+    };
+  }, [user?.id]);
 
   return (
     <AuthContext.Provider value={{ user, session, profile, loading, signOut, isLoggingOut }}>
