@@ -46,7 +46,7 @@ export default function ProfileTab({
   };
 
   return (
-    <div className="max-w-2xl mx-auto w-full px-3 sm:px-6 py-3 sm:py-4 animate-fade-in">
+    <div className="max-w-2xl mx-auto w-full px-3 sm:px-6 py-3 sm:py-4">
       {/* 1. Header Panel */}
       <div className="flex items-center gap-3 sm:gap-4 mb-4 sm:mb-6 text-left">
         <div className="w-9 h-9 sm:w-10 sm:h-10 bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-sky-405 rounded-xl flex items-center justify-center shrink-0 border border-blue-100/50 dark:border-blue-900/30">
@@ -192,12 +192,12 @@ export default function ProfileTab({
               </div>
               <div className="text-right shrink-0">
                 {profile.account_status === 'dikonfirmasi' ? (
-                  <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] sm:text-[11px] font-extrabold bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border border-emerald-100 dark:border-emerald-900/40 shadow-sm animate-fade-in">
+                  <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] sm:text-[11px] font-extrabold bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border border-emerald-100 dark:border-emerald-900/40 shadow-sm">
                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 mr-1 sm:mr-1.5 shrink-0" />
                     Akun Aktif
                   </span>
                 ) : (
-                  <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] sm:text-[11px] font-extrabold bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 border border-amber-100 dark:border-amber-900/40 shadow-sm animate-fade-in">
+                  <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] sm:text-[11px] font-extrabold bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 border border-amber-100 dark:border-amber-900/40 shadow-sm">
                     <span className="w-1.5 h-1.5 rounded-full bg-amber-500 mr-1 sm:mr-1.5 shrink-0" />
                     Belum Dikonfirmasi
                   </span>

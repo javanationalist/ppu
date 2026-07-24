@@ -18,7 +18,7 @@ export default function InformasiTab({ announcements, infoLoading }: InformasiTa
   };
 
   return (
-    <div className="space-y-4 sm:space-y-6 animate-fade-in max-w-4xl mx-auto text-left">
+    <div className="space-y-4 sm:space-y-6 max-w-4xl mx-auto text-left">
       <div className="text-center mb-6 sm:mb-8">
         <div className="inline-flex items-center justify-center w-12 h-12 sm:w-14 sm:h-14 rounded-xl sm:rounded-2xl bg-indigo-50 dark:bg-sky-500/10 border border-indigo-100 dark:border-sky-500/20 mb-3 sm:mb-4 shadow-sm">
           <Info className="w-6 h-6 sm:w-7 sm:h-7 text-indigo-650 dark:text-sky-400" />

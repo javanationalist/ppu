@@ -131,21 +131,21 @@ export default function StatusTab({
       id: 1,
       tag: 'Tahap 1',
       title: 'Verifikasi Akun',
-      description: 'Akun Anda telah berhasil diverifikasi melalui kecocokan kredensial login.',
+      description: 'Verifikasi oleh sistem melalui kecocokan kredensial login.',
       status: step1Status,
     },
     {
       id: 2,
       tag: 'Tahap 2',
       title: 'Cek Profil',
-      description: 'Memastikan kelengkapan data Nama Lengkap dan Kelas Anda agar kartu pemilih sah.',
+      description: 'Pastikan data Nama Lengkap dan Kelas Kamu benar agar kartu pemilih dapat digunakan.',
       status: step2Status,
     },
     {
       id: 3,
       tag: 'Tahap 3',
       title: 'Konfirmasi Akun',
-      description: 'Akun diverifikasi dan disetujui secara resmi oleh pihak Panitia Pemilihan.',
+      description: 'Akun harus diverifikasi dan disetujui aktif oleh Panitia Pemilihan.',
       status: step3Status,
     },
     {
@@ -153,29 +153,29 @@ export default function StatusTab({
       tag: 'Tahap 4',
       title: 'Melakukan Pemilihan',
       description: voteMode === 'regular' 
-        ? 'Gunakan hak pilih Anda secara mandiri langsung melalui aplikasi Portal.' 
-        : 'Hubungkan perangkat Anda dengan memindai kode QR yang berada di Bilik Suara.',
+        ? 'Hubungkan perangkat Kamu dengan memindai kode QR yang ada di Bilik Suara.' 
+        : 'Hubungkan perangkat Kamu dengan memindai kode QR yang ada di Bilik Suara.',
       status: step4Status,
     },
     {
       id: 5,
       tag: 'Tahap 5',
       title: 'Selesai',
-      description: 'Selamat! Partisipasi Anda telah selesai dan hak suara berhasil direkam di sistem.',
+      description: 'Partisipasimu telah selesai dan hak suara berhasil direkam di sistem.',
       status: step5Status,
     }
   ];
 
   return (
-    <div className="space-y-4 sm:space-y-6 animate-fade-in text-left max-w-2xl mx-auto">
+    <div className="space-y-4 sm:space-y-6 text-left max-w-2xl mx-auto">
       {/* Progress Stepper Card */}
       <div className="bg-white dark:bg-[#1a1a1a] border border-slate-200 dark:border-[#2a2a2a] rounded-[24px] p-6 sm:p-8 shadow-sm transition-colors duration-300">
-        <div className="border-b border-slate-100 dark:border-[#2a2a2a] pb-4 mb-6">
+        <div className="border-b border-slate-100 dark:border-[#2a2a2a] pb-4 mb-6 text-center">
           <h3 className="text-base sm:text-lg font-black text-slate-800 dark:text-[#f5f5f5] tracking-tight">
-            Alur Status Keikutsertaan Pemilu
+            Alur Status Pemilu
           </h3>
           <p className="text-slate-400 dark:text-[#a3a3a3] text-[11px] sm:text-xs transition-colors font-medium mt-0.5">
-            Progres partisipasi Anda dalam Pemilihan Umum Raya SMAN 1 Bangsal.
+            Kamu bisa lihat progres partisipasi Kamu di sini.
           </p>
         </div>
 
@@ -295,7 +295,7 @@ export default function StatusTab({
                   {step.id === 3 && visibleStep >= step.id && isActive && (
                     <div className="mt-3 p-3 bg-blue-50/60 dark:bg-blue-950/20 rounded-xl border border-blue-100/30 dark:border-blue-900/30">
                       <p className="text-[11px] text-blue-800 dark:text-blue-300 font-semibold leading-relaxed">
-                        Menunggu proses verifikasi manual oleh operator panitia. Halaman ini akan otomatis diperbarui begitu disetujui.
+                        Silakan verifikasi akun dengan menunjukkan Kartu Pemilih kepada Panitia.
                       </p>
                     </div>
                   )}
@@ -324,7 +324,7 @@ export default function StatusTab({
                             </p>
                           ) : (
                             <p className="text-[11px] text-indigo-750 dark:text-sky-300 font-semibold leading-relaxed">
-                              Silakan beralih ke tab <strong className="font-extrabold text-indigo-800 dark:text-sky-400">Scan QR</strong> untuk memindai kode QR Bilik Suara & menghubungkan akun Anda.
+                              Silakan beralih ke tab <strong className="font-extrabold text-indigo-800 dark:text-sky-400">Scan QR</strong> untuk memindai kode QR Bilik Suara & menghubungkan akun Kamu.
                             </p>
                           )}
                         </div>

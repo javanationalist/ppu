@@ -422,7 +422,7 @@ export default function BilikPage() {
       <header className="border-b border-[#21262d] bg-[#161b22] px-6 py-4 flex justify-between items-center z-10">
         <div className="flex items-center gap-3">
           <Terminal className="w-5 h-5 text-white" />
-          <span className="font-extrabold text-sm tracking-widest text-white">TERMINAL BILIK SUARA</span>
+          <span className="font-extrabold text-sm tracking-widest text-white">BILIK SUARA ({profile ? getBoothCode(profile) : 'CC'})</span>
         </div>
         <div className="flex items-center gap-4">
           <span className="flex items-center gap-1.5 text-xs text-white">
@@ -462,10 +462,10 @@ export default function BilikPage() {
               <div className="flex-1 space-y-4">
                 <div className="space-y-1">
                   <span className="text-[10px] uppercase font-bold tracking-widest text-white font-mono">STATUS KONEKSI</span>
-                  <h2 className="text-xl font-extrabold text-white tracking-tight">Menunggu Pemilih...</h2>
+                  <h2 className="text-xl font-extrabold text-white tracking-tight">PINDAI KODE QR</h2>
                 </div>
                 <p className="text-xs text-white leading-relaxed">
-                  Silakan buka tab <strong className="text-white font-bold">Scan QR</strong> di aplikasi PPU gadget Anda, lalu arahkan kamera untuk memindai token sesi di samping.
+                  Silakan buka tab <strong className="text-white font-bold">Scan QR</strong> di halaman akun, lalu arahkan kamera untuk memindai Kode QR token sesi di samping.
                 </p>
                 <div className="p-3.5 bg-[#0d0f14] border border-[#21262d] rounded-xl space-y-2">
                   <div className="flex justify-between text-[11px]">
@@ -482,7 +482,7 @@ export default function BilikPage() {
                   className="flex items-center gap-2 text-xs font-bold text-white hover:text-white transition-colors focus:outline-none cursor-pointer"
                 >
                   <RefreshCw className="w-3.5 h-3.5 text-white" />
-                  <span>Perbarui Token Baru</span>
+                  <span>Perbarui Token</span>
                 </button>
               </div>
 

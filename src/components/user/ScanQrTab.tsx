@@ -603,7 +603,7 @@ export default function ScanQrTab({
 
         {/* Sesi Section */}
         {isSessionConfigActive && (
-          <div className="space-y-1.5 animate-fade-in">
+          <div className="space-y-1.5">
             <p className="text-[9px] sm:text-[10px] font-extrabold uppercase tracking-widest text-slate-400 dark:text-[#a3a3a3]">ALOKASI SESI</p>
             {userSession ? (
               <div className="bg-slate-50 dark:bg-[#252525]/40 border border-slate-150 dark:border-[#333333] rounded-2xl p-4 shadow-[0_1px_4px_rgba(0,0,0,0.01)] flex gap-3 text-left">
@@ -633,7 +633,7 @@ export default function ScanQrTab({
         <div className="space-y-1.5">
           <p className="text-[9px] sm:text-[10px] font-extrabold uppercase tracking-widest text-slate-400 dark:text-[#a3a3a3]">ALOKASI DAPIL</p>
           {userDapil ? (
-            <div className="space-y-3 animate-fade-in">
+            <div className="space-y-3">
               <div className="bg-gradient-to-br from-indigo-50/70 to-blue-50/40 dark:from-indigo-950/20 dark:to-blue-950/10 border border-indigo-100/70 dark:border-indigo-900/40 rounded-2xl p-4 flex gap-3 text-left">
                 <div className="w-10 h-10 rounded-full bg-indigo-150 dark:bg-indigo-900/40 text-indigo-650 dark:text-sky-400 flex items-center justify-center shrink-0">
                   <Users className="w-5 h-5" />
@@ -717,7 +717,7 @@ export default function ScanQrTab({
   };
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-12 gap-4 sm:gap-6 items-start animate-fade-in max-w-5xl mx-auto">
+    <div className="grid grid-cols-1 md:grid-cols-12 gap-4 sm:gap-6 items-start max-w-5xl mx-auto">
       {/* Left Column: Scanner Card (Only visible in Booth Mode) */}
       {voteMode === 'booth' && (
         <div className="md:col-span-7 w-full">

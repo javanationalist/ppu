@@ -467,74 +467,65 @@ export default function UserDashboard() {
 
       {/* Main Scrollable Area */}
       <main className="flex-1 overflow-y-auto p-4 sm:p-8 pb-12 w-full max-w-7xl mx-auto transition-all duration-300">
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={activeTab}
-            initial={{ opacity: 0, y: 4 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -4 }}
-            transition={{ duration: 0.15, ease: 'easeInOut' }}
-            className="w-full h-full"
-          >
-            {activeTab === 'status' && (
-              <StatusTab
-                profile={profile}
-                isAllCompleted={isAllCompleted}
-                isSessionConfigActive={isSessionConfigActive}
-                userSession={userSession}
-                userDapil={userDapil}
-                accessSettings={accessSettings}
-                helpdeskButtons={helpdeskButtons}
-                loading={dashboardLoading}
-                voteMode={voteMode}
-                isVoting={isVoting}
-                setIsEditModalOpen={setIsEditModalOpen}
-              />
-            )}
+        <div className="w-full h-full">
+          {activeTab === 'status' && (
+            <StatusTab
+              profile={profile}
+              isAllCompleted={isAllCompleted}
+              isSessionConfigActive={isSessionConfigActive}
+              userSession={userSession}
+              userDapil={userDapil}
+              accessSettings={accessSettings}
+              helpdeskButtons={helpdeskButtons}
+              loading={dashboardLoading}
+              voteMode={voteMode}
+              isVoting={isVoting}
+              setIsEditModalOpen={setIsEditModalOpen}
+            />
+          )}
 
-            {activeTab === 'kartu' && (
-              <VoterCardTab
-                profile={profile}
-                isAllCompleted={isAllCompleted}
-                accessSettings={accessSettings}
-                isDownloading={isDownloading}
-                handleDownload={handleDownload}
-                cardRef={cardRef}
-                qrRef={qrRef}
-                renderBlurredEmail={renderBlurredEmail}
-              />
-            )}
+          {activeTab === 'kartu' && (
+            <VoterCardTab
+              profile={profile}
+              isAllCompleted={isAllCompleted}
+              accessSettings={accessSettings}
+              isDownloading={isDownloading}
+              handleDownload={handleDownload}
+              cardRef={cardRef}
+              qrRef={qrRef}
+              renderBlurredEmail={renderBlurredEmail}
+            />
+          )}
 
-            {activeTab === 'scan' && (
-              <ScanQrTab 
-                isAllCompleted={isAllCompleted} 
-                onStateChange={(state) => {
-                  setIsVoting(state === 'voting');
-                }}
-                isSessionConfigActive={isSessionConfigActive}
-                userSession={userSession}
-                userDapil={userDapil}
-                helpdeskButtons={helpdeskButtons}
-              />
-            )}
+          {activeTab === 'scan' && (
+            <ScanQrTab 
+              isAllCompleted={isAllCompleted} 
+              onStateChange={(state) => {
+                setIsVoting(state === 'voting');
+              }}
+              isSessionConfigActive={isSessionConfigActive}
+              userSession={userSession}
+              userDapil={userDapil}
+              helpdeskButtons={helpdeskButtons}
+            />
+          )}
 
-            {activeTab === 'profil' && (
-              <ProfileTab
-                profile={profile}
-                accessSettings={accessSettings}
-                setIsEditModalOpen={setIsEditModalOpen}
-                isAllCompleted={isAllCompleted}
-              />
-            )}
+          {activeTab === 'profil' && (
+            <ProfileTab
+              profile={profile}
+              accessSettings={accessSettings}
+              setIsEditModalOpen={setIsEditModalOpen}
+              isAllCompleted={isAllCompleted}
+            />
+          )}
 
-            {activeTab === 'informasi' && (
-              <InformasiTab
-                announcements={announcements}
-                infoLoading={infoLoading}
-              />
-            )}
-          </motion.div>
-        </AnimatePresence>
+          {activeTab === 'informasi' && (
+            <InformasiTab
+              announcements={announcements}
+              infoLoading={infoLoading}
+            />
+          )}
+        </div>
       </main>
 
       {isEditModalOpen && (

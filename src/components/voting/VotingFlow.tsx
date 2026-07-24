@@ -39,6 +39,7 @@ import {
 import { Category, Candidate, Profile, Vote, Dapil } from '../../types';
 import { getUserAccessSettings, UserAccessSettings } from '../../lib/userAccessService';
 import { getGelombangConfigActive, getGelombangSesiList, GelombangSesi } from '../../lib/gelombangService';
+import { motion, AnimatePresence } from 'motion/react';
 
 export interface VotingFlowProps {
   voteMode: 'regular' | 'booth';
@@ -46,6 +47,48 @@ export interface VotingFlowProps {
   onComplete?: () => void;
   onCancel?: () => void;
 }
+
+const getCategoryDetails = (catId: string, catName: string, catType?: string) => {
+  const id = catId.toLowerCase();
+  const name = catName.toLowerCase();
+  
+  // Default values
+  let gradient = "from-indigo-600 via-indigo-700 to-indigo-950";
+  let desc = "Pilih kandidat terbaik Anda dalam pemilihan umum demokratis ini untuk masa depan yang lebih cerah.";
+  let icon = <Sparkles className="w-10 h-10 text-amber-400 filter drop-shadow-[0_0_10px_rgba(245,158,11,0.5)]" />;
+  
+  if (id.includes('osis') || name.includes('osis')) {
+    gradient = "from-blue-600 via-indigo-700 to-slate-950";
+    desc = "Pilih calon Ketua dan Wakil Ketua OSIS yang akan memimpin dan membawa perubahan positif.";
+    icon = <Sparkles className="w-10 h-10 text-yellow-400 filter drop-shadow-[0_0_10px_rgba(234,179,8,0.5)]" />;
+  } else if (id.includes('mpk') || name.includes('mpk') || catType === 'mpk_smaba') {
+    gradient = "from-purple-600 via-indigo-700 to-slate-950";
+    desc = "Pilih calon perwakilan MPK (Majelis Perwakilan Kelas) yang akan menjadi suara siswa di tingkat sekolah.";
+    icon = (
+      <img 
+        src="https://bfuuuzmcrkfjblancewz.supabase.co/storage/v1/object/public/official%20logo/PPU%20WHITE.webp" 
+        alt="PPU Logo" 
+        className="w-12 h-12 object-contain filter drop-shadow-[0_0_8px_rgba(255,255,255,0.3)]"
+      />
+    );
+  } else if (id.includes('duta') || name.includes('duta')) {
+    gradient = "from-teal-600 via-indigo-800 to-slate-950";
+    desc = "Pilih Duta Sekolah terbaik untuk merepresentasikan prestasi, nilai, dan kepribadian sekolah kita.";
+    icon = <User className="w-10 h-10 text-teal-400 filter drop-shadow-[0_0_10px_rgba(45,212,191,0.5)]" />;
+  } else if (id.includes('ekskul') || name.includes('ekskul') || name.includes('ekstrakurikuler')) {
+    gradient = "from-rose-600 via-indigo-800 to-slate-950";
+    desc = "Pilih Ketua Ekstrakurikuler yang inspiratif untuk memandu berbagai minat bakat kreatif siswa.";
+    icon = (
+      <svg className="w-10 h-10 text-rose-400 filter drop-shadow-[0_0_10px_rgba(251,113,133,0.5)]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+        <circle cx="12" cy="12" r="10" />
+        <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
+        <path d="M2 12h20" />
+      </svg>
+    );
+  }
+  
+  return { gradient, desc, icon };
+};
 
 export default function VotingFlow({ voteMode, initialVoterCardId, onComplete, onCancel }: VotingFlowProps) {
   const navigate = useNavigate();
@@ -78,6 +121,8 @@ export default function VotingFlow({ voteMode, initialVoterCardId, onComplete, o
   const [selectedCatId, setSelectedCatId] = useState<string | null>(null);
   const [selectedCandidate, setSelectedCandidate] = useState<Candidate | null>(null);
   const [selectedMpkVotes, setSelectedMpkVotes] = useState<Record<string, string>>({}); // { class: candidateId }
+  const [activeMpkClassIndex, setActiveMpkClassIndex] = useState<number>(0);
+  const [slideDirection, setSlideDirection] = useState<'left' | 'right'>('right');
 
   // Scanner States
   const [isScanning, setIsScanning] = useState(false);
@@ -94,8 +139,9 @@ export default function VotingFlow({ voteMode, initialVoterCardId, onComplete, o
   // Modals
   const [showModal1, setShowModal1] = useState(false);
   const [showModal2, setShowModal2] = useState(false);
+  const [expandedCandidate, setExpandedCandidate] = useState<Candidate | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  useScrollLock(showModal1 || showModal2);
+  useScrollLock(showModal1 || showModal2 || !!expandedCandidate);
 
   // OTP-style separate inputs for Card ID
   const otpRef0 = useRef<HTMLInputElement>(null);
@@ -471,6 +517,8 @@ export default function VotingFlow({ voteMode, initialVoterCardId, onComplete, o
 
     setSelectedCatId(catId);
     setSelectedMpkVotes({});
+    setActiveMpkClassIndex(0);
+    setSlideDirection('right');
     setSearchLoading(true);
     try {
       let cands = await getCandidates(catId);
@@ -1066,110 +1114,281 @@ export default function VotingFlow({ voteMode, initialVoterCardId, onComplete, o
             </button>
           </main>
         ) : (
-          <main className="flex-1 w-full max-w-4xl mx-auto p-6 flex flex-col">
-            <div className="flex justify-between items-start mb-8 gap-4">
-              <div className="flex items-center gap-3">
-                <img
-                  src="https://bfuuuzmcrkfjblancewz.supabase.co/storage/v1/object/public/official%20logo/PPU%20WHITE.webp"
-                  alt="PPU Logo"
-                  className="w-16 h-16 object-contain"
-                />
+          <main className="flex-1 w-full max-w-5xl mx-auto p-4 sm:p-6 md:p-8 flex flex-col justify-start">
+            {/* Header Section */}
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
+              <div className="flex-1 space-y-4">
+                <div className="flex justify-between items-start mb-4 gap-4">
+                  <div className="flex items-center gap-3">
+                    <img
+                      src="https://bfuuuzmcrkfjblancewz.supabase.co/storage/v1/object/public/official%20logo/PPU%20WHITE.webp"
+                      alt="PPU Logo"
+                      className="w-16 h-16 object-contain"
+                    />
+                  </div>
+
+                  <div className="bg-[#121620]/80 backdrop-blur-md border border-[#2a3050] px-4 py-2.5 rounded-2xl text-right shrink-0 shadow-lg shadow-black/20 flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-xl bg-indigo-500/10 flex items-center justify-center text-indigo-400 border border-indigo-500/20">
+                      <User className="w-5 h-5" />
+                    </div>
+                    <div className="text-left">
+                      <div className="text-[9px] uppercase font-bold text-slate-400 tracking-wider">Pemilih Aktif</div>
+                      <div className="text-white font-extrabold text-sm truncate max-w-[150px]">{voter.full_name}</div>
+                    </div>
+                  </div>
+                </div>
+
+                <h1 className="text-3xl md:text-4xl lg:text-5xl font-black text-white tracking-tight leading-tight">
+                  Pilih <span className="text-sky-400 bg-gradient-to-r from-sky-400 to-indigo-400 bg-clip-text text-transparent">Kategori</span> <span className="text-purple-400 bg-gradient-to-r from-indigo-400 to-purple-400 bg-clip-text text-transparent">Pemilu</span>
+                </h1>
+                <p className="text-slate-300 text-xs sm:text-sm md:text-base leading-relaxed max-w-2xl font-medium">
+                  Anda harus menyelesaikan seluruh kategori pemungutan suara di bawah ini. Setelah seluruh kategori selesai dipilih, hasil akhir akan dikirim secara kolektif ke sistem.
+                </p>
               </div>
 
-              <div className="bg-[#151821] border border-[#2a3050] px-4 py-2 rounded-xl text-right shrink-0">
-                <div className="text-[9px] uppercase font-bold text-slate-500 tracking-wider">Pemilih Aktif</div>
-                <div className="text-white font-bold text-sm truncate max-w-[150px]">{voter.full_name}</div>
+              {/* ILLUSTRATION */}
+              <div className="hidden md:flex flex-1 justify-end items-center relative h-56 max-w-xs ml-auto">
+                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-indigo-500/10 blur-3xl rounded-full"></div>
+                <motion.div 
+                  animate={{ y: [0, -8, 0] }}
+                  transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+                  className="relative z-10 w-56 h-52"
+                >
+                  <svg viewBox="0 0 200 200" className="w-full h-full filter drop-shadow-[0_10px_30px_rgba(99,102,241,0.25)]">
+                    {/* Orbital circles */}
+                    <circle cx="100" cy="100" r="85" fill="none" stroke="rgba(99,102,241,0.15)" strokeWidth="1.5" strokeDasharray="4 4" />
+                    <circle cx="100" cy="100" r="70" fill="none" stroke="rgba(168,85,247,0.1)" strokeWidth="1" />
+                    
+                    <defs>
+                      <linearGradient id="boxGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stopColor="#6366f1" />
+                        <stop offset="50%" stopColor="#4f46e5" />
+                        <stop offset="100%" stopColor="#3730a3" />
+                      </linearGradient>
+                      <linearGradient id="lidGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stopColor="#818cf8" />
+                        <stop offset="100%" stopColor="#4f46e5" />
+                      </linearGradient>
+                      <linearGradient id="checkGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stopColor="#34d399" />
+                        <stop offset="100%" stopColor="#059669" />
+                      </linearGradient>
+                      <linearGradient id="starGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stopColor="#fbbf24" />
+                        <stop offset="100%" stopColor="#f59e0b" />
+                      </linearGradient>
+                      <linearGradient id="paperGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stopColor="#ffffff" />
+                        <stop offset="100%" stopColor="#e2e8f0" />
+                      </linearGradient>
+                    </defs>
+
+                    {/* Sparkles (Stars) */}
+                    <path d="M 35 45 L 37 40 L 42 38 L 37 36 L 35 31 L 33 36 L 28 38 L 33 40 Z" fill="url(#starGrad)" className="opacity-80" />
+                    <path d="M 165 145 L 166 141 L 170 140 L 166 139 L 165 135 L 164 139 L 160 140 L 164 141 Z" fill="url(#starGrad)" className="opacity-90" />
+                    <path d="M 170 45 L 172 40 L 177 38 L 172 36 L 170 31 L 168 36 L 163 38 L 168 40 Z" fill="#818cf8" className="opacity-75" />
+
+                    {/* 3D Ballot Box */}
+                    <path d="M 60 100 L 140 100 L 140 160 L 60 160 Z" fill="url(#boxGrad)" />
+                    <path d="M 60 100 L 100 100 L 100 160 L 60 160 Z" fill="black" fillOpacity="0.1" />
+                    
+                    {/* Top Lid */}
+                    <path d="M 50 100 L 150 100 L 150 90 L 50 90 Z" fill="url(#lidGrad)" rx="2" />
+                    
+                    {/* Slot on Lid */}
+                    <rect x="80" y="93" width="40" height="4" rx="2" fill="#1e1b4b" />
+
+                    {/* Ballot Paper entering slot */}
+                    <g transform="translate(0, -10)">
+                      <path d="M 85 55 L 115 55 L 115 93 L 85 93 Z" fill="url(#paperGrad)" rx="2" />
+                      <line x1="90" y1="65" x2="110" y2="65" stroke="#94a3b8" strokeWidth="2" strokeLinecap="round" />
+                      <line x1="90" y1="73" x2="105" y2="73" stroke="#cbd5e1" strokeWidth="2" strokeLinecap="round" />
+                      <circle cx="100" cy="80" r="6" fill="url(#checkGrad)" />
+                      <path d="M 97 80 L 99 82 L 103 78" fill="none" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                    </g>
+                    
+                    {/* Front Panel details */}
+                    <rect x="80" y="115" width="40" height="30" rx="4" fill="rgba(255,255,255,0.08)" stroke="rgba(255,255,255,0.15)" strokeWidth="1" />
+                    <line x1="88" y1="124" x2="112" y2="124" stroke="rgba(255,255,255,0.6)" strokeWidth="2" strokeLinecap="round" />
+                    <line x1="88" y1="131" x2="105" y2="131" stroke="rgba(255,255,255,0.4)" strokeWidth="2" strokeLinecap="round" />
+                    <line x1="88" y1="138" x2="110" y2="138" stroke="rgba(255,255,255,0.4)" strokeWidth="2" strokeLinecap="round" />
+                  </svg>
+                </motion.div>
               </div>
             </div>
 
-            <h1 className="text-2xl font-extrabold text-white tracking-tight mb-2">
-              Pilih Kategori Pemilu
-            </h1>
-            <p className="text-xs text-slate-400 mb-8 max-w-2xl leading-relaxed">
-              Anda harus menyelesaikan seluruh kategori pemungutan suara di bawah ini. Selesai memberikan suara di seluruh kategori untuk mengirim hasil akhir Anda secara kolektif ke pusat data.
-            </p>
-
-            <div className="w-full bg-[#151821] border border-[#2a3050] rounded-2xl p-5 mb-8">
-              <div className="flex justify-between items-center mb-3">
-                <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Kemajuan Pemilihan</span>
-                <span className="text-xs font-black text-indigo-400 font-mono tracking-wider">
-                  {completedCategories} / {totalCategories} Selesai
+            {/* Kemajuan Pemilihan Card */}
+            <div className="bg-[#121620]/60 backdrop-blur-md border border-slate-800/80 rounded-3xl p-6 mb-8 shadow-2xl shadow-black/40">
+              <div className="flex justify-between items-center mb-4">
+                <div className="flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse"></span>
+                  <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Kemajuan Pemilihan</span>
+                </div>
+                <span className="text-sm font-black text-indigo-400 font-mono tracking-wider">
+                  <span className="text-lg text-indigo-300">{completedCategories}</span> / {totalCategories} Selesai
                 </span>
               </div>
               
-              <div className="w-full h-3 bg-black/40 rounded-full border border-[#262c4a] overflow-hidden p-[2px]">
-                <div 
-                  className="h-full bg-gradient-to-r from-indigo-500 to-indigo-600 rounded-full relative"
-                  style={{ width: `${percentComplete}%` }}
+              <div className="w-full h-3 bg-slate-950 rounded-full border border-slate-800 overflow-hidden p-[2px]">
+                <motion.div 
+                  initial={{ width: 0 }}
+                  animate={{ width: `${percentComplete}%` }}
+                  transition={{ duration: 0.5, ease: "easeOut" }}
+                  className="h-full bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 rounded-full relative"
                 >
-                  <div className="absolute inset-y-0 right-0 w-2 h-full bg-white/40 blur-[1px]"></div>
-                </div>
+                  <div className="absolute inset-y-0 right-0 w-8 h-full bg-white/20 blur-[1px] animate-pulse"></div>
+                </motion.div>
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 flex-1 mb-8">
+            {/* Kategori Tersedia Section Title */}
+            <div className="mb-6 flex flex-col gap-1">
+              <div className="flex items-center gap-2">
+                <span className="w-[4px] h-5 bg-indigo-500 rounded-full"></span>
+                <h2 className="text-lg font-extrabold text-white">Kategori Tersedia</h2>
+              </div>
+              <p className="text-xs text-slate-400">Pilih kategori di bawah untuk memulai proses pemungutan suara.</p>
+            </div>
+
+            {/* Categories Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
               {categories.map((cat) => {
                 const voted = !!votedCategories[cat.id];
+                const { gradient, desc, icon } = getCategoryDetails(cat.id, cat.name, cat.type);
+                
                 return (
-                  <div 
+                  <motion.div 
                     key={cat.id}
+                    whileHover={{ y: -6, scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
                     onClick={() => openCategory(cat.id)}
-                    className={`bg-[#151821] border border-[#2a3050] rounded-2xl p-5 flex items-center justify-between relative overflow-hidden group ${
-                      voted 
-                        ? 'border-emerald-500/30 bg-emerald-950/5 opacity-80 cursor-default' 
-                        : 'cursor-pointer hover:border-indigo-500 hover:bg-[#1c2030]'
+                    className={`flex flex-col bg-white rounded-3xl overflow-hidden shadow-xl shadow-indigo-950/10 border border-slate-100 transition-all cursor-pointer ${
+                      voted ? 'ring-2 ring-emerald-500/30 animate-pulse' : 'hover:shadow-2xl hover:shadow-indigo-500/10'
                     }`}
                   >
-                    <div className="flex items-center gap-4 min-w-0">
-                      <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-xl shrink-0 border ${
-                        voted 
-                          ? 'bg-emerald-500/20 border-emerald-500/30 text-emerald-400' 
-                          : 'bg-[#1c2030] border-[#2a3050] text-[#e8ecf5] group-hover:border-indigo-500/30 group-hover:bg-indigo-600/10'
-                      }`}>
-                        {voted ? <Check className="w-5 h-5 font-black" /> : cat.icon}
+                    {/* Card Header (Gradient Area) */}
+                    <div className={`relative h-44 bg-gradient-to-br ${gradient} flex items-center justify-center overflow-hidden`}>
+                      <div className="absolute inset-0 bg-black/10"></div>
+                      <div className="absolute top-0 left-0 w-full h-full opacity-25 mix-blend-overlay">
+                        <svg className="w-full h-full" viewBox="0 0 100 100" preserveAspectRatio="none">
+                          <circle cx="20" cy="20" r="15" fill="white" />
+                          <circle cx="80" cy="70" r="25" fill="white" />
+                        </svg>
+                      </div>
+                      
+                      {/* Decorative Floating Sparkles */}
+                      <div className="absolute inset-0 pointer-events-none">
+                        <span className="absolute top-6 left-12 text-sm opacity-30 text-white animate-pulse">✦</span>
+                        <span className="absolute bottom-8 right-16 text-xs opacity-40 text-white animate-pulse">✦</span>
+                        <span className="absolute top-12 right-12 text-lg opacity-25 text-white animate-pulse">✦</span>
                       </div>
 
-                      <div className="min-w-0">
-                        <h3 className="font-bold text-white text-base leading-tight truncate">{cat.name}</h3>
-                        <span className={`text-[10px] uppercase font-black tracking-widest block mt-1 ${
-                          voted ? 'text-emerald-400' : 'text-slate-500'
-                        }`}>
-                          {voted ? 'SUDAH MEMILIH' : 'BELUM MEMILIH'}
-                        </span>
+                      {/* Floating Glass Container for the Icon */}
+                      <div className="relative z-10 w-24 h-24 rounded-2xl bg-slate-900/40 backdrop-blur-md border border-slate-700/50 flex items-center justify-center shadow-2xl shadow-black/40">
+                        {voted ? (
+                          <div className="relative flex items-center justify-center">
+                            <div className="absolute -inset-1 bg-emerald-500/30 blur-md rounded-full animate-pulse"></div>
+                            <Check className="w-10 h-10 text-emerald-400 filter drop-shadow-[0_0_8px_rgba(52,211,153,0.6)]" strokeWidth={3} />
+                          </div>
+                        ) : (
+                          icon
+                        )}
                       </div>
                     </div>
 
-                    {!voted && (
-                      <ChevronRight className="w-5 h-5 text-slate-500 group-hover:text-indigo-400" />
-                    )}
-                  </div>
+                    {/* Card Body (White Background) */}
+                    <div className="p-6 flex-1 flex flex-col text-center">
+                      <h3 className="font-extrabold text-[#0B1220] text-xl tracking-tight leading-snug mb-2">
+                        {cat.name}
+                      </h3>
+                      
+                      {/* Badge Status */}
+                      <div className="mb-4">
+                        {voted ? (
+                          <span className="inline-flex items-center gap-1.5 px-4.5 py-1.5 rounded-full text-[10px] uppercase font-extrabold tracking-widest bg-emerald-50 text-emerald-600 border border-emerald-100">
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                            Sudah Memilih
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1.5 px-4.5 py-1.5 rounded-full text-[10px] uppercase font-extrabold tracking-widest bg-indigo-50 text-indigo-600 border border-indigo-100">
+                            <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-pulse"></span>
+                            Belum Memilih
+                          </span>
+                        )}
+                      </div>
+
+                      <p className="text-slate-500 text-xs leading-relaxed max-w-[280px] mx-auto mb-6 flex-1">
+                        {desc}
+                      </p>
+
+                      {/* Custom Button inside Card */}
+                      <div 
+                        className={`w-full py-3.5 px-5 rounded-xl font-bold text-sm transition-all duration-300 flex items-center justify-between border ${
+                          voted 
+                            ? 'bg-emerald-50 border-emerald-100 text-emerald-700 hover:bg-emerald-100/70' 
+                            : 'bg-white hover:bg-slate-50 border-slate-200 text-indigo-600 hover:border-indigo-500 hover:text-indigo-700'
+                        }`}
+                      >
+                        <span className="mx-auto flex items-center gap-2">
+                          {voted ? 'Lihat Pilihan' : 'Pilih Kategori'}
+                          <ChevronRight className="w-4 h-4" />
+                        </span>
+                      </div>
+                    </div>
+                  </motion.div>
                 );
               })}
             </div>
 
-            <div className="mt-auto pt-6 border-t border-[#1c2030] flex gap-4">
+            {/* Bottom Actions Area */}
+            <div className="mt-auto pt-6 border-t border-slate-800/60 flex flex-col sm:flex-row gap-4">
               <button 
                 onClick={handleCancelVotingFlow}
                 disabled={isSubmitting}
-                className="py-3 px-6 bg-red-600/10 hover:bg-red-600/20 border border-red-500/20 text-red-400 rounded-xl text-xs font-bold cursor-pointer disabled:opacity-50"
+                className="py-4 px-6 bg-red-950/40 hover:bg-red-950/70 border border-red-500/20 text-red-400 hover:text-red-300 rounded-2xl text-sm font-bold flex items-center justify-center gap-2 transition-all shadow-lg shadow-black/20 cursor-pointer disabled:opacity-50"
               >
+                <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="3 6 5 6 21 6" />
+                  <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                </svg>
                 Batalkan Voting
               </button>
 
               <button 
                 onClick={handleFinalFinish}
                 disabled={!allCompleted || isSubmitting}
-                className="flex-1 py-4 bg-emerald-600 hover:bg-emerald-700 disabled:bg-[#1a2e26] disabled:border-emerald-500/10 disabled:opacity-40 disabled:text-emerald-500/70 border border-emerald-500/20 text-white rounded-xl text-sm font-black shadow-xl shadow-emerald-600/10 flex items-center justify-center gap-2 cursor-pointer"
+                className="flex-1 py-4.5 bg-emerald-950/60 hover:bg-emerald-900 border border-emerald-500/20 hover:border-emerald-400/30 text-emerald-400 font-black text-sm md:text-base rounded-2xl shadow-xl shadow-black/30 flex items-center justify-center gap-2.5 transition-all duration-300 cursor-pointer disabled:bg-[#0c1411] disabled:border-emerald-950/20 disabled:text-emerald-800/40 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isSubmitting ? (
                   <>
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    <span>Mengirim Hak Suara...</span>
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                    <span>Memproses Hak Suara...</span>
                   </>
                 ) : (
-                  'Simpan & Kirim Hak Suara Akhir ✓'
+                  <>
+                    <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                      <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                      <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                    </svg>
+                    <span>Simpan & Kirim Hak Suara Akhir</span>
+                    <span className="text-emerald-400 text-base font-extrabold">✓</span>
+                  </>
                 )}
               </button>
+            </div>
+
+            {/* Information Card at the very bottom */}
+            <div className="w-full bg-[#11131c] border border-slate-800/60 p-4 rounded-2xl flex items-start sm:items-center gap-3 mt-6">
+              <div className="w-8 h-8 rounded-xl bg-indigo-500/10 flex items-center justify-center text-indigo-400 border border-indigo-500/20 shrink-0">
+                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="12" cy="12" r="10" />
+                  <line x1="12" y1="16" x2="12" y2="12" />
+                  <line x1="12" y1="8" x2="12.01" y2="8" />
+                </svg>
+              </div>
+              <p className="text-xs text-slate-400 leading-relaxed font-medium">
+                Pastikan Anda telah memilih semua kategori sebelum mengirim suara akhir.
+              </p>
             </div>
           </main>
         )
@@ -1184,22 +1403,123 @@ export default function VotingFlow({ voteMode, initialVoterCardId, onComplete, o
           : null;
 
         return (
-          <main className="flex-1 w-full max-w-5xl mx-auto p-6 flex flex-col">
-            <button 
-              onClick={() => triggerBack('categories')}
-              className="flex items-center gap-2 text-xs font-semibold text-slate-500 hover:text-white mb-6 self-start bg-[#151821] border border-[#2a3050] px-4 py-2 rounded-full cursor-pointer"
-            >
-              <ChevronLeft className="w-4 h-4" /> Kembali ke Kategori Pemilu
-            </button>
+          <main className="flex-1 w-full max-w-5xl mx-auto p-4 sm:p-6 md:p-8 flex flex-col justify-start">
+            {/* Top Bar with Back Button and Active Voter info */}
+            <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center mb-8 gap-4">
+              <button 
+                onClick={() => triggerBack('categories')}
+                className="flex items-center justify-center gap-2 text-xs font-extrabold text-slate-300 hover:text-white bg-[#121620]/80 backdrop-blur-md border border-slate-800/80 hover:border-slate-700/80 px-5 py-3 rounded-full cursor-pointer shadow-lg transition-all"
+              >
+                <ChevronLeft className="w-4 h-4 text-indigo-400" /> Kembali ke Kategori Pemilu
+              </button>
 
-            <h1 className="text-2xl font-black text-white tracking-tight mb-1">
-              {activeCat?.name || 'Kandidat'}
-            </h1>
-            <p className="text-xs text-slate-400 mb-8 max-w-2xl">
-              {isSelectedCatMpk 
-                ? 'Tentukan pilihan perwakilan Anda untuk masing-masing kelas di Daerah Pemilihan (Dapil) ini.'
-                : 'Tentukan pilihan Anda untuk kategori ini. Tekan tombol "Kirim Pilihan" untuk mengonfirmasi hak pilih.'}
-            </p>
+              <div className="bg-[#121620]/80 backdrop-blur-md border border-[#2a3050] px-4 py-2.5 rounded-2xl text-right shrink-0 shadow-lg shadow-black/20 flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl bg-indigo-500/10 flex items-center justify-center text-indigo-400 border border-indigo-500/20">
+                  <User className="w-5 h-5" />
+                </div>
+                <div className="text-left">
+                  <div className="text-[9px] uppercase font-bold text-slate-400 tracking-wider">Pemilih Aktif</div>
+                  <div className="text-white font-extrabold text-sm truncate max-w-[150px]">{voter.full_name}</div>
+                </div>
+              </div>
+            </div>
+
+            {/* HERO SECTION */}
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-10 bg-gradient-to-br from-[#131724]/90 via-[#191e30]/80 to-[#1e1b4b]/20 border border-slate-800/60 p-6 md:p-8 rounded-3xl relative overflow-hidden shadow-2xl shadow-indigo-950/20">
+              <div className="absolute top-1/2 left-1/4 -translate-y-1/2 w-48 h-48 bg-indigo-500/10 blur-3xl rounded-full pointer-events-none"></div>
+              
+              <div className="flex-1 space-y-4 relative z-10 text-left">
+                <div className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-[10px] uppercase font-black tracking-widest bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
+                  <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-pulse"></span>
+                  Kategori: {activeCat?.name}
+                </div>
+                
+                <h1 className="text-3xl md:text-4xl font-black text-white tracking-tight leading-tight">
+                  {(() => {
+                    const catName = activeCat?.name || '';
+                    const catId = activeCat?.id || '';
+                    const nid = catId.toLowerCase();
+                    const nname = catName.toLowerCase();
+                    if (nid.includes('osis') || nname.includes('osis')) {
+                      return "Pilih Calon Ketua dan Wakil Ketua OSIS";
+                    } else if (nid.includes('mpk') || nname.includes('mpk') || activeCat?.type === 'mpk_smaba') {
+                      return "Pilih Calon Anggota MPK";
+                    } else if (nid.includes('duta') || nname.includes('duta')) {
+                      return "Pilih Calon Duta Sekolah";
+                    } else if (nid.includes('ekskul') || nname.includes('ekskul') || nname.includes('ekstrakurikuler')) {
+                      return "Pilih Calon Ketua Ekstrakurikuler";
+                    }
+                    return `Pilih Calon ${catName}`;
+                  })()}
+                </h1>
+                
+                <p className="text-slate-300 text-xs sm:text-sm md:text-base leading-relaxed max-w-2xl font-medium">
+                  Tentukan pilihan Anda dengan cermat. Setelah suara dikirim, pilihan tidak dapat diubah kembali.
+                </p>
+              </div>
+
+              {/* ILLUSTRATION */}
+              <div className="hidden md:flex justify-end items-center relative h-40 w-40 shrink-0 ml-auto">
+                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-40 h-40 bg-indigo-500/10 blur-2xl rounded-full"></div>
+                <motion.div 
+                  animate={{ y: [0, -6, 0] }}
+                  transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+                  className="relative z-10 w-full h-full"
+                >
+                  <svg viewBox="0 0 200 200" className="w-full h-full filter drop-shadow-[0_10px_20px_rgba(99,102,241,0.2)]">
+                    {/* Orbital circles */}
+                    <circle cx="100" cy="100" r="85" fill="none" stroke="rgba(99,102,241,0.15)" strokeWidth="1.5" strokeDasharray="4 4" />
+                    
+                    <defs>
+                      <linearGradient id="boxGrad2" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stopColor="#6366f1" />
+                        <stop offset="50%" stopColor="#4f46e5" />
+                        <stop offset="100%" stopColor="#3730a3" />
+                      </linearGradient>
+                      <linearGradient id="lidGrad2" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stopColor="#818cf8" />
+                        <stop offset="100%" stopColor="#4f46e5" />
+                      </linearGradient>
+                      <linearGradient id="checkGrad2" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stopColor="#34d399" />
+                        <stop offset="100%" stopColor="#059669" />
+                      </linearGradient>
+                      <linearGradient id="starGrad2" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stopColor="#fbbf24" />
+                        <stop offset="100%" stopColor="#f59e0b" />
+                      </linearGradient>
+                      <linearGradient id="paperGrad2" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stopColor="#ffffff" />
+                        <stop offset="100%" stopColor="#e2e8f0" />
+                      </linearGradient>
+                    </defs>
+
+                    {/* Sparkles (Stars) */}
+                    <path d="M 35 45 L 37 40 L 42 38 L 37 36 L 35 31 L 33 36 L 28 38 L 33 40 Z" fill="url(#starGrad2)" className="opacity-80" />
+                    <path d="M 165 145 L 166 141 L 170 140 L 166 139 L 165 135 L 164 139 L 160 140 L 164 141 Z" fill="url(#starGrad2)" className="opacity-90" />
+
+                    {/* 3D Ballot Box */}
+                    <path d="M 60 100 L 140 100 L 140 160 L 60 160 Z" fill="url(#boxGrad2)" />
+                    <path d="M 60 100 L 100 100 L 100 160 L 60 160 Z" fill="black" fillOpacity="0.1" />
+                    
+                    {/* Top Lid */}
+                    <path d="M 50 100 L 150 100 L 150 90 L 50 90 Z" fill="url(#lidGrad2)" rx="2" />
+                    
+                    {/* Slot on Lid */}
+                    <rect x="80" y="93" width="40" height="4" rx="2" fill="#1e1b4b" />
+
+                    {/* Ballot Paper entering slot */}
+                    <g transform="translate(0, -10)">
+                      <path d="M 85 55 L 115 55 L 115 93 L 85 93 Z" fill="url(#paperGrad2)" rx="2" />
+                      <line x1="90" y1="65" x2="110" y2="65" stroke="#94a3b8" strokeWidth="2" strokeLinecap="round" />
+                      <line x1="90" y1="73" x2="105" y2="73" stroke="#cbd5e1" strokeWidth="2" strokeLinecap="round" />
+                      <circle cx="100" cy="80" r="6" fill="url(#checkGrad2)" />
+                      <path d="M 97 80 L 99 82 L 103 78" fill="none" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                    </g>
+                  </svg>
+                </motion.div>
+              </div>
+            </div>
 
             {isSelectedCatMpk && !voterDapil ? (
               <div className="bg-[#151821] border border-dashed border-[#2a3050] rounded-3xl p-12 text-center max-w-lg mx-auto space-y-4 my-auto">
@@ -1258,145 +1578,266 @@ export default function VotingFlow({ voteMode, initialVoterCardId, onComplete, o
                     }
 
                     const isAllSelected = classesWithCandidates.every(cls => !!selectedMpkVotes[cls]);
+                    const currentClassIndex = Math.min(activeMpkClassIndex, Math.max(0, classesWithCandidates.length - 1));
+                    const currentClass = classesWithCandidates[currentClassIndex];
+                    const clsCands = grouped[currentClass] ? grouped[currentClass].sort((a, b) => a.number - b.number) : [];
+                    const chosenCandId = selectedMpkVotes[currentClass];
+
+                    const slideVariants = {
+                      enter: (direction: 'left' | 'right') => ({
+                        x: direction === 'right' ? 80 : -80,
+                        opacity: 0
+                      }),
+                      center: {
+                        x: 0,
+                        opacity: 1
+                      },
+                      exit: (direction: 'left' | 'right') => ({
+                        x: direction === 'right' ? -80 : 80,
+                        opacity: 0
+                      })
+                    };
 
                     return (
-                      <div className="flex-1 flex flex-col space-y-12 pb-12">
-                        {classesWithCandidates.map(cls => {
-                          const clsCands = grouped[cls].sort((a, b) => a.number - b.number);
-                          const chosenCandId = selectedMpkVotes[cls];
+                      <div className="flex-1 flex flex-col pb-12">
+                        {/* Class Selector Bar */}
+                        <div className="flex items-center justify-between bg-[#151821]/80 backdrop-blur-md border border-[#2a3050] rounded-3xl p-6 shadow-xl mb-8 text-left">
+                          {/* Left Button '<' */}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (currentClassIndex > 0) {
+                                setSlideDirection('left');
+                                setActiveMpkClassIndex(currentClassIndex - 1);
+                              }
+                            }}
+                            disabled={currentClassIndex === 0}
+                            className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all border ${
+                              currentClassIndex === 0
+                                ? 'bg-[#12141c] border-[#1d2235] text-slate-600 cursor-not-allowed opacity-50'
+                                : 'bg-[#1c2030] hover:bg-[#252a42] border-[#2a3050] text-slate-200 hover:text-indigo-400 active:scale-95 cursor-pointer'
+                            }`}
+                          >
+                            <ChevronLeft className="w-5 h-5" />
+                          </button>
 
-                          return (
-                            <div key={cls} className="space-y-4">
-                              <div className="flex items-center gap-3 border-b border-[#2a3050] pb-2">
-                                <span className="w-2.5 h-6 bg-indigo-500 rounded-md"></span>
-                                <h2 className="text-lg font-extrabold text-[#e8ecf5] tracking-tight">
-                                  Perwakilan Kelas {cls}
-                                </h2>
-                                {chosenCandId ? (
-                                  <span className="text-[10px] font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-0.5 rounded-full ml-auto flex items-center gap-1 font-sans">
-                                    <Check className="w-3.5 h-3.5" /> Sudah Memilih
-                                  </span>
-                                ) : (
-                                  <span className="text-[10px] font-bold text-amber-400 bg-amber-500/10 border border-amber-500/20 px-2.5 py-0.5 rounded-full ml-auto font-sans">
-                                    Pilihan Belum Ditentukan
-                                  </span>
-                                )}
-                              </div>
+                          {/* Class Header */}
+                          <div className="text-center">
+                            <span className="text-[10px] font-black uppercase tracking-widest text-indigo-400 font-mono block mb-1">
+                              Calon Perwakilan MPK
+                            </span>
+                            <h2 className="text-2xl font-black text-white tracking-tight">
+                              Kelas {currentClass}
+                            </h2>
+                          </div>
 
-                              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                                {clsCands.map(cand => {
-                                  const isSelected = chosenCandId === cand.id;
+                          {/* Right Button '>' */}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (currentClassIndex < classesWithCandidates.length - 1) {
+                                setSlideDirection('right');
+                                setActiveMpkClassIndex(currentClassIndex + 1);
+                              }
+                            }}
+                            disabled={currentClassIndex === classesWithCandidates.length - 1}
+                            className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all border ${
+                              currentClassIndex === classesWithCandidates.length - 1
+                                ? 'bg-[#12141c] border-[#1d2235] text-slate-600 cursor-not-allowed opacity-50'
+                                : 'bg-[#1c2030] hover:bg-[#252a42] border-[#2a3050] text-slate-200 hover:text-indigo-400 active:scale-95 cursor-pointer'
+                            }`}
+                          >
+                            <ChevronRight className="w-5 h-5" />
+                          </button>
+                        </div>
 
-                                  return (
-                                    <div 
-                                      key={cand.id}
-                                      onClick={() => {
-                                        setSelectedMpkVotes(prev => ({
-                                          ...prev,
-                                          [cls]: cand.id
-                                        }));
-                                      }}
-                                      className={`bg-[#151821] border-2 rounded-3xl overflow-hidden shadow-2xl flex flex-col h-full group transition-all duration-200 cursor-pointer ${
-                                        isSelected 
-                                          ? 'border-indigo-500 ring-2 ring-indigo-500/30' 
-                                          : 'border-[#2a3050] hover:border-slate-500/50'
-                                      }`}
-                                    >
-                                      <div className="relative w-full aspect-[16/9] bg-[#1c2030] overflow-hidden shrink-0 flex items-center justify-center text-slate-600">
-                                        {cand.photo_url ? (
-                                          <img 
-                                            src={cand.photo_url} 
-                                            alt={cand.chairman} 
-                                            className="w-full h-full object-cover"
-                                            referrerPolicy="no-referrer"
-                                          />
-                                        ) : (
-                                          <div className="absolute inset-0 flex flex-col items-center justify-center p-4 bg-gradient-to-br from-[#1c2030] to-[#252a42]">
-                                            <span className="text-4xl filter saturate-50 drop-shadow mb-2">🧑‍💼</span>
-                                            <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Pasfoto Kandidat</span>
-                                          </div>
-                                        )}
-                                        <div className={`absolute left-4 top-4 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest text-white shadow-lg ${
-                                          isSelected ? 'bg-indigo-600' : 'bg-slate-700'
-                                        }`}>
-                                          KANDIDAT {String(cand.number).padStart(2, '0')}
+                        {/* Slide animation container for active class candidates */}
+                        <div className="relative overflow-hidden w-full flex-1 min-h-[400px]">
+                          <AnimatePresence mode="wait" custom={slideDirection}>
+                            <motion.div
+                              key={currentClass}
+                              custom={slideDirection}
+                              variants={slideVariants}
+                              initial="enter"
+                              animate="center"
+                              exit="exit"
+                              transition={{ duration: 0.25, ease: 'easeInOut' }}
+                              className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 items-stretch w-full h-full pb-20"
+                            >
+                              {clsCands.map(cand => {
+                                const isSelected = chosenCandId === cand.id;
+
+                                return (
+                                  <motion.div 
+                                    key={cand.id}
+                                    whileHover={{ y: -6, scale: 1.01 }}
+                                    whileTap={{ scale: 0.99 }}
+                                    onClick={() => {
+                                      setSelectedMpkVotes(prev => ({
+                                        ...prev,
+                                        [currentClass]: cand.id
+                                      }));
+                                    }}
+                                    className={`bg-white rounded-3xl overflow-hidden shadow-xl border-2 flex flex-col h-full group transition-all duration-300 cursor-pointer ${
+                                      isSelected 
+                                        ? 'border-indigo-600 ring-4 ring-indigo-600/15 shadow-indigo-600/10' 
+                                        : 'border-slate-100 hover:border-indigo-500/30'
+                                    }`}
+                                  >
+                                    {/* Header Gradient + Photo Area */}
+                                    <div className="relative w-full aspect-[4/3] bg-gradient-to-br from-indigo-50 to-slate-100 overflow-hidden shrink-0 flex items-center justify-center text-slate-400 border-b border-slate-100">
+                                      {cand.photo_url ? (
+                                        <img 
+                                          src={cand.photo_url} 
+                                          alt={cand.chairman} 
+                                          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                                          referrerPolicy="no-referrer"
+                                        />
+                                      ) : (
+                                        <div className="absolute inset-0 flex flex-col items-center justify-center p-4 bg-gradient-to-br from-indigo-50/50 to-slate-100">
+                                          <span className="text-[10px] text-slate-400 font-extrabold uppercase tracking-widest">Pasfoto Kandidat</span>
                                         </div>
-
-                                        <div className="absolute right-4 top-4">
-                                          <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all ${
-                                            isSelected 
-                                              ? 'border-indigo-500 bg-indigo-600 text-white shadow-lg' 
-                                              : 'border-slate-500 bg-black/40'
-                                          }`}>
-                                            {isSelected && <Check className="w-4 h-4 text-white" />}
-                                          </div>
-                                        </div>
+                                      )}
+                                      
+                                      {/* Nomor Paslon Badge */}
+                                      <div className={`absolute left-4 top-4 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest text-white shadow-lg transition-all ${
+                                        isSelected ? 'bg-indigo-600 shadow-indigo-600/25' : 'bg-slate-800'
+                                      }`}>
+                                        KANDIDAT {String(cand.number).padStart(2, '0')}
                                       </div>
 
-                                      <div className="p-5 flex-1 flex flex-col">
-                                        <h3 className="font-extrabold text-white text-base tracking-tight leading-tight mb-4">
-                                          {cand.chairman}
-                                        </h3>
+                                      {/* Selection Check Badge */}
+                                      <div className="absolute right-4 top-4">
+                                        {isSelected ? (
+                                          <motion.div 
+                                            initial={{ scale: 0, opacity: 0 }}
+                                            animate={{ scale: 1, opacity: 1 }}
+                                            className="px-3 py-1.5 bg-indigo-600 border border-indigo-400 text-white font-extrabold text-[10px] rounded-xl flex items-center justify-center shadow-lg shadow-indigo-600/30"
+                                          >
+                                            Dipilih
+                                          </motion.div>
+                                        ) : (
+                                          <div className="w-6 h-6 rounded-full border-2 border-slate-300/80 bg-white/40 backdrop-blur-md flex items-center justify-center">
+                                            <div className="w-2.5 h-2.5 rounded-full bg-transparent"></div>
+                                          </div>
+                                        )}
+                                      </div>
+                                    </div>
 
+                                    {/* Card Content Area (White background) */}
+                                    <div className="p-6 flex-1 flex flex-col justify-between text-left">
+                                      <div className="flex-1 flex flex-col justify-between">
+                                        <div className="space-y-3 mb-5">
+                                          <div>
+                                            <span className="block text-[10px] font-extrabold text-slate-400 uppercase tracking-wider mb-0.5">Ketua / Perwakilan</span>
+                                            <span className="font-black text-slate-800 text-lg leading-tight block">
+                                              {cand.chairman}
+                                            </span>
+                                          </div>
+                                          {cand.vice && (
+                                            <div>
+                                              <span className="block text-[10px] font-extrabold text-slate-400 uppercase tracking-wider mb-0.5">Wakil Ketua</span>
+                                              <span className="font-extrabold text-slate-700 text-sm sm:text-base leading-tight block">
+                                                {cand.vice}
+                                              </span>
+                                            </div>
+                                          )}
+                                        </div>
+
+                                        {/* Visi preview - Plain Document Style */}
                                         {cand.visi && cand.visi.trim() !== '' && (
-                                          <div className="mb-4">
-                                            <span className="block text-[9px] uppercase font-bold text-indigo-400 tracking-wider mb-1 font-mono">Visi</span>
-                                            <p className="text-slate-400 text-xs leading-relaxed font-semibold italic text-justify bg-[#1c2030] p-3 rounded-2xl border border-[#2a3050]">
+                                          <div className="mb-4 text-left">
+                                            <span className="block text-[11px] font-extrabold text-slate-800 uppercase tracking-wider mb-1 font-mono">VISI</span>
+                                            <p className="text-slate-600 text-xs font-normal leading-relaxed text-justify">
                                               "{cand.visi}"
                                             </p>
                                           </div>
                                         )}
 
+                                        {/* Misi preview - Plain Document Style */}
                                         {cand.misi && cand.misi.length > 0 && (
-                                          <div className="font-semibold mb-2">
-                                            <span className="block text-[9px] uppercase font-bold text-indigo-400 tracking-wider mb-1 font-mono">Misi</span>
-                                            <ul className="space-y-1">
+                                          <div className="mb-6 text-left">
+                                            <span className="block text-[11px] font-extrabold text-slate-800 uppercase tracking-wider mb-1 font-mono">MISI</span>
+                                            <ul className="space-y-1 text-left">
                                               {cand.misi.slice(0, 3).map((m, mIdx) => (
-                                                <li key={mIdx} className="text-slate-400 text-xs leading-normal flex gap-1.5 items-start text-justify">
-                                                  <span className="text-indigo-400 font-extrabold shrink-0">•</span>
-                                                  <span className="line-clamp-2">{m}</span>
+                                                <li key={mIdx} className="text-slate-600 text-xs font-normal leading-relaxed flex gap-2 items-start text-justify">
+                                                  <span className="text-slate-400 shrink-0 select-none">•</span>
+                                                  <span>{m}</span>
                                                 </li>
                                               ))}
                                             </ul>
                                           </div>
                                         )}
-
-                                        {isSelected && (
-                                          <div className="flex items-center justify-center gap-2 py-3 bg-emerald-500/10 border border-emerald-500/30 rounded-2xl text-emerald-400 text-[10px] font-black tracking-widest mt-auto">
-                                            <Check className="w-4 h-4" />
-                                            <span>TERPILIH</span>
-                                          </div>
-                                        )}
                                       </div>
+
+                                      {/* Button trigger for "Lihat Selengkapnya" */}
+                                      <button
+                                        type="button"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          setExpandedCandidate(cand);
+                                        }}
+                                        className="text-xs font-bold text-indigo-600 hover:text-indigo-800 transition-all flex items-center gap-1.5 mt-auto self-start bg-indigo-50 hover:bg-indigo-100 px-3.5 py-2 rounded-xl border border-indigo-100/50"
+                                      >
+                                        Detail Visi Misi
+                                      </button>
                                     </div>
-                                  );
-                                })}
+                                  </motion.div>
+                                );
+                              })}
+                            </motion.div>
+                          </AnimatePresence>
+                        </div>
+
+                        {/* Sticky Bottom Action Bar */}
+                        <div className="sticky bottom-0 left-0 right-0 p-4 md:p-6 bg-[#090b11]/90 backdrop-blur-2xl border-t border-slate-800/60 z-[50] shadow-[0_-15px_40px_rgba(0,0,0,0.5)]">
+                          <div className="w-full max-w-5xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
+                            <div className="flex items-center gap-3 self-start sm:self-auto">
+                              <div className="w-12 h-12 rounded-2xl bg-indigo-600/10 border border-indigo-500/20 flex items-center justify-center shrink-0">
+                                <CheckCircle2 className="w-6 h-6 text-indigo-400" />
+                              </div>
+                              <div className="text-left">
+                                <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest font-mono">Progres Pilihan MPK</div>
+                                <p className="text-xs sm:text-sm font-bold text-white">
+                                  {Object.keys(selectedMpkVotes).length} dari {classesWithCandidates.length} Kelas Dipilih
+                                </p>
                               </div>
                             </div>
-                          );
-                        })}
 
-                        <div className="pt-8 border-t border-[#2a3050] flex flex-col items-center">
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setShowModal1(true);
-                            }}
-                            disabled={!isAllSelected}
-                            className={`px-10 py-5 rounded-2xl text-sm font-black tracking-wide shadow-2xl transition-all cursor-pointer ${
-                              isAllSelected
-                                ? 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-indigo-600/20'
-                                : 'bg-slate-800 border border-[#2a3050] text-slate-500 cursor-not-allowed'
-                            }`}
-                          >
-                            ✓ Selesai dan Kumpulkan ({Object.keys(selectedMpkVotes).length} dari {classesWithCandidates.length} Kelas Terpilih)
-                          </button>
-                          {!isAllSelected && (
-                            <p className="text-[10px] font-bold text-amber-400/80 mt-3 flex items-center gap-1">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                if (isAllSelected) {
+                                  setShowModal1(true);
+                                }
+                              }}
+                              disabled={!isAllSelected || isSubmitting}
+                              className={`w-full sm:w-auto px-10 py-4 rounded-2xl text-sm font-black tracking-wider shadow-2xl transition-all flex items-center justify-center gap-3 cursor-pointer ${
+                                isAllSelected
+                                  ? 'bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white shadow-emerald-500/20 active:scale-95 duration-150'
+                                  : 'bg-slate-900 border border-slate-800 text-slate-500 cursor-not-allowed opacity-60'
+                              }`}
+                            >
+                              {isSubmitting ? (
+                                <>
+                                  <Loader2 className="w-4 h-4 animate-spin" /> Mengirim...
+                                </>
+                              ) : (
+                                <>
+                                  Kirim Pilihan MPK <ArrowRight className="w-4 h-4" />
+                                </>
+                              )}
+                            </button>
+                          </div>
+                        </div>
+
+                        {!isAllSelected && (
+                          <div className="w-full max-w-lg mx-auto bg-amber-500/10 border border-amber-500/20 p-4 rounded-2xl text-center">
+                            <p className="text-xs font-bold text-amber-400 flex items-center justify-center gap-1.5">
                               ⚠️ Anda wajib menentukan tepat satu perwakilan pada setiap kelompok kelas untuk menyimpan pilihan MPK.
                             </p>
-                          )}
-                        </div>
+                          </div>
+                        )}
                       </div>
                     );
                   })()
@@ -1412,120 +1853,183 @@ export default function VotingFlow({ voteMode, initialVoterCardId, onComplete, o
                       </div>
                     </div>
                   ) : (
-                    <div className="flex-1 flex flex-col pb-24">
-                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6 items-start">
+                    <div className="flex-1 flex flex-col pb-24 text-left">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-6 items-stretch">
                         {candidates.map((cand) => {
                           const isSelected = selectedCandidate?.id === cand.id;
                           return (
-                            <div 
+                            <motion.div 
                               key={cand.id}
+                              whileHover={{ y: -6, scale: 1.01 }}
+                              whileTap={{ scale: 0.99 }}
                               onClick={() => setSelectedCandidate(cand)}
-                              className={`bg-[#151821] border-2 rounded-3xl overflow-hidden shadow-2xl flex flex-col h-full group transition-all duration-300 cursor-pointer ${
+                              className={`bg-white rounded-3xl overflow-hidden shadow-xl border-2 flex flex-col h-full group transition-all duration-300 cursor-pointer ${
                                 isSelected 
-                                  ? 'border-emerald-500 bg-emerald-500/5 ring-4 ring-emerald-500/10' 
-                                  : 'border-[#2a3050] hover:border-slate-500/50'
+                                  ? 'border-indigo-600 ring-4 ring-indigo-600/15 shadow-indigo-600/10' 
+                                  : 'border-slate-100 hover:border-indigo-500/30'
                               }`}
                             >
-                              <div className="relative w-full aspect-[16/9] bg-[#1c2030] overflow-hidden shrink-0 flex items-center justify-center text-slate-600">
+                              {/* Header Gradient + Photo Area */}
+                              <div className="relative w-full aspect-[4/3] bg-gradient-to-br from-indigo-50 to-slate-100 overflow-hidden shrink-0 flex items-center justify-center text-slate-400 border-b border-slate-100">
                                 {cand.photo_url ? (
                                   <img 
                                     src={cand.photo_url} 
                                     alt={cand.chairman} 
-                                    className="w-full h-full object-cover"
+                                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                                     referrerPolicy="no-referrer"
                                   />
                                 ) : (
-                                  <div className="absolute inset-0 flex flex-col items-center justify-center p-4 bg-gradient-to-br from-[#1c2030] to-[#252a42]">
-                                    <span className="text-4xl filter saturate-50 drop-shadow mb-2">🧑‍💼</span>
-                                    <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Pasfoto Kandidat</span>
+                                  <div className="absolute inset-0 flex flex-col items-center justify-center p-4 bg-gradient-to-br from-indigo-50/50 to-slate-100">
+                                    <span className="text-[10px] text-slate-400 font-extrabold uppercase tracking-widest">Pasfoto Kandidat</span>
                                   </div>
                                 )}
-                                <div className={`absolute left-4 top-4 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest text-white shadow-lg transition-colors ${
-                                  isSelected ? 'bg-emerald-600' : 'bg-indigo-600'
+                                
+                                {/* Nomor Paslon Badge */}
+                                <div className={`absolute left-4 top-4 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest text-white shadow-lg transition-all ${
+                                  isSelected ? 'bg-indigo-600 shadow-indigo-600/25' : 'bg-slate-800'
                                 }`}>
                                   PASLON {String(cand.number).padStart(2, '0')}
                                 </div>
 
-                                {isSelected && (
-                                  <div className="absolute inset-0 bg-emerald-500/10 flex items-center justify-center">
-                                    <div className="bg-emerald-500 text-white p-2 rounded-full shadow-xl">
-                                      <Check className="w-8 h-8 font-black" />
+                                {/* Selection Check Badge */}
+                                <div className="absolute right-4 top-4">
+                                  {isSelected ? (
+                                    <motion.div 
+                                      initial={{ scale: 0, opacity: 0 }}
+                                      animate={{ scale: 1, opacity: 1 }}
+                                      className="px-3 py-1.5 bg-indigo-600 border border-indigo-400 text-white font-extrabold text-[10px] rounded-xl flex items-center justify-center shadow-lg shadow-indigo-600/30"
+                                    >
+                                      Dipilih
+                                    </motion.div>
+                                  ) : (
+                                    <div className="w-6 h-6 rounded-full border-2 border-slate-300/80 bg-white/40 backdrop-blur-md flex items-center justify-center">
+                                      <div className="w-2.5 h-2.5 rounded-full bg-transparent"></div>
                                     </div>
-                                  </div>
-                                )}
+                                  )}
+                                </div>
                               </div>
 
-                              <div className="p-5 flex-1 flex flex-col">
-                                <div className="mb-5">
-                                  <h3 className="font-extrabold text-white text-base tracking-tight leading-tight flex flex-wrap items-center gap-x-2">
-                                    <span className="text-white">{cand.chairman}</span>
+                              {/* Card Content Area (White background) */}
+                              <div className="p-6 flex-1 flex flex-col justify-between text-left">
+                                <div className="flex-1 flex flex-col justify-between">
+                                  <div className="space-y-3 mb-5">
+                                    <div>
+                                      <span className="block text-[10px] font-extrabold text-slate-400 uppercase tracking-wider mb-0.5">Ketua</span>
+                                      <span className="font-black text-slate-800 text-lg leading-tight block">
+                                        {cand.chairman}
+                                      </span>
+                                    </div>
                                     {cand.vice && (
-                                      <>
-                                        <span className="text-indigo-400 font-black">•</span>
-                                        <span className="text-slate-400 font-bold text-sm italic">{cand.vice}</span>
-                                      </>
+                                      <div>
+                                        <span className="block text-[10px] font-extrabold text-slate-400 uppercase tracking-wider mb-0.5">Wakil Ketua</span>
+                                        <span className="font-extrabold text-slate-700 text-sm sm:text-base leading-tight block">
+                                          {cand.vice}
+                                        </span>
+                                      </div>
                                     )}
-                                  </h3>
+                                  </div>
+
+                                  {/* Visi preview - Plain Document Style */}
+                                  {cand.visi && cand.visi.trim() !== '' && (
+                                    <div className="mb-4 text-left">
+                                      <span className="block text-[11px] font-extrabold text-slate-800 uppercase tracking-wider mb-1 font-mono">VISI</span>
+                                      <p className="text-slate-600 text-xs font-normal leading-relaxed text-justify">
+                                        "{cand.visi}"
+                                      </p>
+                                    </div>
+                                  )}
+
+                                  {/* Misi preview - Plain Document Style */}
+                                  {cand.misi && cand.misi.length > 0 && (
+                                    <div className="mb-6 text-left">
+                                      <span className="block text-[11px] font-extrabold text-slate-800 uppercase tracking-wider mb-1 font-mono">MISI</span>
+                                      <ul className="space-y-1 text-left">
+                                        {cand.misi.slice(0, 3).map((m, mIdx) => (
+                                          <li key={mIdx} className="text-slate-600 text-xs font-normal leading-relaxed flex gap-2 items-start text-justify">
+                                            <span className="text-slate-400 shrink-0 select-none">•</span>
+                                            <span>{m}</span>
+                                          </li>
+                                        ))}
+                                      </ul>
+                                    </div>
+                                  )}
                                 </div>
 
-                                {cand.visi && cand.visi.trim() !== '' && (
-                                  <div className="mb-4">
-                                    <span className="block text-[9px] uppercase font-bold text-indigo-400 tracking-wider mb-1.5 font-mono">Visi</span>
-                                    <p className="text-slate-400 text-xs leading-relaxed font-semibold italic text-justify bg-[#1c2030] p-3 rounded-2xl border border-[#2a3050]">
-                                      "{cand.visi}"
-                                    </p>
-                                  </div>
-                                )}
-
-                                {cand.misi && Array.isArray(cand.misi) && cand.misi.length > 0 && (
-                                  <div className="mb-6 font-semibold">
-                                    <span className="block text-[9px] uppercase font-bold text-indigo-400 tracking-wider mb-1.5 font-mono">Misi</span>
-                                    <ul className="space-y-1.5">
-                                      {cand.misi.map((m, mIdx) => (
-                                        <li key={mIdx} className="text-slate-400 text-xs leading-normal flex gap-2 items-start text-justify">
-                                          <span className="text-indigo-400 font-extrabold mt-0.5 shrink-0">•</span>
-                                          <span>{m}</span>
-                                        </li>
-                                      ))}
-                                    </ul>
-                                  </div>
-                                )}
-
-                                {isSelected && (
-                                  <div className="mt-auto pt-4 flex items-center justify-center">
-                                    <span className="inline-flex items-center gap-1.5 py-2 px-4 rounded-full bg-emerald-500 text-white text-[10px] font-black uppercase tracking-widest shadow-lg shadow-emerald-500/20">
-                                      📌 Dipilih
-                                    </span>
-                                  </div>
-                                )}
+                                {/* Button trigger for "Lihat Selengkapnya" */}
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setExpandedCandidate(cand);
+                                  }}
+                                  className="text-xs font-bold text-indigo-600 hover:text-indigo-800 transition-all flex items-center gap-1.5 mt-auto self-start bg-indigo-50 hover:bg-indigo-100 px-3.5 py-2 rounded-xl border border-indigo-100/50"
+                                >
+                                  Detail Visi Misi
+                                </button>
                               </div>
-                            </div>
+                            </motion.div>
                           );
                         })}
                       </div>
 
-                      <div className="fixed bottom-0 left-0 right-0 p-4 bg-[#0d0f14]/80 backdrop-blur-xl border-t border-[#2a3050] z-[50] flex justify-center">
-                        <div className="w-full max-w-lg">
+                      {/* Sticky Bottom Action Bar */}
+                      <div className="sticky bottom-0 left-0 right-0 p-4 md:p-6 bg-[#090b11]/90 backdrop-blur-2xl border-t border-slate-800/60 z-[50] shadow-[0_-15px_40px_rgba(0,0,0,0.5)]">
+                        <div className="w-full max-w-5xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
+                          {/* Info Paslon Terpilih */}
+                          <div className="flex items-center gap-4 text-left self-start sm:self-auto">
+                            {selectedCandidate ? (
+                              <div className="flex items-center gap-3">
+                                <div className="w-12 h-12 rounded-2xl bg-indigo-600/10 border border-indigo-500/20 flex items-center justify-center shrink-0">
+                                  <span className="text-lg font-black text-indigo-400">
+                                    {String(selectedCandidate.number).padStart(2, '0')}
+                                  </span>
+                                </div>
+                                <div className="min-w-0">
+                                  <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Paslon Terpilih</div>
+                                  <h4 className="font-extrabold text-white text-sm sm:text-base truncate max-w-[200px] sm:max-w-[300px]">
+                                    {selectedCandidate.chairman}
+                                  </h4>
+                                  {selectedCandidate.vice && (
+                                    <p className="text-xs text-slate-400 truncate max-w-[200px] sm:max-w-[300px] italic">
+                                      & {selectedCandidate.vice}
+                                    </p>
+                                  )}
+                                </div>
+                              </div>
+                            ) : (
+                              <div className="flex items-center gap-3 text-slate-400">
+                                <div className="w-12 h-12 rounded-2xl bg-slate-900 border border-slate-800 flex items-center justify-center shrink-0">
+                                  <HelpCircle className="w-6 h-6 text-slate-500" />
+                                </div>
+                                <div>
+                                  <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Paslon Terpilih</div>
+                                  <p className="text-xs font-bold text-slate-400">Belum ada pilihan</p>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Action Button */}
                           <button
                             onClick={() => {
                               if (selectedCandidate) {
                                 setShowModal1(true);
                               }
                             }}
-                            disabled={!selectedCandidate}
-                            className={`w-full py-4 rounded-2xl text-sm font-black tracking-wide shadow-2xl transition-all flex items-center justify-center gap-3 ${
+                            disabled={!selectedCandidate || isSubmitting}
+                            className={`w-full sm:w-auto px-10 py-4 rounded-2xl text-sm font-black tracking-wider shadow-2xl transition-all flex items-center justify-center gap-3 cursor-pointer ${
                               selectedCandidate
-                                ? 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-emerald-600/20 cursor-pointer'
-                                : 'bg-slate-800 border border-[#2a3050] text-slate-500 cursor-not-allowed opacity-80'
+                                ? 'bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white shadow-emerald-500/20 active:scale-95 duration-150'
+                                : 'bg-slate-900 border border-slate-800 text-slate-500 cursor-not-allowed opacity-60'
                             }`}
                           >
-                            {selectedCandidate ? (
+                            {isSubmitting ? (
                               <>
-                                Kirim Suara <ArrowRight className="w-5 h-5" />
+                                <Loader2 className="w-4 h-4 animate-spin" /> Mengirim...
                               </>
                             ) : (
                               <>
-                                <AlertTriangle className="w-4 h-4" /> Pilih paslon terlebih dahulu
+                                Kirim Pilihan <ArrowRight className="w-4 h-4" />
                               </>
                             )}
                           </button>
@@ -1657,6 +2161,106 @@ export default function VotingFlow({ voteMode, initialVoterCardId, onComplete, o
           </div>
         );
       })()}
+
+      {/* MODAL: CANDIDATE DETAIL (VISI & MISI FULLVIEW) */}
+      <AnimatePresence>
+        {expandedCandidate && (
+          <div 
+            className="fixed inset-0 bg-[#090b11]/80 backdrop-blur-md z-[100] flex items-center justify-center p-4 sm:p-6 overflow-y-auto"
+            onClick={() => setExpandedCandidate(null)}
+          >
+            <motion.div 
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              transition={{ type: 'spring', damping: 25, stiffness: 350 }}
+              onClick={(e) => e.stopPropagation()}
+              className="bg-white max-w-2xl w-full rounded-3xl overflow-hidden shadow-2xl relative border border-slate-105 flex flex-col md:flex-row max-h-[90vh] md:max-h-[80vh] items-stretch text-left"
+            >
+              {/* Image side */}
+              <div className="relative w-full md:w-2/5 aspect-[4/3] md:aspect-auto bg-gradient-to-br from-indigo-50 to-slate-100 flex items-center justify-center shrink-0 border-b md:border-b-0 md:border-r border-slate-100">
+                {expandedCandidate.photo_url ? (
+                  <img 
+                    src={expandedCandidate.photo_url} 
+                    alt={expandedCandidate.chairman} 
+                    className="w-full h-full object-cover"
+                    referrerPolicy="no-referrer"
+                  />
+                ) : (
+                  <div className="absolute inset-0 flex flex-col items-center justify-center p-4">
+                    <span className="text-6xl filter saturate-70 drop-shadow mb-3">🧑‍💼</span>
+                    <span className="text-xs text-slate-400 font-extrabold uppercase tracking-widest">Pasfoto Kandidat</span>
+                  </div>
+                )}
+                
+                {/* Number badge */}
+                <div className="absolute left-4 top-4 px-3.5 py-2 bg-indigo-600 text-white font-black text-xs rounded-xl shadow-lg">
+                  KANDIDAT {String(expandedCandidate.number).padStart(2, '0')}
+                </div>
+              </div>
+
+              {/* Text / details side */}
+              <div className="p-6 sm:p-8 flex-1 flex flex-col justify-between overflow-y-auto max-h-[50vh] md:max-h-none">
+                <div className="space-y-6">
+                  {/* Candidate Identity */}
+                  <div className="border-b border-slate-100 pb-4">
+                    <span className="text-[10px] font-black text-indigo-500 uppercase tracking-widest font-mono">Profil Kandidat</span>
+                    <h3 className="text-2xl font-black text-slate-800 tracking-tight leading-tight mt-1">
+                      {expandedCandidate.chairman}
+                    </h3>
+                    {expandedCandidate.vice && (
+                      <div className="mt-2 pl-3 border-l-2 border-indigo-200">
+                        <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider block">Wakil Ketua</span>
+                        <p className="font-extrabold text-slate-600 text-sm leading-tight">
+                          {expandedCandidate.vice}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Visi */}
+                  {expandedCandidate.visi && (
+                    <div className="bg-slate-50 border border-slate-100 p-5 rounded-2xl relative overflow-hidden">
+                      <span className="text-[9px] uppercase font-black tracking-widest text-indigo-500 font-mono">Visi Utama</span>
+                      <p className="text-slate-700 text-sm font-semibold leading-relaxed mt-2 text-justify italic">
+                        "{expandedCandidate.visi}"
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Misi */}
+                  {expandedCandidate.misi && expandedCandidate.misi.length > 0 && (
+                    <div className="space-y-2">
+                      <span className="text-[9px] uppercase font-black tracking-widest text-indigo-500 font-mono">Misi & Rencana Kerja</span>
+                      <ul className="space-y-3 pt-1">
+                        {expandedCandidate.misi.map((m, mIdx) => (
+                          <li key={mIdx} className="text-slate-600 text-sm font-semibold leading-relaxed flex gap-3 items-start text-justify">
+                            <div className="w-5 h-5 rounded-full bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600 font-black text-xs shrink-0 mt-0.5 font-mono">
+                              {mIdx + 1}
+                            </div>
+                            <span>{m}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+
+                {/* Close Button */}
+                <div className="mt-8 pt-4 border-t border-slate-100 flex justify-end">
+                  <button
+                    type="button"
+                    onClick={() => setExpandedCandidate(null)}
+                    className="px-6 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-black text-xs uppercase tracking-wider rounded-xl cursor-pointer transition-all active:scale-95 duration-100"
+                  >
+                    Tutup Detail
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
       {/* MODAL 2: ABSOLUTE COMMIT WARNING */}
       {showModal2 && (

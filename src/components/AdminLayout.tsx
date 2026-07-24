@@ -1,8 +1,22 @@
 import { useState, useEffect } from 'react';
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { LogOut, Home, Users, Settings, BarChart, FileText, LifeBuoy, Menu, X, ShieldCheck, Layers, Eye, ShieldAlert, Lock, Clock, Timer, Monitor } from 'lucide-react';
+import { LogOut, Home, Users, Settings, BarChart, FileText, LifeBuoy, Menu, X, ShieldCheck, Layers, Lock, Clock, Timer, Monitor, ChevronRight } from 'lucide-react';
 import { getAdminButtonSettings, AdminButtonSettings } from '../lib/adminButtonService';
+import { motion, AnimatePresence } from 'motion/react';
+
+interface GroupItem {
+  to: string;
+  label: string;
+  icon: any;
+  key?: string;
+}
+
+interface NavGroup {
+  id: string;
+  title: string;
+  items: GroupItem[];
+}
 
 export const AdminLayout = () => {
   const { signOut } = useAuth();
@@ -11,6 +25,68 @@ export const AdminLayout = () => {
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [btnSettings, setBtnSettings] = useState<AdminButtonSettings | null>(null);
   const [voteMode, setVoteMode] = useState<'regular' | 'booth'>('regular');
+  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({
+    dashboard: true, // Default open Dashboard
+  });
+
+  const groups: NavGroup[] = [
+    {
+      id: 'dashboard',
+      title: 'Dashboard',
+      items: [
+        { to: '/admin', icon: Home, label: 'Utama' },
+        { to: '/admin/gelombang', icon: Clock, label: 'Gelombang Voting', key: 'gelombang_voting' },
+        { to: '/admin/mode-vote', icon: Settings, label: 'Mode Vote' },
+      ],
+    },
+    {
+      id: 'kelola',
+      title: 'Kelola',
+      items: [
+        { to: '/admin/pengaturan', icon: Settings, label: 'Kelola Kategori', key: 'kelola_kategori' },
+        { to: '/admin/kandidat', icon: Layers, label: 'Kelola Kandidat', key: 'kelola_kandidat' },
+        { to: '/admin/pemilih', icon: Users, label: 'Kelola Pemilih', key: 'kelola_pemilih' },
+        ...(voteMode === 'booth' ? [{ to: '/admin/bilik', icon: Monitor, label: 'Kelola Bilik Suara' }] : []),
+        { to: '/admin/helpdesk', icon: LifeBuoy, label: 'Kelola Helpdesk', key: 'kelola_helpdesk' },
+        { to: '/admin/hasil', icon: BarChart, label: 'Hasil Voting', key: 'hasil_voting' },
+      ],
+    },
+    {
+      id: 'konfirmasi',
+      title: 'Konfirmasi',
+      items: [
+        { to: '/admin/konfirmasi', icon: ShieldCheck, label: 'Konfirmasi Pemilih', key: 'konfirmasi_pemilih' },
+      ],
+    },
+    {
+      id: 'lainnya',
+      title: 'Lainnya',
+      items: [
+        { to: '/admin/countdown', icon: Timer, label: 'Countdown', key: 'countdown' },
+        { to: '/admin/wafo', icon: FileText, label: 'WAFO (Warung Informasi)', key: 'wafo' },
+        { to: '/admin/maintenance', icon: Settings, label: 'Maintenance', key: 'maintenance' },
+      ],
+    },
+    {
+      id: 'data',
+      title: 'Data',
+      items: [
+        { to: '/admin/audit', icon: FileText, label: 'Audit Log', key: 'audit_log' },
+        { to: '/admin/export', icon: FileText, label: 'Export Data', key: 'export_data' },
+      ],
+    },
+  ];
+
+  const isItemActive = (to: string): boolean => {
+    if (to === '/admin') {
+      return location.pathname === '/admin';
+    }
+    return location.pathname === to || location.pathname.startsWith(to + '/');
+  };
+
+  const isGroupActive = (group: NavGroup): boolean => {
+    return group.items.some(item => isItemActive(item.to));
+  };
 
   useEffect(() => {
     const loadBtnSettings = async () => {
@@ -41,7 +117,8 @@ export const AdminLayout = () => {
 
   useEffect(() => {
     if (btnSettings) {
-      const currentLink = navLinks.find(link => 
+      const allItems = groups.flatMap(g => g.items);
+      const currentLink = allItems.find(link => 
         location.pathname === link.to || 
         (link.to !== '/admin' && location.pathname.startsWith(link.to + '/'))
       );
@@ -49,38 +126,139 @@ export const AdminLayout = () => {
         navigate('/admin/akses-pro', { replace: true });
       }
     }
-  }, [location.pathname, btnSettings]);
+  }, [location.pathname, btnSettings, voteMode]);
+
+  useEffect(() => {
+    const activeGroup = groups.find(isGroupActive);
+    if (activeGroup) {
+      setOpenGroups(prev => ({
+        ...prev,
+        [activeGroup.id]: true
+      }));
+    }
+  }, [location.pathname, voteMode]);
+
+  const toggleGroup = (groupId: string) => {
+    setOpenGroups(prev => ({
+      ...prev,
+      [groupId]: !prev[groupId],
+    }));
+  };
+
+  const isLinkEnabled = (key?: string): boolean => {
+    if (!key) return true;
+    if (!btnSettings) return true;
+    return (btnSettings as any)[key] !== false;
+  };
+
+  const closeSidebar = () => setIsMobileOpen(false);
 
   const handleLogout = async () => {
     await signOut();
     navigate('/');
   };
 
-  const navLinks = [
-    { to: '/admin', icon: Home, label: 'Dashboard' },
-    ...(voteMode === 'booth' ? [{ to: '/admin/bilik', icon: Monitor, label: 'Kelola Bilik Suara' }] : []),
-    { to: '/admin/gelombang', icon: Clock, label: 'Gelombang Voting', key: 'gelombang_voting' },
-    { to: '/admin/mode-vote', icon: Settings, label: 'Mode Vote' },
-    { to: '/admin/pengaturan', icon: Settings, label: 'Kelola Kategori', key: 'kelola_kategori' },
-    { to: '/admin/kandidat', icon: Layers, label: 'Kelola Kandidat', key: 'kelola_kandidat' },
-    { to: '/admin/konfirmasi', icon: ShieldCheck, label: 'Konfirmasi Pemilih', key: 'konfirmasi_pemilih' },
-    { to: '/admin/pemilih', icon: Users, label: 'Kelola Pemilih', key: 'kelola_pemilih' },
-    { to: '/admin/wafo', icon: FileText, label: 'WAFO (Warung Informasi)', key: 'wafo' },
-    { to: '/admin/countdown', icon: Timer, label: 'Countdown', key: 'countdown' },
-    { to: '/admin/helpdesk', icon: LifeBuoy, label: 'Kelola Helpdesk', key: 'kelola_helpdesk' },
-    { to: '/admin/hasil', icon: BarChart, label: 'Hasil Voting', key: 'hasil_voting' },
-    { to: '/admin/audit', icon: FileText, label: 'Audit Log', key: 'audit_log' },
-    { to: '/admin/export', icon: FileText, label: 'Export Data', key: 'export_data' },
-    { to: '/admin/maintenance', icon: Settings, label: 'Maintenance', key: 'maintenance' },
-  ];
+  const renderSidebarContent = (isMobile: boolean = false) => {
+    return (
+      <div className="space-y-4">
+        {groups.map((group) => {
+          const isOpen = !!openGroups[group.id];
+          const hasActiveChild = isGroupActive(group);
 
-  const isLinkEnabled = (key?: string): boolean => {
-    if (!key) return true;
-    if (!btnSettings) return true; // Default to allow access until loaded
-    return (btnSettings as any)[key] !== false;
+          return (
+            <div key={group.id} className="space-y-1">
+              {/* Group Header Button */}
+              <button
+                type="button"
+                onClick={() => toggleGroup(group.id)}
+                className={`w-full flex items-center justify-between px-3 py-2 text-xs font-bold uppercase tracking-wider transition-colors focus:outline-none cursor-pointer ${
+                  hasActiveChild 
+                    ? 'text-ppu-blue' 
+                    : 'text-gray-400 hover:text-gray-650'
+                }`}
+              >
+                <span>{group.title}</span>
+                <ChevronRight 
+                  className={`w-3.5 h-3.5 transition-transform duration-250 ${
+                    isOpen ? 'rotate-90 text-ppu-blue' : 'text-gray-400'
+                  }`} 
+                />
+              </button>
+
+              {/* Submenu with height animation */}
+              <AnimatePresence initial={false}>
+                {isOpen && (
+                  <motion.div
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: 'auto', opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    transition={{ duration: 0.25, ease: 'easeInOut' }}
+                    className="overflow-hidden space-y-1 pl-4"
+                  >
+                    {group.items.map((item) => {
+                      const isActive = isItemActive(item.to);
+                      const enabled = isLinkEnabled(item.key);
+
+                      const content = (
+                        <>
+                          <div className="flex items-center gap-2.5 min-w-0">
+                            <item.icon 
+                              className={`w-4 h-4 shrink-0 ${
+                                !enabled 
+                                  ? 'text-gray-400' 
+                                  : isActive 
+                                    ? 'text-ppu-blue' 
+                                    : 'text-gray-500 hover:text-gray-750'
+                              }`} 
+                            />
+                            <span className="truncate">{item.label}</span>
+                          </div>
+                          {!enabled && <Lock className="w-3.5 h-3.5 text-gray-400 shrink-0" />}
+                        </>
+                      );
+
+                      if (!enabled) {
+                        return (
+                          <div
+                            key={item.to}
+                            className="flex items-center justify-between px-3 py-1.5 text-[13px] font-semibold rounded-lg bg-[#F5F7FA] text-gray-400 select-none pb-1.5"
+                            style={{
+                              filter: "blur(0.8px)",
+                              opacity: 0.5,
+                              cursor: "not-allowed",
+                              userSelect: "none",
+                              pointerEvents: "none"
+                            }}
+                          >
+                            {content}
+                          </div>
+                        );
+                      }
+
+                      return (
+                        <Link
+                          key={item.to}
+                          to={item.to}
+                          onClick={isMobile ? closeSidebar : undefined}
+                          className={`flex items-center justify-between px-3 py-1.5 text-[13px] font-semibold rounded-lg transition-colors ${
+                            isActive
+                              ? 'bg-ppu-blue-light text-ppu-blue font-bold'
+                              : 'text-gray-600 hover:bg-gray-100 hover:text-gray-950'
+                          }`}
+                        >
+                          {content}
+                        </Link>
+                      );
+                    })}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+          );
+        })}
+      </div>
+    );
   };
-
-  const closeSidebar = () => setIsMobileOpen(false);
 
   return (
     <div className="flex flex-col lg:flex-row bg-gray-50 min-h-screen overflow-x-hidden w-full relative">
@@ -128,60 +306,14 @@ export const AdminLayout = () => {
             <X className="w-5 h-5" />
           </button>
         </div>
-        <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
-          {navLinks.map((link) => {
-            const isActive = location.pathname === link.to;
-            const enabled = isLinkEnabled(link.key);
-            
-            const content = (
-              <>
-                <div className="flex items-center gap-3">
-                  <link.icon className={`w-5 h-5 ${!enabled ? 'text-gray-400' : isActive ? 'text-ppu-blue' : 'text-gray-500'}`} />
-                  <span>{link.label}</span>
-                </div>
-                {!enabled && <Lock className="w-3.5 h-3.5 text-gray-400 shrink-0" />}
-              </>
-            );
-
-            if (!enabled) {
-              return (
-                <div
-                  key={link.to}
-                  className="flex items-center justify-between px-3 py-2 text-sm font-semibold rounded-lg bg-[#F5F7FA] text-gray-400 select-none pb-2"
-                  style={{
-                    filter: "blur(1.5px)",
-                    opacity: 0.5,
-                    cursor: "not-allowed",
-                    userSelect: "none",
-                    pointerEvents: "none"
-                  }}
-                >
-                  {content}
-                </div>
-              );
-            }
-
-            return (
-              <Link
-                key={link.to}
-                to={link.to}
-                onClick={closeSidebar}
-                className={`flex items-center justify-between px-3 py-2 text-sm font-semibold rounded-lg transition-colors ${
-                  isActive
-                    ? 'bg-ppu-blue-light text-ppu-blue font-bold'
-                    : 'text-gray-700 hover:bg-gray-100'
-                }`}
-              >
-                {content}
-              </Link>
-            );
-          })}
+        <nav className="flex-1 p-4 space-y-4 overflow-y-auto">
+          {renderSidebarContent(true)}
           <button
             onClick={() => {
               closeSidebar();
               handleLogout();
             }}
-            className="w-full mt-4 flex items-center gap-3 px-3 py-2 text-sm font-semibold text-red-600 rounded-lg hover:bg-[#E31B23]/10 transition-colors"
+            className="w-full mt-4 flex items-center gap-3 px-3 py-2 text-sm font-semibold text-red-600 rounded-lg hover:bg-[#E31B23]/10 transition-colors cursor-pointer"
           >
             <LogOut className="w-5 h-5" />
             Logout
@@ -198,56 +330,11 @@ export const AdminLayout = () => {
             className="h-10 w-auto"
           />
         </div>
-        <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
-          {navLinks.map((link) => {
-            const isActive = location.pathname === link.to;
-            const enabled = isLinkEnabled(link.key);
-            
-            const content = (
-              <>
-                <div className="flex items-center gap-3">
-                  <link.icon className={`w-5 h-5 ${!enabled ? 'text-gray-400' : isActive ? 'text-ppu-blue' : 'text-gray-500'}`} />
-                  <span>{link.label}</span>
-                </div>
-                {!enabled && <Lock className="w-3.5 h-3.5 text-gray-400 shrink-0" />}
-              </>
-            );
-
-            if (!enabled) {
-              return (
-                <div
-                  key={link.to}
-                  className="flex items-center justify-between px-3 py-2 text-sm font-semibold rounded-lg bg-[#F5F7FA] text-gray-400 select-none pb-2"
-                  style={{
-                    filter: "blur(1.5px)",
-                    opacity: 0.5,
-                    cursor: "not-allowed",
-                    userSelect: "none",
-                    pointerEvents: "none"
-                  }}
-                >
-                  {content}
-                </div>
-              );
-            }
-
-            return (
-              <Link
-                key={link.to}
-                to={link.to}
-                className={`flex items-center justify-between px-3 py-2 text-sm font-semibold rounded-lg transition-colors ${
-                  isActive
-                    ? 'bg-ppu-blue-light text-ppu-blue font-bold'
-                    : 'text-gray-700 hover:bg-gray-100'
-                }`}
-              >
-                {content}
-              </Link>
-            );
-          })}
+        <nav className="flex-1 p-4 space-y-4 overflow-y-auto">
+          {renderSidebarContent(false)}
           <button
             onClick={handleLogout}
-            className="w-full mt-4 flex items-center gap-3 px-3 py-2 text-sm font-semibold text-red-600 rounded-lg hover:bg-[#E31B23]/10 transition-colors"
+            className="w-full mt-4 flex items-center gap-3 px-3 py-2 text-sm font-semibold text-red-600 rounded-lg hover:bg-[#E31B23]/10 transition-colors cursor-pointer"
           >
             <LogOut className="w-5 h-5" />
             Logout

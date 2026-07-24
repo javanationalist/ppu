@@ -25,7 +25,7 @@ export default function VoterCardTab({
   renderBlurredEmail,
 }: VoterCardTabProps) {
   return (
-    <div className="space-y-4 sm:space-y-6 animate-fade-in text-left">
+    <div className="space-y-4 sm:space-y-6 text-left">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-3">
         <div>
           <h2 className="text-lg sm:text-2xl font-black text-slate-800 dark:text-[#f5f5f5] transition-colors">Kartu Pemilih Digital</h2>
