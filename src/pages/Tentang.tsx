@@ -1,6 +1,12 @@
-import { Building2, ShieldCheck, Zap, Users } from 'lucide-react';
+import { Building2, ShieldCheck, Zap, Users, ArrowLeft } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
+import BackToHomeButton from '../components/BackToHomeButton';
 
 export default function Tentang() {
+  const { user, profile } = useAuth();
+  const dashboardPath = profile?.role === 'admin' ? '/admin' : '/dashboard';
+
   const features = [
     {
       title: 'Digitalisasi Pemilu',
@@ -21,6 +27,18 @@ export default function Tentang() {
 
   return (
     <div className="flex-1 flex flex-col items-center py-12 px-4 sm:px-6 lg:px-8 w-full max-w-4xl mx-auto transition-colors duration-300">
+      <div className="w-full flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+        <BackToHomeButton />
+        {user && (
+          <Link
+            to={dashboardPath}
+            className="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold bg-white dark:bg-[#2a2a2a] border border-slate-200 dark:border-[#333333] hover:bg-slate-50 dark:hover:bg-[#333333] text-slate-700 dark:text-[#f5f5f5] rounded-xl shadow-xs transition-all duration-200"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            <span>Kembali ke Dashboard</span>
+          </Link>
+        )}
+      </div>
       <div className="text-center mb-12 w-full animate-fade-in animate-in fade-in duration-500">
         <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-ppu-blue/10 dark:bg-sky-500/10 border border-ppu-blue/20 dark:border-sky-500/20 mb-6 shadow-md shadow-ppu-blue/5">
           <Building2 className="w-8 h-8 text-ppu-blue dark:text-sky-400" />

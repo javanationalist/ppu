@@ -1,11 +1,21 @@
 import { useEffect, useState } from 'react';
 import { 
   BarChart, RefreshCw, Users, ShieldCheck, 
-  Award, Clock, AlertTriangle, MapPin
+  Award, Clock, AlertTriangle, MapPin, ArrowLeft
 } from 'lucide-react';
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 import { getAllProfiles } from '../../lib/adminService';
 import { getCategories, getCandidates, getAllVotes, getDapils, getElectionStatistics, ElectionStatistics } from '../../lib/votingService';
 import { Profile, Category, Vote, Candidate, Dapil } from '../../types';
+
+const COLORS = [
+  '#4f46e5', // indigo-600
+  '#06b6d4', // cyan-500
+  '#f59e0b', // amber-500
+  '#10b981', // emerald-500
+  '#f43f5e', // rose-500
+  '#8b5cf6', // violet-500
+];
 
 export default function HasilAdmin() {
   const [profiles, setProfiles] = useState<Profile[]>([]);
@@ -36,12 +46,6 @@ export default function HasilAdmin() {
       setDapils(dList || []);
       setStats(computedStats);
 
-      let defaultCatId = selectedCatId;
-      if (cList.length > 0 && !defaultCatId) {
-        defaultCatId = cList[0].id;
-        setSelectedCatId(defaultCatId);
-      }
-
       // Load candidates for all categories
       const cmap: Record<string, Candidate[]> = {};
       await Promise.all(
@@ -51,17 +55,6 @@ export default function HasilAdmin() {
         })
       );
       setCandidatesMap(cmap);
-
-      // Auto-select first dapil if category is mpk_smaba
-      if (defaultCatId) {
-        const activeCat = cList.find(c => c.id === defaultCatId);
-        if (activeCat?.type === 'mpk_smaba') {
-          const activeDapils = (dList || []).filter(d => d.category_id === defaultCatId);
-          if (activeDapils.length > 0 && !selectedDapilId) {
-            setSelectedDapilId(activeDapils[0].id);
-          }
-        }
-      }
     } catch (err) {
       console.error('Failed to load hasil voting', err);
     } finally {
@@ -79,24 +72,22 @@ export default function HasilAdmin() {
     return () => clearInterval(interval);
   }, []);
 
-  // Update selected Dapil when category changes
+  // Reset selected Dapil when category changes
   useEffect(() => {
     if (selectedCatId) {
       const activeCat = categories.find(c => c.id === selectedCatId);
       if (activeCat?.type === 'mpk_smaba') {
         const catDapils = dapils.filter(d => d.category_id === selectedCatId);
-        if (catDapils.length > 0) {
-          if (!selectedDapilId || !catDapils.some(d => d.id === selectedDapilId)) {
-            setSelectedDapilId(catDapils[0].id);
-          }
-        } else {
+        if (selectedDapilId && !catDapils.some(d => d.id === selectedDapilId)) {
           setSelectedDapilId('');
         }
       } else {
         setSelectedDapilId('');
       }
+    } else {
+      setSelectedDapilId('');
     }
-  }, [selectedCatId, categories, dapils, selectedDapilId]);
+  }, [selectedCatId, categories, dapils]);
 
   const handleRefresh = async () => {
     setRefreshing(true);
@@ -124,435 +115,602 @@ export default function HasilAdmin() {
   const isMpkType = activeCategory?.type === 'mpk_smaba';
 
   return (
-    <div className="p-4 sm:p-8 max-w-7xl mx-auto space-y-8 select-none">
+    <div className="p-4 sm:p-8 max-w-7xl mx-auto space-y-8 select-none animate-fade-in animate-in fade-in duration-300">
       {/* Header */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-slate-100 pb-6">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-slate-100 dark:border-slate-800 pb-6">
         <div>
-          <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight flex items-center gap-2">
-            <BarChart className="w-6 h-6 text-indigo-600" />
+          <h1 className="text-2xl font-extrabold text-slate-900 dark:text-[#f5f5f5] tracking-tight flex items-center gap-2">
+            <BarChart className="w-6 h-6 text-indigo-600 dark:text-indigo-450" />
             <span>Hasil Perolehan Suara Utama</span>
           </h1>
-          <p className="text-slate-500 text-sm mt-1">
+          <p className="text-slate-500 dark:text-slate-400 text-sm mt-1">
             Data rekapitulasi real-time suara masuk pemilu OSIS/MPK. Penyegaran otomatis aktif.
           </p>
         </div>
         <button 
           onClick={handleRefresh}
           disabled={refreshing}
-          className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold flex items-center gap-2 shadow-sm transition-all disabled:opacity-50 cursor-pointer"
+          className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 shadow-sm transition-all disabled:opacity-50 cursor-pointer"
         >
           <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? 'animate-spin' : ''}`} />
           <span>{refreshing ? 'Memperbarui...' : 'Segarkan Data'}</span>
         </button>
       </div>
 
-      {/* Metrics Board */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-gradient-to-br from-indigo-50 to-white p-6 rounded-2xl border border-indigo-100/50 shadow-sm flex items-start justify-between">
-          <div>
-            <span className="text-xs font-bold text-indigo-500 uppercase tracking-widest block font-mono">Suara Selesai</span>
-            <h2 className="text-4xl font-black text-slate-800 mt-2">{votedVoters}</h2>
-            <p className="text-xs text-slate-500 mt-1">Siswa telah meluangkan suaranya</p>
-          </div>
-          <div className="p-3 bg-indigo-100 text-indigo-700 rounded-xl">
-            <Award className="w-6 h-6" />
-          </div>
-        </div>
+      {/* STEP 1: CATEGORY SELECTION (HALAMAN PERTAMA) */}
+      {!selectedCatId && (
+        <div className="space-y-8 animate-fade-in animate-in fade-in duration-300">
+          {/* Metrics Board */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="bg-white dark:bg-[#1a1a1a] p-6 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-xs flex items-start justify-between">
+              <div>
+                <span className="text-xs font-bold text-indigo-500 uppercase tracking-widest block font-mono">Suara Selesai</span>
+                <h2 className="text-4xl font-black text-slate-800 dark:text-white mt-2">{votedVoters}</h2>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Siswa telah meluangkan suaranya</p>
+              </div>
+              <div className="p-3 bg-indigo-50 text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-400 rounded-xl">
+                <Award className="w-6 h-6" />
+              </div>
+            </div>
 
-        <div className="bg-gradient-to-br from-indigo-50 to-white p-6 rounded-2xl border border-indigo-100/50 shadow-sm flex items-start justify-between">
-          <div>
-            <span className="text-xs font-bold text-indigo-500 uppercase tracking-widest block font-mono">Tingkat Partisipasi</span>
-            <h2 className="text-4xl font-black text-slate-800 mt-2">{participationRate}%</h2>
-            <div className="w-32 bg-slate-100 h-2 rounded-full mt-2 overflow-hidden">
-              <div className="bg-indigo-600 h-full rounded-full" style={{ width: `${participationRate}%` }}></div>
+            <div className="bg-white dark:bg-[#1a1a1a] p-6 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-xs flex items-start justify-between">
+              <div>
+                <span className="text-xs font-bold text-indigo-500 uppercase tracking-widest block font-mono">Tingkat Partisipasi</span>
+                <h2 className="text-4xl font-black text-slate-800 dark:text-white mt-2">{participationRate}%</h2>
+                <div className="w-32 bg-slate-100 dark:bg-slate-800 h-2 rounded-full mt-2 overflow-hidden">
+                  <div className="bg-indigo-600 h-full rounded-full" style={{ width: `${participationRate}%` }}></div>
+                </div>
+              </div>
+              <div className="p-3 bg-indigo-50 text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-400 rounded-xl">
+                <Users className="w-6 h-6" />
+              </div>
+            </div>
+
+            <div className="bg-white dark:bg-[#1a1a1a] p-6 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-xs flex items-start justify-between">
+              <div>
+                <span className="text-xs font-bold text-indigo-500 uppercase tracking-widest block font-mono">DPT Terdaftar</span>
+                <h2 className="text-4xl font-black text-slate-800 dark:text-white mt-2">{totalVoters}</h2>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Target potensial DPT kesiswaan</p>
+              </div>
+              <div className="p-3 bg-indigo-50 text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-400 rounded-xl">
+                <ShieldCheck className="w-6 h-6" />
+              </div>
             </div>
           </div>
-          <div className="p-3 bg-indigo-100 text-indigo-700 rounded-xl">
-            <Users className="w-6 h-6" />
-          </div>
-        </div>
 
-        <div className="bg-gradient-to-br from-indigo-50 to-white p-6 rounded-2xl border border-indigo-100/50 shadow-sm flex items-start justify-between">
-          <div>
-            <span className="text-xs font-bold text-indigo-500 uppercase tracking-widest block font-mono">DPT Terdaftar</span>
-            <h2 className="text-4xl font-black text-slate-800 mt-2">{totalVoters}</h2>
-            <p className="text-xs text-slate-500 mt-1">Target potensial DPT kesiswaan</p>
-          </div>
-          <div className="p-3 bg-indigo-100 text-indigo-700 rounded-xl">
-            <ShieldCheck className="w-6 h-6" />
-          </div>
-        </div>
-      </div>
+          {/* Main Content Split Layout */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            {/* Left: Choose Category Grid */}
+            <div className="lg:col-span-2 space-y-6">
+              <div>
+                <h2 className="text-lg font-bold text-slate-900 dark:text-white">Pilih Kategori Pemilihan</h2>
+                <p className="text-slate-500 dark:text-slate-400 text-xs mt-1">Silakan pilih kategori di bawah untuk melihat rekapitulasi real-time perolehan suara.</p>
+              </div>
 
-      {/* 1. Category Dropdown Selector at Top */}
-      <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div className="space-y-1">
-          <span className="text-[10px] font-black uppercase tracking-widest text-indigo-600 block font-mono">PEMILIHAN AKTIF</span>
-          <h3 className="text-base font-extrabold text-slate-800">Pilih Kategori Pemilu</h3>
-        </div>
-        <div className="relative">
-          <select
-            value={selectedCatId}
-            onChange={(e) => setSelectedCatId(e.target.value)}
-            className="w-full sm:w-80 bg-slate-50 border-2 border-slate-200 hover:border-indigo-400 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 text-slate-800 rounded-xl px-4 py-3 font-extrabold text-sm outline-none transition-all cursor-pointer shadow-sm appearance-none pr-10"
-          >
-            {categories.map(cat => (
-              <option key={cat.id} value={cat.id}>
-                {cat.icon || '🗳️'} {cat.name}
-              </option>
-            ))}
-          </select>
-          <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-slate-500">
-            <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
-              <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/>
-            </svg>
-          </div>
-        </div>
-      </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                {categories.map((cat) => {
+                  const catVotes = votes.filter(v => v.category_id === cat.id).length;
+                  return (
+                    <button
+                      key={cat.id}
+                      onClick={() => setSelectedCatId(cat.id)}
+                      className="group flex flex-col p-6 bg-white dark:bg-[#1a1a1a] border border-slate-200 dark:border-slate-800 rounded-xl text-left shadow-xs hover:shadow-md transition-all duration-300 transform hover:-translate-y-0.5 cursor-pointer w-full"
+                    >
+                      <div className="flex items-center justify-between w-full">
+                        <span className="text-2xl p-3 bg-slate-50 dark:bg-[#2a2a2a] rounded-lg group-hover:bg-indigo-50 dark:group-hover:bg-indigo-950/30 transition-colors">
+                          {cat.icon || '🗳️'}
+                        </span>
+                        <span className="text-[10px] font-black uppercase tracking-widest px-2.5 py-1 bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 rounded-full font-mono">
+                          {cat.type === 'mpk_smaba' ? 'MPK SMABA' : 'OSIS / REGULER'}
+                        </span>
+                      </div>
+                      
+                      <h3 className="text-lg font-black text-slate-800 dark:text-[#f5f5f5] mt-5 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+                        {cat.name}
+                      </h3>
+                      
+                      <p className="text-xs text-slate-400 mt-1 flex items-center gap-1">
+                        <span>{catVotes} suara masuk</span>
+                        <span>•</span>
+                        <span className="text-slate-500 font-medium">Klik untuk lihat hasil lengkap</span>
+                      </p>
 
-      {/* 3. Selective MPK State: Choose Dapil Dropdown if type === 'mpk_smaba' */}
-      {isMpkType && (
-        <div className="bg-gradient-to-r from-indigo-50/70 to-blue-50/50 border border-indigo-100 p-6 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-sm animate-fade-in">
-          <div className="space-y-1">
-            <span className="text-[10px] font-black uppercase tracking-widest text-indigo-600 block font-mono">REKAPITULASI DAERAH PEMILIHAN</span>
-            <h3 className="text-base font-extrabold text-slate-850">Pilih Daerah Pemilihan (Dapil)</h3>
-          </div>
-          <div className="relative">
-            <select
-              value={selectedDapilId}
-              onChange={(e) => setSelectedDapilId(e.target.value)}
-              className="w-full sm:w-80 bg-white border-2 border-indigo-200 hover:border-indigo-450 focus:border-indigo-600 focus:ring-4 focus:ring-indigo-100 text-slate-900 rounded-xl px-4 py-3 font-extrabold text-sm outline-none transition-all cursor-pointer shadow-sm appearance-none pr-10"
-            >
-              <option value="">-- Pilih Dapil --</option>
-              {dapils.filter(d => d.category_id === selectedCatId).map(d => (
-                <option key={d.id} value={d.id}>
-                  📍 {d.name}
-                </option>
-              ))}
-            </select>
-            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-slate-500 border-l border-indigo-150-100 ml-1">
-              <MapPin className="w-4 h-4 text-indigo-500" />
+                      <div className="mt-6 flex items-center text-xs font-bold text-indigo-600 dark:text-indigo-400 group-hover:text-indigo-700 gap-1 mt-auto">
+                        <span>Lihat Hasil</span>
+                        <span className="transition-transform group-hover:translate-x-1 duration-200">→</span>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Right: Global Attendance & Contribution */}
+            <div className="space-y-6">
+              {/* 1. Kehadiran Kelas (Partisipasi) */}
+              <div className="bg-white dark:bg-[#1a1a1a] p-6 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-xs space-y-6">
+                <div>
+                  <h3 className="text-base font-extrabold text-slate-800 dark:text-[#f5f5f5]">Kehadiran Kelas</h3>
+                  <p className="text-xs text-slate-400">Tingkat partisipasi kehadiran per kelas</p>
+                </div>
+
+                <div className="overflow-y-auto max-h-[250px] pr-2 space-y-4">
+                  {!stats || stats.classParticipation.length === 0 ? (
+                    <p className="text-center py-6 text-xs text-slate-400">Belum ada pemilih tercatat.</p>
+                  ) : (
+                    stats.classParticipation.map((item) => {
+                      const pct = Math.round(item.percentage);
+                      return (
+                        <div key={item.className} className="space-y-1">
+                          <div className="flex justify-between items-center text-xs">
+                            <span className="font-bold text-slate-700 dark:text-slate-350">{item.className}</span>
+                            <span className="font-mono text-slate-500 dark:text-slate-400">
+                              {item.completedCount}/{item.totalCount} <span className="font-bold text-slate-700 dark:text-slate-350">({pct}%)</span>
+                            </span>
+                          </div>
+                          <div className="w-full bg-slate-100 dark:bg-slate-800 h-2 rounded-full overflow-hidden">
+                            <div 
+                              className={`h-full rounded-full transition-all duration-700 ${
+                                pct >= 90 ? 'bg-emerald-500' : pct >= 70 ? 'bg-indigo-500' : pct >= 50 ? 'bg-amber-500' : 'bg-rose-500'
+                              }`}
+                              style={{ width: `${pct}%` }}
+                            ></div>
+                          </div>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+
+                <div className="bg-slate-50 dark:bg-[#252525]/40 p-4 rounded-xl space-y-2">
+                  <h4 className="text-xs font-bold text-slate-800 dark:text-[#e0e0e0] flex items-center gap-1.5">
+                    <Clock className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
+                    <span>Indikator Partisipasi</span>
+                  </h4>
+                  <div className="grid grid-cols-2 gap-2 text-[10px] text-slate-500 dark:text-slate-400 pt-1 font-sans">
+                    <div className="flex items-center gap-1">
+                      <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 inline-block"></span>
+                      <span>Luar Biasa (&gt;=90%)</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <span className="w-2.5 h-2.5 rounded-full bg-indigo-500 inline-block"></span>
+                      <span>Optimal (&gt;=70%)</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <span className="w-2.5 h-2.5 rounded-full bg-amber-500 inline-block"></span>
+                      <span>Sedang (&gt;=50%)</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <span className="w-2.5 h-2.5 rounded-full bg-rose-500 inline-block"></span>
+                      <span>Kritis (&lt;50%)</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* 2. Tingkat Kontribusi Suara */}
+              <div className="bg-white dark:bg-[#1a1a1a] p-6 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-xs space-y-6">
+                <div>
+                  <h3 className="text-base font-extrabold text-slate-800 dark:text-[#f5f5f5]">Porsi Kontribusi Suara</h3>
+                  <p className="text-xs text-slate-400">Porsi sumbangan suara selesai masing-masing kelas</p>
+                </div>
+
+                <div className="overflow-y-auto max-h-[200px] pr-2 space-y-4">
+                  {!stats || stats.classContribution.length === 0 ? (
+                    <p className="text-center py-6 text-xs text-slate-400">Belum ada pemilih selesai tercatat.</p>
+                  ) : (
+                    stats.classContribution.map((item) => {
+                      const pct = Math.round(item.percentage);
+                      return (
+                        <div key={item.className} className="space-y-1">
+                          <div className="flex justify-between items-center text-xs">
+                            <span className="font-bold text-slate-700 dark:text-slate-350">{item.className}</span>
+                            <span className="font-mono text-slate-500 dark:text-slate-400">
+                              {item.completedCount} Suara <span className="font-bold text-indigo-600 dark:text-indigo-400">({pct}%)</span>
+                            </span>
+                          </div>
+                          <div className="w-full bg-slate-100 dark:bg-slate-800 h-2 rounded-full overflow-hidden">
+                            <div 
+                              className="h-full bg-indigo-600 dark:bg-indigo-500 rounded-full transition-all duration-700"
+                              style={{ width: `${item.percentage}%` }}
+                            ></div>
+                          </div>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+              </div>
             </div>
           </div>
         </div>
       )}
 
-      {/* Main Results Board Section Layout Split */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Main Scoring Card Panel */}
-        <div className="bg-white p-6 sm:p-8 rounded-2xl border border-slate-100 shadow-sm lg:col-span-2 space-y-6">
-          <div className="border-b border-slate-50 pb-4">
-            <h3 className="text-lg font-extrabold text-slate-800">
-              Status Perolehan Hasil Suara Terkini
-            </h3>
-            <p className="text-xs text-slate-400 mt-1">
-              {isMpkType 
-                ? `Daerah Pemilihan: ${dapils.find(d => d.id === selectedDapilId)?.name || 'Sedang memuat...'}`
-                : `Total kartu suara masuk kategori: ${votes.filter(v => v.category_id === selectedCatId).length} suara`}
+      {/* STEP 2: DAPIL SELECTION (ONLY FOR MPK SMABA AND DAPIL NOT SELECTED YET) */}
+      {selectedCatId && isMpkType && !selectedDapilId && (
+        <div className="space-y-8 animate-fade-in animate-in fade-in duration-300">
+          {/* Navigation */}
+          <div className="flex items-center justify-between">
+            <button
+              onClick={() => setSelectedCatId('')}
+              className="inline-flex items-center gap-2 px-4 py-2 text-xs font-bold bg-white dark:bg-[#2a2a2a] border border-slate-200 dark:border-[#333333] hover:bg-slate-50 dark:hover:bg-[#333333] text-slate-700 dark:text-[#f5f5f5] rounded-xl shadow-xs transition-all duration-200 cursor-pointer"
+            >
+              <ArrowLeft className="w-3.5 h-3.5" />
+              <span>Kembali ke Kategori</span>
+            </button>
+            <span className="text-[11px] font-black uppercase tracking-wider text-slate-400 font-mono bg-slate-100 dark:bg-slate-850 px-3 py-1 rounded-full">
+              Kategori: {activeCategory?.name}
+            </span>
+          </div>
+
+          {/* Title */}
+          <div className="text-center py-4">
+            <h2 className="text-xl sm:text-2xl font-extrabold text-slate-900 dark:text-white">
+              Pilih Daerah Pemilihan (Dapil)
+            </h2>
+            <p className="text-slate-500 dark:text-slate-400 text-sm mt-1 max-w-md mx-auto">
+              Silakan pilih salah satu Dapil terdaftar di bawah ini untuk melihat detail perolehan suaranya.
             </p>
           </div>
 
-          {/* Conditional MPK vs Regular render */}
-          {!isMpkType ? (
-            // 2. REGULAR RENDERING WITH ABSOLUTE PERCENTAGES
-            (() => {
-              const activeCandidates = candidatesMap[selectedCatId] || [];
-              const activeVotes = votes.filter(v => v.category_id === selectedCatId);
-              const totalActiveVotes = activeVotes.length;
-
-              const cScores = activeCandidates.map(c => {
-                const score = activeVotes.filter(v => v.candidate_id === c.id).length;
-                const percentageStr = totalActiveVotes > 0 ? ((score / totalActiveVotes) * 100).toFixed(1) : '0.0';
-                return {
-                  ...c,
-                  votesCount: score,
-                  percentage: Number(percentageStr)
-                };
-              }).sort((a, b) => b.votesCount - a.votesCount);
-
-              if (cScores.length === 0) {
-                return (
-                  <div className="text-center py-16 text-slate-400 border border-dashed border-slate-150 rounded-2xl">
-                    <AlertTriangle className="w-10 h-10 mx-auto text-amber-500 mb-2 animate-bounce" />
-                    <p className="text-xs font-bold uppercase tracking-wider">Belum Ada Kandidat</p>
-                    <p className="text-[11px] text-slate-400 mt-1">Sistem belum mendeteksi konfigurasi kandidat untuk kategori ini.</p>
-                  </div>
-                );
-              }
+          {/* Dapil Cards Grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+            {dapils.filter(d => d.category_id === selectedCatId).map((d) => {
+              const dapilCandList = (candidatesMap[selectedCatId] || []).filter(c => c.dapil_id === d.id);
+              const dapilVotesCount = votes.filter(v => dapilCandList.some(c => c.id === v.candidate_id)).length;
 
               return (
-                <div className="space-y-6">
-                  {cScores.map((cand, index) => {
-                    const placeColors = [
-                      'bg-amber-100 text-amber-800 border-amber-200',
-                      'bg-slate-100 text-slate-800 border-slate-200',
-                      'bg-orange-100 text-orange-850 border-orange-200'
-                    ];
-                    const fallbackColor = 'bg-slate-50 text-slate-600 border-slate-100';
+                <button
+                  key={d.id}
+                  onClick={() => setSelectedDapilId(d.id)}
+                  className="group flex flex-col p-6 bg-white dark:bg-[#1a1a1a] border border-slate-200 dark:border-slate-800 rounded-2xl text-left shadow-xs hover:shadow-md transition-all duration-300 transform hover:-translate-y-1 cursor-pointer w-full"
+                >
+                  <div className="flex items-center justify-between w-full mb-4">
+                    <span className="p-2.5 bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 rounded-xl">
+                      <MapPin className="w-5 h-5" />
+                    </span>
+                    <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-2.5 py-0.5 rounded-full">
+                      {dapilCandList.length} Kandidat
+                    </span>
+                  </div>
 
-                    return (
-                      <div key={cand.id} className="space-y-3 p-4 rounded-xl border border-slate-50 bg-slate-50/20 hover:bg-slate-50/50 transition-colors">
-                        <div className="flex items-center justify-between gap-3 flex-wrap sm:flex-nowrap">
-                          <div className="flex items-center gap-3">
-                            <div className={`w-6 h-6 rounded-full border flex items-center justify-center font-mono font-bold text-xs ${index < 3 ? placeColors[index] : fallbackColor}`}>
-                              {index + 1}
-                            </div>
-                            <div>
-                              <span className="text-slate-550 text-[10px] font-mono font-black block">
-                                NO URUT {String(cand.number).padStart(2, '0')}
-                              </span>
-                              <span className="font-extrabold text-slate-850">{cand.chairman}</span>
-                              {cand.vice && <span className="text-xs text-slate-500 font-medium"> & {cand.vice}</span>}
-                            </div>
-                          </div>
+                  <h3 className="text-base font-black text-slate-800 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+                    {d.name}
+                  </h3>
 
-                          <div className="text-right shrink-0">
-                            <span className="text-lg font-black text-slate-900 block">{cand.votesCount} Suara</span>
-                            <span className="text-xs font-black text-indigo-600 font-mono bg-indigo-50 px-2.5 py-0.5 rounded-full">{cand.percentage}%</span>
-                          </div>
-                        </div>
+                  <p className="text-xs text-slate-400 mt-1">
+                    {dapilVotesCount} suara selesai memilih
+                  </p>
 
-                        {/* Percentage Progress Bar */}
-                        <div className="w-full bg-slate-100 h-3 rounded-full overflow-hidden">
-                          <div 
-                            className="bg-indigo-600 h-full rounded-full transition-all duration-1000 ease-out shadow-inner"
-                            style={{ width: `${cand.percentage}%` }}
-                          ></div>
-                        </div>
-                      </div>
-                    );
-                  })}
+                  <div className="mt-6 flex items-center text-xs font-bold text-indigo-600 dark:text-indigo-400 group-hover:text-indigo-700 gap-1 mt-auto">
+                    <span>Lihat Hasil Dapil</span>
+                    <span className="transition-transform group-hover:translate-x-1 duration-200">→</span>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* STEP 3: RESULTS SCREEN (DONUT CHART & CANDIDATE LISTS) */}
+      {selectedCatId && (!isMpkType || selectedDapilId) && (
+        <div className="space-y-8 animate-fade-in animate-in fade-in duration-300">
+          {/* Navigation Header */}
+          <div className="flex items-center justify-between">
+            <button
+              onClick={() => {
+                if (isMpkType) {
+                  setSelectedDapilId('');
+                } else {
+                  setSelectedCatId('');
+                }
+              }}
+              className="inline-flex items-center gap-2 px-4 py-2 text-xs font-bold bg-white dark:bg-[#2a2a2a] border border-slate-200 dark:border-[#333333] hover:bg-slate-50 dark:hover:bg-[#333333] text-slate-700 dark:text-[#f5f5f5] rounded-xl shadow-xs transition-all duration-200 cursor-pointer"
+            >
+              <ArrowLeft className="w-3.5 h-3.5" />
+              <span>Kembali</span>
+            </button>
+
+            <span className="text-[11px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-3.5 py-1 rounded-full font-mono">
+              {isMpkType 
+                ? `${activeCategory?.name} • ${dapils.find(d => d.id === selectedDapilId)?.name}` 
+                : activeCategory?.name}
+            </span>
+          </div>
+
+          {/* Calculations scope */}
+          {(() => {
+            const activeCandidates = candidatesMap[selectedCatId] || [];
+            const activeCategoryVotes = votes.filter(v => v.category_id === selectedCatId);
+
+            let filteredCandidates = activeCandidates;
+            let scopeVotes = activeCategoryVotes;
+            let totalScopeVotes = 0;
+            let totalScopeVoters = totalVoters;
+            let scopeParticipation = participationRate;
+
+            if (isMpkType) {
+              filteredCandidates = activeCandidates.filter(c => c.dapil_id === selectedDapilId);
+              scopeVotes = activeCategoryVotes.filter(v => filteredCandidates.some(c => c.id === v.candidate_id));
+              totalScopeVotes = scopeVotes.length;
+
+              const activeDapil = dapils.find(d => d.id === selectedDapilId);
+              const eligibleClasses = activeDapil?.eligible_classes || [];
+              totalScopeVoters = voters.filter(p => eligibleClasses.includes(p.class)).length;
+              scopeParticipation = totalScopeVoters > 0 ? ((totalScopeVotes / totalScopeVoters) * 100).toFixed(1) : '0';
+            } else {
+              totalScopeVotes = activeCategoryVotes.length;
+              totalScopeVoters = totalVoters;
+              scopeParticipation = participationRate;
+            }
+
+            // Empty State Validation
+            if (totalScopeVotes === 0) {
+              return (
+                <div className="text-center py-20 bg-white dark:bg-[#1a1a1a] border border-slate-200 dark:border-slate-800 rounded-2xl max-w-2xl mx-auto shadow-xs">
+                  <AlertTriangle className="w-12 h-12 mx-auto text-amber-500 mb-3 animate-pulse" />
+                  <h3 className="text-base font-extrabold text-slate-800 dark:text-[#f5f5f5]">Belum ada suara yang masuk</h3>
+                  <p className="text-xs text-slate-400 mt-1 max-w-sm mx-auto leading-relaxed">
+                    Kalkulasi perolehan suara akan muncul di sini secara otomatis setelah pemilih selesai menyalurkan suaranya.
+                  </p>
                 </div>
               );
-            })()
-          ) : (
-            // 4. MPK RENDERING GROUPED BY CLASS AND SELECTED DAPIL
-            (() => {
-              if (!selectedDapilId) {
-                return (
-                  <div className="text-center py-16 text-slate-400 border border-dashed border-slate-200 rounded-2xl bg-slate-50/20">
-                    <MapPin className="w-10 h-10 mx-auto text-indigo-500 mb-2 animate-pulse" />
-                    <p className="text-xs font-bold uppercase tracking-wider text-slate-650">Dapil Belum Ditentukan</p>
-                    <p className="text-[11px] text-slate-450 mt-1 max-w-sm mx-auto leading-relaxed">Silakan tentukan Daerah Pemilihan (Dapil) pada dropdown di atas untuk memulai kalkulasi.</p>
-                  </div>
-                );
-              }
+            }
 
-              const allCandidatesInCategory = candidatesMap[selectedCatId] || [];
-              const dapilCandidates = allCandidatesInCategory.filter(cand => cand.dapil_id === selectedDapilId);
-              
-              if (dapilCandidates.length === 0) {
-                return (
-                  <div className="text-center py-16 text-slate-400 border border-dashed border-slate-200 rounded-2xl">
-                    <AlertTriangle className="w-10 h-10 mx-auto text-amber-500 mb-2" />
-                    <p className="text-xs font-bold uppercase tracking-wider">Kandidat Dapil Kosong</p>
-                    <p className="text-[11px] text-slate-400 mt-1">Tidak ditemukan konfigurasi perwakilan MPK terdaftar di Dapil ini.</p>
-                  </div>
-                );
-              }
+            // Format Chart Data
+            const chartData = filteredCandidates.map(cand => {
+              const votesCount = scopeVotes.filter(v => v.candidate_id === cand.id).length;
+              const percentageNum = totalScopeVotes > 0 ? ((votesCount / totalScopeVotes) * 100) : 0;
+              return {
+                name: cand.chairman + (cand.vice ? ` & ${cand.vice}` : ` (${cand.class_name || cand.candidate_class || ''})`),
+                value: votesCount,
+                percentage: percentageNum.toFixed(1),
+                cand,
+              };
+            }).sort((a, b) => b.value - a.value);
 
-              // Group candidates by class_name
-              const grouped: Record<string, Candidate[]> = {};
-              dapilCandidates.forEach(cand => {
-                const cls = cand.class_name || cand.candidate_class || 'Lainnya';
-                if (!grouped[cls]) {
-                  grouped[cls] = [];
-                }
-                grouped[cls].push(cand);
-              });
+            return (
+              <div className="space-y-8 animate-fade-in duration-300">
+                {/* Visualizer and Statistics Grid */}
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                  {/* Left: Donut Chart Area */}
+                  <div className="bg-white dark:bg-[#1a1a1a] p-6 sm:p-8 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-xs lg:col-span-2 flex flex-col justify-between min-h-[420px]">
+                    <div>
+                      <h3 className="text-base font-extrabold text-slate-800 dark:text-[#f5f5f5]">Visualisasi Persentase Suara</h3>
+                      <p className="text-xs text-slate-400 mt-0.5">Proporsi pembagian suara dari total {totalScopeVotes} kartu suara masuk</p>
+                    </div>
 
-              const classesWithCands = Object.keys(grouped).sort();
+                    {/* Donut rendering */}
+                    <div className="relative w-full h-64 sm:h-80 flex items-center justify-center my-4">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <PieChart>
+                          <Pie
+                            data={chartData}
+                            cx="50%"
+                            cy="50%"
+                            innerRadius="65%"
+                            outerRadius="85%"
+                            paddingAngle={3}
+                            dataKey="value"
+                          >
+                            {chartData.map((entry, index) => (
+                              <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                            ))}
+                          </Pie>
+                          <Tooltip
+                            formatter={(value) => [`${value} Suara`, 'Jumlah Suara']}
+                            contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
+                          />
+                        </PieChart>
+                      </ResponsiveContainer>
+                      <div className="absolute flex flex-col items-center justify-center text-center pointer-events-none">
+                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block font-mono">Total Suara</span>
+                        <span className="text-2xl sm:text-3xl font-black text-slate-850 dark:text-white mt-0.5">{totalScopeVotes}</span>
+                      </div>
+                    </div>
 
-              // Fetch votes for this category
-              const activeCategoryVotes = votes.filter(v => v.category_id === selectedCatId);
-
-              return (
-                <div className="space-y-12">
-                  {classesWithCands.map(clsName => {
-                    const clsCandidates = grouped[clsName];
-                    const clsCandIds = clsCandidates.map(c => c.id);
-                    
-                    // 5. Calculate class total votes
-                    const classVotesCount = activeCategoryVotes.filter(v => clsCandIds.includes(v.candidate_id)).length;
-
-                    // Compute individual candidate stats and sort
-                    const scoredClsCandidates = clsCandidates.map(cand => {
-                      const cVoteCount = activeCategoryVotes.filter(v => v.candidate_id === cand.id).length;
-                      // 6. Percentage calculated per class, not per Dapil
-                      const pct = classVotesCount > 0 ? ((cVoteCount / classVotesCount) * 100).toFixed(2) : '0.00';
-                      return {
-                        ...cand,
-                        votesCount: cVoteCount,
-                        percentage: Number(pct)
-                      };
-                    }).sort((a, b) => b.votesCount - a.votesCount); // Sorted by highest vote
-
-                    return (
-                      <div key={clsName} className="space-y-4">
-                        {/* Class title section */}
-                        <div className="flex items-center gap-2 border-b border-slate-100 pb-2">
-                          <span className="w-2.5 h-5 bg-indigo-600 rounded"></span>
-                          <span className="text-sm font-black text-slate-800 uppercase tracking-tight">Perwakilan Kelas {clsName}</span>
-                          <span className="text-[10px] font-bold text-slate-500 bg-slate-100 border border-slate-200/50 px-2.5 py-0.5 rounded-full ml-auto">
-                            DPT Kelas Memilih: {classVotesCount} suara
-                          </span>
+                    {/* Custom Legend */}
+                    <div className="flex flex-wrap justify-center gap-2 sm:gap-3">
+                      {chartData.map((entry, index) => (
+                        <div key={index} className="flex items-center gap-1.5 bg-slate-50 dark:bg-[#252525]/30 px-3 py-1.5 rounded-full border border-slate-100 dark:border-slate-800 text-[10px] sm:text-xs text-slate-600 dark:text-slate-300 font-medium">
+                          <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: COLORS[index % COLORS.length] }} />
+                          <span>{entry.name}: <span className="font-bold">{entry.value}</span> ({entry.percentage}%)</span>
                         </div>
+                      ))}
+                    </div>
+                  </div>
 
-                        {/* Candidates score lists inside the class */}
-                        <div className="grid grid-cols-1 gap-4">
-                          {scoredClsCandidates.map((cand, index) => {
-                            const isWinner = index === 0 && cand.votesCount > 0;
+                  {/* Right: Informational Stats Board */}
+                  <div className="bg-white dark:bg-[#1a1a1a] p-6 sm:p-8 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-xs space-y-6">
+                    <div>
+                      <h3 className="text-base font-extrabold text-slate-850 dark:text-[#f5f5f5]">Informasi Pemilihan</h3>
+                      <p className="text-xs text-slate-400 mt-0.5">Parameter rekapitulasi data aktif</p>
+                    </div>
+
+                    <div className="space-y-4 pt-2">
+                      <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
+                        <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">Total Suara Masuk</span>
+                        <span className="text-sm font-black text-slate-850 dark:text-[#f5f5f5]">{totalScopeVotes} Suara</span>
+                      </div>
+
+                      <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
+                        <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">Total Pemilih</span>
+                        <span className="text-sm font-black text-slate-850 dark:text-[#f5f5f5]">{totalScopeVoters} DPT</span>
+                      </div>
+
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">Persentase Partisipasi</span>
+                        <span className="text-sm font-black text-indigo-600 dark:text-indigo-400 font-mono bg-indigo-50 dark:bg-indigo-950/30 px-2.5 py-1 rounded-lg">{scopeParticipation}%</span>
+                      </div>
+
+                      <div className="w-full bg-slate-100 dark:bg-slate-800 h-2 rounded-full overflow-hidden mt-1">
+                        <div className="bg-indigo-600 dark:bg-indigo-500 h-full rounded-full animate-pulse-slow" style={{ width: `${scopeParticipation}%` }}></div>
+                      </div>
+                    </div>
+
+                    <div className="bg-slate-50 dark:bg-[#252525]/30 p-4 rounded-xl border border-slate-100 dark:border-slate-800">
+                      <h4 className="text-xs font-bold text-slate-700 dark:text-[#d0d0d0] flex items-center gap-1.5">
+                        <Clock className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
+                        <span>Sistem Real-Time</span>
+                      </h4>
+                      <p className="text-[11px] text-slate-550 dark:text-slate-400 mt-1 leading-relaxed">
+                        Data diperbarui otomatis setiap 30 detik. Silakan tekan tombol segarkan di atas untuk memperbarui data seketika.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Bottom List of Candidates */}
+                <div className="bg-white dark:bg-[#1a1a1a] p-6 sm:p-8 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-xs space-y-6">
+                  <div>
+                    <h3 className="text-lg font-extrabold text-slate-800 dark:text-[#f5f5f5]">Daftar Perolehan Suara</h3>
+                    <p className="text-xs text-slate-400 mt-0.5">Kalkulasi perolehan suara setiap pasangan calon / perwakilan kelas</p>
+                  </div>
+
+                  {!isMpkType ? (
+                    // Regular list
+                    <div className="space-y-4">
+                      {chartData.map((cand, index) => {
+                        const placeColors = [
+                          'bg-amber-100 text-amber-800 border-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-900',
+                          'bg-slate-100 text-slate-800 border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700',
+                          'bg-orange-100 text-orange-850 border-orange-200 dark:bg-orange-950/40 dark:text-orange-300 dark:border-orange-900'
+                        ];
+                        const fallbackColor = 'bg-slate-50 text-slate-600 border-slate-100 dark:bg-[#252525]/30 dark:text-slate-400 dark:border-slate-800';
+
+                        return (
+                          <div key={cand.cand.id} className="space-y-3 p-4 rounded-xl border border-slate-150/40 dark:border-slate-800 bg-slate-50/20 dark:bg-transparent hover:bg-slate-50/50 dark:hover:bg-[#252525]/20 transition-colors">
+                            <div className="flex items-center justify-between gap-3 flex-wrap sm:flex-nowrap">
+                              <div className="flex items-center gap-3">
+                                <div className={`w-6 h-6 rounded-full border flex items-center justify-center font-mono font-bold text-xs ${index < 3 ? placeColors[index] : fallbackColor}`}>
+                                  {index + 1}
+                                </div>
+                                <div>
+                                  <span className="text-slate-400 dark:text-slate-500 text-[10px] font-mono font-black block">
+                                    NO URUT {String(cand.cand.number).padStart(2, '0')}
+                                  </span>
+                                  <span className="font-extrabold text-slate-850 dark:text-white">{cand.cand.chairman}</span>
+                                  {cand.cand.vice && <span className="text-xs text-slate-500 dark:text-slate-400 font-medium"> & {cand.cand.vice}</span>}
+                                </div>
+                              </div>
+
+                              <div className="text-right shrink-0">
+                                <span className="text-lg font-black text-slate-900 dark:text-white block">{cand.value} Suara</span>
+                                <span className="text-xs font-black text-indigo-600 dark:text-indigo-400 font-mono bg-indigo-50 dark:bg-indigo-950/30 px-2.5 py-0.5 rounded-full">{cand.percentage}%</span>
+                              </div>
+                            </div>
+
+                            <div className="w-full bg-slate-100 dark:bg-slate-800 h-3 rounded-full overflow-hidden">
+                              <div
+                                className="bg-indigo-600 dark:bg-indigo-500 h-full rounded-full transition-all duration-1000 ease-out shadow-inner"
+                                style={{ width: `${cand.percentage}%` }}
+                              ></div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    // MPK grouped by Class name
+                    (() => {
+                      const grouped: Record<string, Candidate[]> = {};
+                      filteredCandidates.forEach(cand => {
+                        const cls = cand.class_name || cand.candidate_class || 'Lainnya';
+                        if (!grouped[cls]) {
+                          grouped[cls] = [];
+                        }
+                        grouped[cls].push(cand);
+                      });
+
+                      const classesWithCands = Object.keys(grouped).sort();
+
+                      return (
+                        <div className="space-y-12 animate-fade-in">
+                          {classesWithCands.map(clsName => {
+                            const clsCandidates = grouped[clsName];
+                            const clsCandIds = clsCandidates.map(c => c.id);
+                            const classVotesCount = activeCategoryVotes.filter(v => clsCandIds.includes(v.candidate_id)).length;
+
+                            const scoredClsCandidates = clsCandidates.map(cand => {
+                              const cVoteCount = activeCategoryVotes.filter(v => v.candidate_id === cand.id).length;
+                              const pct = classVotesCount > 0 ? ((cVoteCount / classVotesCount) * 100).toFixed(2) : '0.00';
+                              return {
+                                ...cand,
+                                votesCount: cVoteCount,
+                                percentage: pct,
+                              };
+                            }).sort((a, b) => b.votesCount - a.votesCount);
+
                             return (
-                              <div key={cand.id} className={`p-4 rounded-xl border transition-all ${
-                                isWinner 
-                                  ? 'border-emerald-100 bg-emerald-50/20' 
-                                  : 'border-slate-50 bg-slate-50/20'
-                              }`}>
-                                <div className="flex items-center justify-between gap-3 flex-wrap sm:flex-nowrap">
-                                  <div className="flex items-center gap-2.5">
-                                    <div className={`w-5 h-5 font-mono text-[10px] font-bold rounded-lg flex items-center justify-center ${
-                                      isWinner ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-200 text-slate-650'
-                                    }`}>
-                                      {index + 1}
-                                    </div>
-                                    <div>
-                                      <span className="block text-[9px] font-black text-slate-400 font-mono">
-                                        KANDIDAT {String(cand.number).padStart(2, '0')}
-                                      </span>
-                                      <span className="font-extrabold text-slate-800 text-sm leading-tight block">{cand.chairman}</span>
-                                    </div>
-                                  </div>
-
-                                  <div className="text-right shrink-0">
-                                    <span className="text-sm font-black text-slate-900 block leading-tight">{cand.votesCount} Suara</span>
-                                    <span className={`text-[11px] font-black font-mono px-2 py-0.5 rounded-lg inline-block mt-0.5 ${
-                                      isWinner ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-indigo-600'
-                                    }`}>
-                                      {cand.percentage}%
-                                    </span>
-                                  </div>
+                              <div key={clsName} className="space-y-4">
+                                <div className="flex items-center gap-2 border-b border-slate-100 dark:border-slate-800 pb-2">
+                                  <span className="w-2.5 h-5 bg-indigo-600 dark:bg-indigo-500 rounded"></span>
+                                  <span className="text-sm font-black text-slate-800 dark:text-[#e0e0e0] uppercase tracking-tight">Perwakilan Kelas {clsName}</span>
+                                  <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-850 border border-slate-200/50 dark:border-slate-800 px-2.5 py-0.5 rounded-full ml-auto">
+                                    DPT Kelas Memilih: {classVotesCount} suara
+                                  </span>
                                 </div>
 
-                                {/* Progress Indicator */}
-                                <div className="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden mt-3">
-                                  <div 
-                                    className={`h-full rounded-full transition-all duration-1000 ${
-                                      isWinner ? 'bg-emerald-500' : 'bg-indigo-600/80'
-                                    }`}
-                                    style={{ width: `${cand.percentage}%` }}
-                                  ></div>
+                                <div className="grid grid-cols-1 gap-4">
+                                  {scoredClsCandidates.map((cand, index) => {
+                                    const isWinner = index === 0 && cand.votesCount > 0;
+                                    return (
+                                      <div key={cand.id} className={`p-4 rounded-xl border transition-all ${
+                                        isWinner
+                                          ? 'border-emerald-100 dark:border-emerald-950 bg-emerald-50/20 dark:bg-emerald-950/10'
+                                          : 'border-slate-50 dark:border-slate-850 bg-slate-50/20 dark:bg-transparent'
+                                      }`}>
+                                        <div className="flex items-center justify-between gap-3 flex-wrap sm:flex-nowrap">
+                                          <div className="flex items-center gap-2.5">
+                                            <div className={`w-5 h-5 font-mono text-[10px] font-bold rounded-lg flex items-center justify-center ${
+                                              isWinner ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-400' : 'bg-slate-200 text-slate-650 dark:bg-slate-800 dark:text-slate-400'
+                                            }`}>
+                                              {index + 1}
+                                            </div>
+                                            <div>
+                                              <span className="block text-[9px] font-black text-slate-400 dark:text-slate-500 font-mono">
+                                                KANDIDAT {String(cand.number).padStart(2, '0')}
+                                              </span>
+                                              <span className="font-extrabold text-slate-800 dark:text-white text-sm leading-tight block">{cand.chairman}</span>
+                                            </div>
+                                          </div>
+
+                                          <div className="text-right shrink-0">
+                                            <span className="text-sm font-black text-slate-900 dark:text-white block leading-tight">{cand.votesCount} Suara</span>
+                                            <span className={`text-[11px] font-black font-mono px-2 py-0.5 rounded-lg inline-block mt-0.5 ${
+                                              isWinner ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400' : 'bg-slate-100 dark:bg-[#252525]/30 text-indigo-600 dark:text-indigo-400'
+                                            }`}>
+                                              {cand.percentage}%
+                                            </span>
+                                          </div>
+                                        </div>
+
+                                        <div className="w-full bg-slate-100 dark:bg-slate-800 h-2.5 rounded-full overflow-hidden mt-3">
+                                          <div
+                                            className={`h-full rounded-full transition-all duration-1000 ${
+                                              isWinner ? 'bg-emerald-500' : 'bg-indigo-600/80 dark:bg-indigo-500/80'
+                                            }`}
+                                            style={{ width: `${cand.percentage}%` }}
+                                          ></div>
+                                        </div>
+                                      </div>
+                                    );
+                                  })}
                                 </div>
                               </div>
                             );
                           })}
                         </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              );
-            })()
-          )}
-        </div>
-
-        {/* Right Split Column Panel: Class Attendance & Contribution metrics */}
-        <div className="space-y-6 self-start">
-          {/* 1. Kehadiran Kelas (Partisipasi) */}
-          <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm space-y-6">
-            <div>
-              <h3 className="text-lg font-extrabold text-slate-850">Kehadiran Kelas (Partisipasi)</h3>
-              <p className="text-xs text-slate-400">Persentase tingkat partisipasi kehadiran per kelas</p>
-            </div>
-
-            <div className="overflow-y-auto max-h-[300px] pr-2 space-y-4">
-              {!stats || stats.classParticipation.length === 0 ? (
-                <p className="text-center py-6 text-xs text-slate-400">Belum ada pemilih tercatat.</p>
-              ) : (
-                stats.classParticipation.map((item) => {
-                  const pct = Math.round(item.percentage);
-                  return (
-                    <div key={item.className} className="space-y-1">
-                      <div className="flex justify-between items-center text-xs">
-                        <span className="font-bold text-slate-700">{item.className}</span>
-                        <span className="font-mono text-slate-500">
-                          {item.completedCount}/{item.totalCount} <span className="font-bold text-slate-700">({pct}%)</span>
-                        </span>
-                      </div>
-                      <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
-                        <div 
-                          className={`h-full rounded-full transition-all duration-700 ${
-                            pct >= 90 ? 'bg-emerald-500' : pct >= 70 ? 'bg-indigo-500' : pct >= 50 ? 'bg-amber-500' : 'bg-rose-500'
-                          }`}
-                          style={{ width: `${pct}%` }}
-                        ></div>
-                      </div>
-                    </div>
-                  );
-                })
-              )}
-            </div>
-
-            <div className="bg-slate-50 p-4 rounded-xl space-y-2">
-              <h4 className="text-xs font-bold text-slate-850 flex items-center gap-1.5">
-                <Clock className="w-3.5 h-3.5 text-indigo-600" />
-                <span>Indikator Warna Partisipasi</span>
-              </h4>
-              <div className="grid grid-cols-2 gap-2 text-[10px] text-slate-550 pt-1">
-                <div className="flex items-center gap-1">
-                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 inline-block"></span>
-                  <span>Luar Biasa (&gt;=90%)</span>
-                </div>
-                <div className="flex items-center gap-1">
-                  <span className="w-2.5 h-2.5 rounded-full bg-indigo-500 inline-block"></span>
-                  <span>Optimal (&gt;=70%)</span>
-                </div>
-                <div className="flex items-center gap-1">
-                  <span className="w-2.5 h-2.5 rounded-full bg-amber-500 inline-block"></span>
-                  <span>Sedang (&gt;=50%)</span>
-                </div>
-                <div className="flex items-center gap-1">
-                  <span className="w-2.5 h-2.5 rounded-full bg-rose-500 inline-block"></span>
-                  <span>Kritis (&lt;50%)</span>
+                      );
+                    })()
+                  )}
                 </div>
               </div>
-            </div>
-          </div>
-
-          {/* 2. Tingkat Kontribusi Suara Berdasarkan Kelas */}
-          <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm space-y-6">
-            <div>
-              <h3 className="text-lg font-extrabold text-slate-850">Tingkat Kontribusi Suara Berdasarkan Kelas</h3>
-              <p className="text-xs text-slate-400">Porsi sumbangan suara selesai masing-masing kelas</p>
-            </div>
-
-            <div className="overflow-y-auto max-h-[300px] pr-2 space-y-4">
-              {!stats || stats.classContribution.length === 0 ? (
-                <p className="text-center py-6 text-xs text-slate-400">Belum ada pemilih selesai tercatat.</p>
-              ) : (
-                stats.classContribution.map((item) => {
-                  const pct = Math.round(item.percentage);
-                  return (
-                    <div key={item.className} className="space-y-1">
-                      <div className="flex justify-between items-center text-xs">
-                        <span className="font-bold text-slate-700">{item.className}</span>
-                        <span className="font-mono text-slate-500">
-                          {item.completedCount} Suara <span className="font-bold text-indigo-600">({pct}%)</span>
-                        </span>
-                      </div>
-                      <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
-                        <div 
-                          className="h-full bg-indigo-600 rounded-full transition-all duration-700"
-                          style={{ width: `${item.percentage}%` }}
-                        ></div>
-                      </div>
-                    </div>
-                  );
-                })
-              )}
-            </div>
-          </div>
+            );
+          })()}
         </div>
-      </div>
+      )}
     </div>
   );
 }

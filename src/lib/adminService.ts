@@ -405,7 +405,7 @@ export const createBooth = async (
     }
 
     const codeConflict = profiles.find(
-      (p: any) => p.role === 'vote' && !p.is_deleted && p.booth_code?.toUpperCase() === boothCode.toUpperCase()
+      (p: any) => (p.role === 'vote' || p.role === 'bilik') && !p.is_deleted && p.booth_code?.toUpperCase() === boothCode.toUpperCase()
     );
     if (codeConflict) {
       return { success: false, error: `Kode Bilik "${boothCode}" sudah digunakan.` };
@@ -419,7 +419,7 @@ export const createBooth = async (
       id: newUserId,
       full_name: name,
       email: email,
-      role: 'vote',
+      role: 'bilik',
       account_status: 'dikonfirmasi',
       voting_status: 'offline',
       class: keterangan,
@@ -459,7 +459,7 @@ export const createBooth = async (
           id: authData.user.id,
           full_name: name,
           email: email,
-          role: 'vote',
+          role: 'bilik',
           account_status: 'dikonfirmasi',
           voting_status: 'offline',
           class: keterangan,
@@ -497,7 +497,7 @@ export const updateBooth = async (
       const profiles = JSON.parse(localProfilesStr);
       
       const codeConflict = profiles.find(
-        (p: any) => p.id !== boothId && p.role === 'vote' && !p.is_deleted && p.booth_code?.toUpperCase() === boothCode.toUpperCase()
+        (p: any) => p.id !== boothId && (p.role === 'vote' || p.role === 'bilik') && !p.is_deleted && p.booth_code?.toUpperCase() === boothCode.toUpperCase()
       );
       if (codeConflict) {
         throw new Error(`Kode Bilik "${boothCode}" sudah digunakan.`);
@@ -521,7 +521,7 @@ export const updateBooth = async (
     const { data: existingCode, error: checkError } = await supabase
       .from('profiles')
       .select('*')
-      .eq('role', 'vote')
+      .in('role', ['vote', 'bilik'])
       .eq('is_deleted', false)
       .eq('booth_code', boothCode)
       .neq('id', boothId)
@@ -659,5 +659,104 @@ export const toggleBoothActivation = async (
   } catch (err) {
     console.error(err);
     return false;
+  }
+};
+
+// CREATE ADMIN OR CREATOR
+export const createAdminOrCreator = async (
+  adminEmail: string,
+  name: string,
+  email: string,
+  password: string,
+  role: 'admin' | 'creator'
+): Promise<{ success: boolean; error?: string }> => {
+  // Validate unique email in profiles first
+  try {
+    const existing = await supabase.from('profiles').select('*').eq('email', email).maybeSingle();
+    if (existing && existing.data) {
+      return { success: false, error: 'Email login sudah digunakan.' };
+    }
+  } catch (e) {}
+
+  const uniqueCardId = 'adm-' + Math.random().toString(36).substring(2, 11);
+
+  if (!isSupabaseConfigured) {
+    const localProfilesStr = localStorage.getItem('mock_profiles') || '[]';
+    const profiles = JSON.parse(localProfilesStr);
+    
+    const localUsersStr = localStorage.getItem('mock_users') || '[]';
+    const users = JSON.parse(localUsersStr);
+
+    if (users.find((u: any) => u.email === email)) {
+      return { success: false, error: 'Email login sudah digunakan.' };
+    }
+
+    const newUserId = 'usr-' + Math.random().toString(36).substring(2, 11);
+    users.push({ id: newUserId, email, password });
+    localStorage.setItem('mock_users', JSON.stringify(users));
+
+    const newProfile: Profile = {
+      id: newUserId,
+      full_name: name,
+      email: email,
+      role: role,
+      account_status: 'dikonfirmasi',
+      voting_status: 'offline',
+      class: 'Administrator',
+      card_id: uniqueCardId,
+      created_at: new Date().toISOString(),
+      is_deleted: false,
+    };
+
+    profiles.push(newProfile);
+    localStorage.setItem('mock_profiles', JSON.stringify(profiles));
+
+    await logAdminAction(adminEmail, `Membuat ${role === 'creator' ? 'Creator' : 'Admin'} baru (Mock)`, `${name} (${email})`);
+    return { success: true };
+  }
+
+  try {
+    const tempClient = createClient(
+      import.meta.env.VITE_SUPABASE_URL || '',
+      import.meta.env.VITE_SUPABASE_ANON_KEY || '',
+      { auth: { persistSession: false } }
+    );
+
+    const { data: authData, error: authError } = await tempClient.auth.signUp({
+      email,
+      password,
+    });
+
+    if (authError) {
+      return { success: false, error: authError.message };
+    }
+
+    if (authData.user) {
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .upsert({
+          id: authData.user.id,
+          full_name: name,
+          email: email,
+          role: role,
+          account_status: 'dikonfirmasi',
+          voting_status: 'offline',
+          class: 'Administrator',
+          card_id: uniqueCardId,
+          is_deleted: false,
+        });
+
+      if (profileError) {
+        return { success: false, error: profileError.message };
+      }
+
+      await logAdminAction(adminEmail, `Membuat ${role === 'creator' ? 'Creator' : 'Admin'} baru`, `${name} (${email})`);
+      return { success: true };
+    }
+
+    return { success: false, error: `Gagal membuat akun ${role === 'creator' ? 'Creator' : 'Admin'}.` };
+  } catch (err: any) {
+    console.error(err);
+    return { success: false, error: err.message || 'Terjadi kesalahan sistem.' };
   }
 };

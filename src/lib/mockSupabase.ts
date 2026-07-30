@@ -470,6 +470,28 @@ export const mockSupabase = {
         };
       }
     };
+  },
+
+  channel(name: string) {
+    const channelInstance = {
+      on(event: string, filter: any, callback: (...args: any[]) => void) {
+        return channelInstance;
+      },
+      subscribe(callback?: (status: string, err?: any) => void) {
+        if (callback) {
+          setTimeout(() => callback('SUBSCRIBED'), 0);
+        }
+        return channelInstance;
+      },
+      unsubscribe() {
+        return Promise.resolve();
+      }
+    };
+    return channelInstance;
+  },
+
+  removeChannel(channel: any) {
+    return Promise.resolve();
   }
 };
 

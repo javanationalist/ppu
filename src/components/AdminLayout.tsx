@@ -46,6 +46,7 @@ export const AdminLayout = () => {
         { to: '/admin/pengaturan', icon: Settings, label: 'Kelola Kategori', key: 'kelola_kategori' },
         { to: '/admin/kandidat', icon: Layers, label: 'Kelola Kandidat', key: 'kelola_kandidat' },
         { to: '/admin/pemilih', icon: Users, label: 'Kelola Pemilih', key: 'kelola_pemilih' },
+        { to: '/admin/admins', icon: ShieldCheck, label: 'Kelola Admin', key: 'kelola_admin' },
         ...(voteMode === 'booth' ? [{ to: '/admin/bilik', icon: Monitor, label: 'Kelola Bilik Suara' }] : []),
         { to: '/admin/helpdesk', icon: LifeBuoy, label: 'Kelola Helpdesk', key: 'kelola_helpdesk' },
         { to: '/admin/hasil', icon: BarChart, label: 'Hasil Voting', key: 'hasil_voting' },

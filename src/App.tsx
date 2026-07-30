@@ -36,6 +36,7 @@ import KelolaKategori from './pages/admin/KelolaKategori';
 import PengaturanVoting from './pages/admin/PengaturanVoting';
 import ModeVote from './pages/admin/ModeVote';
 import KelolaBilik from './pages/admin/KelolaBilik';
+import KelolaAdmin from './pages/admin/KelolaAdmin';
 import BilikPage from './pages/Bilik';
 import HasilAdmin from './pages/admin/HasilAdmin';
 import ExportData from './pages/admin/ExportData';
@@ -118,6 +119,7 @@ function AppContent() {
           <Route path="konfirmasi" element={<KonfirmasiPemilih />} />
           <Route path="scanner-pro" element={<ScannerPro />} />
           <Route path="pemilih" element={<KelolaPemilih />} />
+          <Route path="admins" element={<KelolaAdmin />} />
           <Route path="wafo" element={<WafoManager />} />
           <Route path="countdown" element={<CountdownManager />} />
           <Route path="helpdesk" element={<HelpdeskManager />} />

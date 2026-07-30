@@ -35,7 +35,12 @@ export const ProtectedRoute = ({
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
-  const hasAccess = !allowedRoles || allowedRoles.includes(profile.role) || (profile.role === 'creator' && allowedRoles.includes('admin'));
+  const hasAccess = 
+    !allowedRoles || 
+    allowedRoles.includes(profile.role) || 
+    (profile.role === 'creator' && allowedRoles.includes('admin')) ||
+    (profile.role === 'bilik' && allowedRoles.includes('vote')) ||
+    (profile.role === 'vote' && allowedRoles.includes('bilik'));
 
   if (!hasAccess) {
     // Redirect to their respective dashboard if they don't have access

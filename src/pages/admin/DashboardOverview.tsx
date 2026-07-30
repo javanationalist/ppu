@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
-  Users, CheckCircle2, Award, ClipboardCheck, 
+  Users, CheckCircle2, Award, ClipboardCheck, Monitor,
   ChevronRight, ArrowUpRight, LifeBuoy, Database, History,
   Settings, Layers, FileText, ShieldAlert, BarChart3, RefreshCw, Lock, Unlock, ShieldCheck, Clock
 } from 'lucide-react';
@@ -10,6 +10,7 @@ import { getCategories, getAllVotes } from '../../lib/votingService';
 import { getHelpdeskButtons } from '../../lib/helpdesk';
 import { getAdminButtonSettings, AdminButtonSettings } from '../../lib/adminButtonService';
 import { Profile, Category, Vote } from '../../types';
+import BackToHomeButton from '../../components/BackToHomeButton';
 
 export default function DashboardOverview() {
   const navigate = useNavigate();
@@ -70,6 +71,10 @@ export default function DashboardOverview() {
   }
 
   // Calculate metrics
+  const totalUsersCount = profiles.filter(p => p.role === 'user' && !p.is_deleted).length;
+  const totalAdminsCount = profiles.filter(p => (p.role === 'admin' || p.role === 'creator') && !p.is_deleted).length;
+  const totalBilikCount = profiles.filter(p => (p.role === 'bilik' || p.role === 'vote') && !p.is_deleted).length;
+
   const voters = profiles.filter(p => p.role === 'user' && !p.is_deleted);
   const totalVoters = voters.length;
   const verifiedVoters = voters.filter(p => p.account_status === 'dikonfirmasi').length;
@@ -85,7 +90,12 @@ export default function DashboardOverview() {
   }, {} as Record<string, number>);
 
   return (
-    <div className="p-4 sm:p-8 max-w-7xl mx-auto space-y-8">
+    <div className="p-4 sm:p-8 max-w-7xl mx-auto space-y-6">
+      {/* Top Header Navigation */}
+      <div className="flex justify-start">
+        <BackToHomeButton />
+      </div>
+
       {/* Title */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
@@ -99,56 +109,59 @@ export default function DashboardOverview() {
       </div>
 
       {/* Main Metrics Card Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {/* Metric 1 */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
+        {/* Metric 1 - Total Users */}
         <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm hover:shadow-md transition-all group duration-300 flex justify-between items-start">
           <div className="space-y-2">
-            <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider block">Total DPT (Voters)</span>
-            <h2 className="text-4xl font-extrabold text-slate-800">{totalVoters}</h2>
-            <p className="text-xs text-slate-500">Siswa terdaftar dalam sistem</p>
+            <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider block">Total Users</span>
+            <h2 className="text-4xl font-extrabold text-slate-800">{totalUsersCount}</h2>
+            <p className="text-xs text-slate-500">Siswa terdaftar (DPT)</p>
           </div>
           <div className="p-3 bg-indigo-50 rounded-xl text-indigo-600 group-hover:bg-indigo-600 group-hover:text-white transition-colors duration-300">
             <Users className="w-6 h-6" />
           </div>
         </div>
 
-        {/* Metric 2 */}
+        {/* Metric 2 - Total Admins */}
         <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm hover:shadow-md transition-all group duration-300 flex justify-between items-start">
           <div className="space-y-2">
-            <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider block">Pemilih Terverifikasi</span>
-            <div className="flex items-baseline gap-2">
-              <h2 className="text-4xl font-extrabold text-slate-800">{verifiedVoters}</h2>
-              <span className="text-xs text-emerald-600 font-bold">({verificationPercentage}%)</span>
-            </div>
-            {/* Simple progress bar */}
-            <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
-              <div 
-                className="bg-emerald-500 h-full rounded-full transition-all duration-500" 
-                style={{ width: `${verificationPercentage}%` }}
-              ></div>
-            </div>
+            <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider block">Total Admins</span>
+            <h2 className="text-4xl font-extrabold text-slate-800">{totalAdminsCount}</h2>
+            <p className="text-xs text-slate-500">Admin & Creator</p>
           </div>
           <div className="p-3 bg-emerald-50 rounded-xl text-emerald-600 group-hover:bg-emerald-600 group-hover:text-white transition-colors duration-300">
-            <CheckCircle2 className="w-6 h-6" />
+            <ShieldCheck className="w-6 h-6" />
           </div>
         </div>
 
-        {/* Metric 3 */}
+        {/* Metric 3 - Total Bilik */}
         <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm hover:shadow-md transition-all group duration-300 flex justify-between items-start">
           <div className="space-y-2">
-            <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider block">Kertas Suara Masuk</span>
-            <h2 className="text-4xl font-extrabold text-slate-800">{votes.length}</h2>
-            <p className="text-xs text-indigo-600 font-medium">Dari {categories.length} Kategori Utama</p>
+            <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider block">Total Bilik</span>
+            <h2 className="text-4xl font-extrabold text-slate-800">{totalBilikCount}</h2>
+            <p className="text-xs text-slate-500">Bilik suara terdaftar</p>
           </div>
           <div className="p-3 bg-amber-50 rounded-xl text-amber-600 group-hover:bg-amber-600 group-hover:text-white transition-colors duration-300">
+            <Monitor className="w-6 h-6" />
+          </div>
+        </div>
+
+        {/* Metric 4 - Kertas Suara Masuk */}
+        <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm hover:shadow-md transition-all group duration-300 flex justify-between items-start">
+          <div className="space-y-2">
+            <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider block">Suara Masuk</span>
+            <h2 className="text-4xl font-extrabold text-slate-800">{votes.length}</h2>
+            <p className="text-xs text-indigo-600 font-medium">{categories.length} Kategori Utama</p>
+          </div>
+          <div className="p-3 bg-sky-50 rounded-xl text-sky-600 group-hover:bg-sky-600 group-hover:text-white transition-colors duration-300">
             <ClipboardCheck className="w-6 h-6" />
           </div>
         </div>
 
-        {/* Metric 4 */}
+        {/* Metric 5 - Partisipasi (Selesai) */}
         <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm hover:shadow-md transition-all group duration-300 flex justify-between items-start">
-          <div className="space-y-2">
-            <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider block">Partisipasi (Selesai)</span>
+          <div className="space-y-2 w-full">
+            <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider block">Partisipasi</span>
             <div className="flex items-baseline gap-2">
               <h2 className="text-4xl font-extrabold text-slate-800">{votedVoters}</h2>
               <span className="text-xs text-indigo-600 font-bold">({participationPercentage}%)</span>
@@ -161,7 +174,7 @@ export default function DashboardOverview() {
               ></div>
             </div>
           </div>
-          <div className="p-3 bg-purple-50 rounded-xl text-purple-600 group-hover:bg-purple-600 group-hover:text-white transition-colors duration-300">
+          <div className="p-3 bg-purple-50 rounded-xl text-purple-600 group-hover:bg-purple-600 group-hover:text-white transition-colors duration-300 shrink-0">
             <Award className="w-6 h-6" />
           </div>
         </div>

@@ -206,6 +206,20 @@ export default function ScanQrTab({
     return () => clearInterval(timer);
   }, [currentState]);
 
+  // Reset currentState to 'ready' if voting status is reset/not completed, and sync state changes
+  useEffect(() => {
+    if (!isAllCompleted) {
+      localStorage.removeItem('ppu_active_voting_session_id');
+      if (currentState === 'success') {
+        setCurrentState('ready');
+        if (onStateChange) onStateChange('ready');
+      }
+    } else if (isAllCompleted && currentState !== 'success') {
+      setCurrentState('success');
+      if (onStateChange) onStateChange('success');
+    }
+  }, [isAllCompleted, currentState, onStateChange]);
+
   // Initialize html5-qrcode scanner for STATE 1: ready
   useEffect(() => {
     if (voteMode !== 'booth' || currentState !== 'ready' || isAllCompleted) return;
@@ -366,14 +380,7 @@ export default function ScanQrTab({
     }
   };
 
-  const handleManualReset = () => {
-    setCurrentState('ready');
-    if (onStateChange) onStateChange('ready');
-    setScannedToken(null);
-    setTargetBooth(null);
-    setManualToken('');
-    setRestartKey(prev => prev + 1);
-  };
+
 
   if (loading) {
     return (
@@ -404,16 +411,6 @@ export default function ScanQrTab({
               Hak suara Anda telah sukses direkam oleh sistem.
             </p>
           </div>
-          
-          {!isAllCompleted && (
-            <button
-              type="button"
-              onClick={handleManualReset}
-              className="w-full py-3 bg-indigo-650 hover:bg-indigo-700 dark:bg-sky-500 dark:hover:bg-sky-600 dark:text-slate-950 text-white rounded-xl text-xs font-bold transition-all shadow-md cursor-pointer"
-            >
-              Kembali ke Halaman Utama
-            </button>
-          )}
         </div>
       );
     }

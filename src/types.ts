@@ -1,4 +1,4 @@
-export type Role = 'user' | 'admin' | 'creator' | 'vote';
+export type Role = 'user' | 'admin' | 'creator' | 'vote' | 'bilik';
 export type AccountStatus = 'belum_dikonfirmasi' | 'dikonfirmasi';
 export type VotingStatus = 'belum' | 'sudah' | 'waiting' | 'connected' | 'voting' | 'offline';
 

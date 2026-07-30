@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, Outlet, useLocation } from 'react-router-dom';
-import { Menu, X } from 'lucide-react';
+import { Menu, X, Sun, Moon } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
 import { supabase } from '../lib/supabase';
 import WafoSlider from './WafoSlider';
@@ -132,9 +132,11 @@ export default function PortalLayout() {
                 aria-label="Toggle theme"
                 title={theme === 'dark' ? 'Aktifkan Mode Terang' : 'Aktifkan Mode Gelap'}
               >
-                <span className="css-icon-container" aria-hidden="true">
-                  <span className={theme === 'dark' ? 'css-icon-moon' : 'css-icon-sun'} />
-                </span>
+                {theme === 'dark' ? (
+                  <Moon className="w-5 h-5 transition-transform hover:rotate-12 duration-200" />
+                ) : (
+                  <Sun className="w-5 h-5 transition-transform hover:rotate-45 duration-200" />
+                )}
               </button>
               
               <button

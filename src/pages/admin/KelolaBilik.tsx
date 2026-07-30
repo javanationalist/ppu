@@ -76,7 +76,7 @@ export default function KelolaBilik() {
     if (isManualRefresh) setRefreshing(true);
     try {
       const data = await getAllProfiles();
-      const boothProfiles = data.filter(p => p.role === 'vote');
+      const boothProfiles = data.filter(p => p.role === 'vote' || p.role === 'bilik');
       setBooths(boothProfiles);
     } catch (err) {
       console.error('Failed to load booths:', err);

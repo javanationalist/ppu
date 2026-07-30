@@ -4,7 +4,7 @@ import { QRCodeCanvas } from 'qrcode.react';
 import * as htmlToImage from 'html-to-image';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
-import { LogOut, Download, MessageSquare, LifeBuoy, Edit3, X, Info, CalendarDays, FileText, AlertCircle, Megaphone, ChevronRight, Clock, MapPin, Home, CreditCard, QrCode, User, Grid, Menu } from 'lucide-react';
+import { LogOut, Download, MessageSquare, LifeBuoy, Edit3, X, Info, CalendarDays, FileText, AlertCircle, Megaphone, ChevronRight, Clock, MapPin, Home, CreditCard, QrCode, User, Grid, Menu, Sun, Moon } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useNavigate, Link } from 'react-router-dom';
 import { getHelpdeskButtons } from '../../lib/helpdesk';
@@ -51,6 +51,27 @@ export default function UserDashboard() {
   const [infoLoading, setInfoLoading] = useState(true);
   const [isVoting, setIsVoting] = useState(false);
 
+  // Popover States and Refs
+  const [isStatusPopoverOpen, setIsStatusPopoverOpen] = useState(false);
+  const [isLogoutPopoverOpen, setIsLogoutPopoverOpen] = useState(false);
+  const statusRef = useRef<HTMLDivElement>(null);
+  const logoutRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (statusRef.current && !statusRef.current.contains(event.target as Node)) {
+        setIsStatusPopoverOpen(false);
+      }
+      if (logoutRef.current && !logoutRef.current.contains(event.target as Node)) {
+        setIsLogoutPopoverOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+
   useEffect(() => {
     const persistedId = localStorage.getItem('ppu_active_voting_session_id');
     if (persistedId) {
@@ -83,6 +104,8 @@ export default function UserDashboard() {
     if (activeTab === 'informasi') {
       setInfoLoading(true);
       fetchAnnouncements();
+    } else if (activeTab === 'scan') {
+      fetchHelpdeskAndSettings(true);
     }
   }, [activeTab]);
 
@@ -260,13 +283,53 @@ export default function UserDashboard() {
   useEffect(() => {
     if (!profile?.id) return;
 
+    // Realtime channel for user's profile changes
+    const profileChannel = supabase
+      .channel(`profile_dashboard_changes_${profile.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'profiles',
+          filter: `id=eq.${profile.id}`,
+        },
+        () => {
+          console.log('Realtime profile updated inside Dashboard, refreshing status...');
+          fetchHelpdeskAndSettings(true);
+        }
+      )
+      .subscribe();
+
+    // Realtime channel for user's votes changes
+    const votesChannel = supabase
+      .channel(`votes_dashboard_changes_${profile.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'votes',
+          filter: `voter_id=eq.${profile.id}`,
+        },
+        () => {
+          console.log('Realtime votes updated inside Dashboard, refreshing status...');
+          fetchHelpdeskAndSettings(true);
+        }
+      )
+      .subscribe();
+
     const interval = setInterval(() => {
       if (document.visibilityState === 'visible') {
         fetchHelpdeskAndSettings(true);
       }
     }, 3000);
 
-    return () => clearInterval(interval);
+    return () => {
+      profileChannel.unsubscribe();
+      votesChannel.unsubscribe();
+      clearInterval(interval);
+    };
   }, [profile?.id]);
 
   const handleSaveProfile = async (e: React.FormEvent) => {
@@ -332,45 +395,113 @@ export default function UserDashboard() {
   return (
     <div className="h-screen bg-slate-50 dark:bg-[#1a1a1a] font-sans text-slate-900 dark:text-[#f5f5f5] flex flex-col overflow-hidden transition-colors duration-300">
       {/* Top Navigation */}
-      <nav className="h-16 bg-white dark:bg-[#1a1a1a] border-b border-slate-200 dark:border-[#2a2a2a] px-4 sm:px-8 flex items-center justify-between shadow-sm z-10 shrink-0 transition-colors duration-300 animate-fade-in">
-        {/* Left: Logo PPU Digital */}
+      <nav className="h-16 bg-white dark:bg-[#1a1a1a] border-b border-slate-200 dark:border-[#2a2a2a] px-4 sm:px-8 flex items-center justify-between shadow-sm z-15 shrink-0 transition-colors duration-300 animate-fade-in">
+        {/* Left: Logo PPU */}
+        <div className="flex items-center">
+          <img 
+            src={isDark ? "https://bfuuuzmcrkfjblancewz.supabase.co/storage/v1/object/public/official%20logo/PPU%20WHITE.webp" : "https://bfuuuzmcrkfjblancewz.supabase.co/storage/v1/object/public/official%20logo/PPU.webp"} 
+            alt="PPU Logo" 
+            className="h-9 sm:h-11 w-auto object-contain transition-all" 
+          />
+        </div>
+
+        {/* Right: Confirmation status, Toggle theme, and Logout dropdown */}
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 bg-white dark:bg-[#2a2a2a] border border-slate-200 dark:border-[#333333] rounded-sm overflow-hidden flex items-center justify-center shadow-sm shrink-0">
-            <img 
-              src={isDark ? "https://bfuuuzmcrkfjblancewz.supabase.co/storage/v1/object/public/official%20logo/PPU%20WHITE.webp" : "https://bfuuuzmcrkfjblancewz.supabase.co/storage/v1/object/public/official%20logo/PPU.webp"} 
-              alt="PPU Logo" 
-              className="w-full h-full object-contain p-0.5" 
-            />
-          </div>
-          <span className="font-bold text-lg tracking-tight text-slate-800 dark:text-slate-150 transition-colors">
-            PPU Digital
-          </span>
-        </div>
-
-        {/* Center: Badge Status Konfirmasi Akun */}
-        <div className="flex items-center">
-          {profile.account_status === 'dikonfirmasi' ? (
-            <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold bg-emerald-50 dark:bg-emerald-950/45 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-900/30 shadow-sm transition-all duration-200">
-              <span className="text-xs">🟢</span> Profil Terkonfirmasi
-            </div>
-          ) : (
-            <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold bg-amber-50 dark:bg-amber-950/45 text-amber-750 dark:text-amber-400 border border-amber-200 dark:border-amber-900/30 shadow-sm transition-all duration-200">
-              <span className="text-xs animate-pulse">🟡</span> Menunggu Konfirmasi
-            </div>
-          )}
-        </div>
-
-        {/* Right: Tombol Logout */}
-        <div className="flex items-center">
-          <button 
-            onClick={isVoting ? undefined : handleLogout} 
-            disabled={isVoting}
-            className={`px-3 py-1.5 sm:px-4 sm:py-2 bg-red-50 hover:bg-red-100 dark:bg-red-950/20 dark:hover:bg-red-950/40 text-red-650 dark:text-red-400 hover:text-red-750 dark:hover:text-red-300 border border-red-200 dark:border-red-900/30 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all duration-200 ${isVoting ? 'opacity-35 cursor-not-allowed' : 'cursor-pointer'}`} 
-            title={isVoting ? 'Tidak dapat logout saat sedang memilih' : 'Logout'}
+          {/* Status Konfirmasi */}
+          <div 
+            ref={statusRef} 
+            className="relative"
+            onMouseEnter={() => setIsStatusPopoverOpen(true)}
+            onMouseLeave={() => setIsStatusPopoverOpen(false)}
           >
-            <LogOut className="w-4 h-4" />
-            <span className="hidden sm:inline">Keluar</span>
+            <button
+              type="button"
+              onClick={() => setIsStatusPopoverOpen(!isStatusPopoverOpen)}
+              className="w-8 h-8 sm:w-10 sm:h-10 flex items-center justify-center bg-slate-50 hover:bg-slate-100 dark:bg-[#252525]/45 dark:hover:bg-[#303030]/60 border border-slate-200 dark:border-slate-800 rounded-xl transition-all duration-200 cursor-pointer focus:outline-none"
+              aria-label="Status Akun"
+            >
+              <span className={`w-3 h-3 rounded-full ${profile.account_status === 'dikonfirmasi' ? 'bg-emerald-500 shadow-md shadow-emerald-500/30' : profile.account_status === 'ditolak' || profile.account_status === 'tidak_valid' ? 'bg-rose-500 shadow-md shadow-rose-500/30' : 'bg-amber-500 shadow-md shadow-amber-500/30 animate-pulse'}`} />
+            </button>
+            <AnimatePresence>
+              {isStatusPopoverOpen && (
+                <motion.div
+                  initial={{ opacity: 0, y: 8, scale: 0.95 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: 8, scale: 0.95 }}
+                  transition={{ duration: 0.15 }}
+                  className="absolute right-0 mt-2 w-56 bg-white dark:bg-[#202020] border border-slate-200 dark:border-slate-800 rounded-xl shadow-lg p-3 z-50 text-left"
+                >
+                  <div className="text-[10px] uppercase tracking-wider text-slate-400 dark:text-slate-500 font-bold mb-1">
+                    Status Akun
+                  </div>
+                  <div className="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center gap-2">
+                    <span className={`w-2 h-2 rounded-full ${profile.account_status === 'dikonfirmasi' ? 'bg-emerald-500' : profile.account_status === 'ditolak' || profile.account_status === 'tidak_valid' ? 'bg-rose-500' : 'bg-amber-500'}`} />
+                    {profile.account_status === 'dikonfirmasi' ? 'Profil Terkonfirmasi' : profile.account_status === 'ditolak' || profile.account_status === 'tidak_valid' ? 'Profil Ditolak / Tidak Valid' : 'Menunggu Konfirmasi Panitia'}
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+
+          {/* Toggle Theme */}
+          <button
+            type="button"
+            onClick={toggleTheme}
+            className="w-8 h-8 sm:w-10 sm:h-10 flex items-center justify-center bg-slate-50 hover:bg-slate-100 dark:bg-[#252525]/45 dark:hover:bg-[#303030]/60 border border-slate-200 dark:border-slate-800 rounded-xl text-slate-600 dark:text-slate-350 transition-all duration-200 cursor-pointer focus:outline-none"
+            aria-label="Toggle theme"
+            title={theme === 'dark' ? 'Aktifkan Mode Terang' : 'Aktifkan Mode Gelap'}
+          >
+            {theme === 'dark' ? (
+              <Moon className="w-4 h-4 sm:w-5 sm:h-5 transition-transform hover:rotate-12 duration-200" />
+            ) : (
+              <Sun className="w-4 h-4 sm:w-5 sm:h-5 transition-transform hover:rotate-45 duration-200" />
+            )}
           </button>
+
+          {/* Logout & Navigation Menu */}
+          <div ref={logoutRef} className="relative">
+            <button
+              type="button"
+              onClick={() => setIsLogoutPopoverOpen(!isLogoutPopoverOpen)}
+              disabled={isVoting}
+              className={`w-8 h-8 sm:w-10 sm:h-10 flex items-center justify-center bg-slate-50 hover:bg-slate-100 dark:bg-[#252525]/45 dark:hover:bg-[#303030]/60 border border-slate-200 dark:border-slate-800 rounded-xl text-slate-600 dark:text-slate-350 transition-all duration-200 focus:outline-none ${isVoting ? 'opacity-35 cursor-not-allowed' : 'cursor-pointer'}`}
+              title={isVoting ? 'Tidak dapat logout saat sedang memilih' : 'Logout'}
+            >
+              <LogOut className="w-4 h-4 sm:w-5 sm:h-5" />
+            </button>
+            <AnimatePresence>
+              {isLogoutPopoverOpen && (
+                <motion.div
+                  initial={{ opacity: 0, y: 8, scale: 0.95 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: 8, scale: 0.95 }}
+                  transition={{ duration: 0.15 }}
+                  className="absolute right-0 mt-2 w-48 bg-white dark:bg-[#202020] border border-slate-200 dark:border-slate-800 rounded-xl shadow-lg py-1.5 z-50 overflow-hidden"
+                >
+                  <Link
+                    to="/"
+                    onClick={() => setIsLogoutPopoverOpen(false)}
+                    className="w-full text-left px-4 py-2.5 hover:bg-slate-50 dark:hover:bg-slate-800 text-xs sm:text-sm text-slate-700 dark:text-slate-300 transition-colors flex items-center gap-2 font-medium"
+                  >
+                    <Home className="w-4 h-4 shrink-0 text-slate-400 dark:text-slate-500" />
+                    <span>Back to Home</span>
+                  </Link>
+                  <div className="border-t border-slate-100 dark:border-[#2a2a2a] my-1" />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsLogoutPopoverOpen(false);
+                      handleLogout();
+                    }}
+                    className="w-full text-left px-4 py-2.5 hover:bg-red-50 dark:hover:bg-red-950/20 text-xs sm:text-sm text-red-600 dark:text-red-400 font-bold transition-colors flex items-center gap-2 cursor-pointer"
+                  >
+                    <LogOut className="w-4 h-4 shrink-0" />
+                    <span>Log Out</span>
+                  </button>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
         </div>
       </nav>
 

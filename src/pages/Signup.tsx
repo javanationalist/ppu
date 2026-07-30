@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
+import BackToHomeButton from '../components/BackToHomeButton';
 import { getUserAccessSettings } from '../lib/userAccessService';
 import { ALL_CLASSES } from '../lib/classConstants';
 import { Skeleton } from '../components/Skeleton';
@@ -217,7 +218,10 @@ export default function Signup() {
 
   if (!signupEnabled) {
     return (
-      <div className="min-h-screen bg-ppu-surface flex flex-col items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+      <div className="min-h-screen bg-ppu-surface flex flex-col items-center justify-center py-12 px-4 sm:px-6 lg:px-8 relative">
+        <div className="absolute top-6 left-6 z-10">
+          <BackToHomeButton />
+        </div>
         <div className="max-w-md w-full space-y-8 text-center bg-white p-8 sm:p-12 rounded-3xl shadow-2xl border border-ppu-border relative overflow-hidden">
           <div className="absolute top-0 left-0 w-full h-2 bg-ppu-red"></div>
           
@@ -248,7 +252,10 @@ export default function Signup() {
   }
 
   return (
-    <div className="min-h-screen bg-ppu-surface flex flex-col items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-ppu-surface flex flex-col items-center justify-center py-12 px-4 sm:px-6 lg:px-8 relative">
+      <div className="absolute top-6 left-6 z-10">
+        <BackToHomeButton />
+      </div>
       <div className="max-w-md w-full space-y-8 bg-white p-8 rounded-xl border border-ppu-border shadow-xl">
         <div>
           <img

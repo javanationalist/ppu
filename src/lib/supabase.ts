@@ -82,9 +82,65 @@ const makeSafeProxy = (realObj: any, mockObj: any, path: string[] = []): any => 
     get(target, prop, receiver) {
       // Return primitive properties of Proxy checks
       if (prop === '__isProxy') return true;
+
+      // Handle 'then' of Promise-like chains specifically to catch connection issues
+      if (prop === 'then') {
+        let activeTarget = (isSupabaseConfigured && !useLocalMock) ? realObj : mockObj;
+        if (!isObjectOrFunc(activeTarget)) {
+          activeTarget = isObjectOrFunc(realObj) ? realObj : mockObj;
+        }
+        if (isObjectOrFunc(activeTarget)) {
+          const val = Reflect.get(activeTarget, prop);
+          if (typeof val === 'function') {
+            return function (onfulfilled: any, onrejected: any) {
+              const boundThen = val.bind(activeTarget);
+              return boundThen(
+                (res: any) => {
+                  if (res && res.error && (isSupabaseConfigured && !useLocalMock)) {
+                    console.warn(`Supabase issue detected during promise resolution on path [${path.join('.')}] - falling back to Local Mock DB:`, res.error);
+                    useLocalMock = true;
+                    if (isObjectOrFunc(mockObj) && typeof mockObj.then === 'function') {
+                      return mockObj.then(onfulfilled, onrejected);
+                    }
+                    if (typeof onfulfilled === 'function') {
+                      const isMockResponse = (obj: any): boolean => {
+                        return obj && typeof obj === 'object' && ('data' in obj || 'error' in obj);
+                      };
+                      const finalMock = isMockResponse(mockObj) ? mockObj : { data: mockObj, error: null };
+                      return onfulfilled(finalMock);
+                    }
+                  }
+                  if (typeof onfulfilled === 'function') {
+                    return onfulfilled(res);
+                  }
+                  return res;
+                },
+                (err: any) => {
+                  console.warn(`Supabase connection or security issue detected during promise on path [${path.join('.')}] - fallback to Local Mock DB:`, err);
+                  useLocalMock = true;
+                  if (isObjectOrFunc(mockObj) && typeof mockObj.then === 'function') {
+                    return mockObj.then(onfulfilled, onrejected);
+                  }
+                  if (typeof onfulfilled === 'function') {
+                    const isMockResponse = (obj: any): boolean => {
+                      return obj && typeof obj === 'object' && ('data' in obj || 'error' in obj);
+                    };
+                    const finalMock = isMockResponse(mockObj) ? mockObj : { data: mockObj, error: null };
+                    return onfulfilled(finalMock);
+                  }
+                  if (typeof onrejected === 'function') {
+                    return onrejected(err);
+                  }
+                  throw err;
+                }
+              );
+            };
+          }
+        }
+      }
+
       if (
         typeof prop === 'symbol' || 
-        prop === 'then' || 
         prop === 'toJSON' || 
         prop === 'prototype' ||
         prop === 'toString' ||
@@ -95,7 +151,10 @@ const makeSafeProxy = (realObj: any, mockObj: any, path: string[] = []): any => 
         prop === 'isPrototypeOf' ||
         prop === 'propertyIsEnumerable'
       ) {
-        const activeTarget = (isSupabaseConfigured && !useLocalMock) ? realObj : mockObj;
+        let activeTarget = (isSupabaseConfigured && !useLocalMock) ? realObj : mockObj;
+        if (!isObjectOrFunc(activeTarget)) {
+          activeTarget = isObjectOrFunc(realObj) ? realObj : mockObj;
+        }
         if (isObjectOrFunc(activeTarget)) {
           const val = Reflect.get(activeTarget, prop);
           if (typeof val === 'function') {
@@ -106,7 +165,10 @@ const makeSafeProxy = (realObj: any, mockObj: any, path: string[] = []): any => 
         return undefined;
       }
 
-      const activeObj = (isSupabaseConfigured && !useLocalMock) ? realObj : mockObj;
+      let activeObj = (isSupabaseConfigured && !useLocalMock) ? realObj : mockObj;
+      if (!isObjectOrFunc(activeObj)) {
+        activeObj = isObjectOrFunc(realObj) ? realObj : mockObj;
+      }
       if (!isObjectOrFunc(activeObj)) return undefined;
 
       const val = Reflect.get(activeObj, prop);
@@ -117,6 +179,10 @@ const makeSafeProxy = (realObj: any, mockObj: any, path: string[] = []): any => 
             const mockFunc = isObjectOrFunc(mockObj) ? Reflect.get(mockObj, prop) : null;
             if (typeof mockFunc === 'function') {
               return mockFunc.apply(mockObj, args);
+            }
+            const realFunc = isObjectOrFunc(realObj) ? Reflect.get(realObj, prop) : null;
+            if (typeof realFunc === 'function') {
+              return realFunc.apply(realObj, args);
             }
             return mockFunc;
           }
@@ -134,6 +200,10 @@ const makeSafeProxy = (realObj: any, mockObj: any, path: string[] = []): any => 
                   if (typeof mockFunc === 'function') {
                     return mockFunc.apply(mockObj, args);
                   }
+                  const realFunc = isObjectOrFunc(realObj) ? Reflect.get(realObj, prop) : null;
+                  if (typeof realFunc === 'function') {
+                    return realFunc.apply(realObj, args);
+                  }
                   return mockFunc;
                 }
                 return res;
@@ -143,6 +213,10 @@ const makeSafeProxy = (realObj: any, mockObj: any, path: string[] = []): any => 
                 const mockFunc = isObjectOrFunc(mockObj) ? Reflect.get(mockObj, prop) : null;
                 if (typeof mockFunc === 'function') {
                   return mockFunc.apply(mockObj, args);
+                }
+                const realFunc = isObjectOrFunc(realObj) ? Reflect.get(realObj, prop) : null;
+                if (typeof realFunc === 'function') {
+                  return realFunc.apply(realObj, args);
                 }
                 return mockFunc;
               });
@@ -158,6 +232,10 @@ const makeSafeProxy = (realObj: any, mockObj: any, path: string[] = []): any => 
             const mockFunc = isObjectOrFunc(mockObj) ? Reflect.get(mockObj, prop) : null;
             if (typeof mockFunc === 'function') {
               return mockFunc.apply(mockObj, args);
+            }
+            const realFunc = isObjectOrFunc(realObj) ? Reflect.get(realObj, prop) : null;
+            if (typeof realFunc === 'function') {
+              return realFunc.apply(realObj, args);
             }
             return mockFunc;
           }

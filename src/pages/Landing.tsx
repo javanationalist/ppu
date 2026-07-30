@@ -407,16 +407,7 @@ export default function Landing() {
             Portal Pemilihan Umum (PPU) Digital
           </h2>
 
-          {/* X (formerly Twitter) text-only link */}
-          <a
-            id="footer-x-link"
-            href="https://x.com"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-xs sm:text-sm text-slate-400 dark:text-slate-500 hover:text-ppu-blue dark:hover:text-sky-400 transition-colors duration-300 mt-1 font-medium"
-          >
-            X
-          </a>
+
 
           {/* Jarak vertikal yang cukup (whitespace) */}
           <div className="h-12" />
