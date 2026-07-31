@@ -45,6 +45,8 @@ import WafoManager from './pages/admin/WafoManager';
 import GelombangVoting from './pages/admin/GelombangVoting';
 import CountdownManager from './pages/admin/CountdownManager';
 import AksesPro from './pages/admin/AksesPro';
+import SystemUpdateUser from './pages/SystemUpdateUser';
+import SystemUpdateAdmin from './pages/admin/SystemUpdateAdmin';
 import NetworkStatus from './components/NetworkStatus';
 
 function ExperimentalRoute({ children }: { children: React.ReactNode }) {
@@ -74,6 +76,7 @@ function AppContent() {
         <Route element={<PortalLayout />}>
           <Route path="/" element={<Landing />} />
           <Route path="/informasi" element={<Informasi />} />
+          <Route path="/informasi/system-update" element={<SystemUpdateUser />} />
           <Route path="/tentang" element={<Tentang />} />
           <Route path="/cara-menggunakan" element={<CaraMenggunakan />} />
         </Route>
@@ -128,6 +131,7 @@ function AppContent() {
           <Route path="hasil" element={<HasilAdmin />} />
           <Route path="audit" element={<AuditLog />} />
           <Route path="export" element={<ExportData />} />
+          <Route path="system-update" element={<SystemUpdateAdmin />} />
           <Route path="akses-pro" element={<AksesPro />} />
         </Route>
 

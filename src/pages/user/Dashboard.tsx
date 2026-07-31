@@ -4,7 +4,7 @@ import { QRCodeCanvas } from 'qrcode.react';
 import * as htmlToImage from 'html-to-image';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
-import { LogOut, Download, MessageSquare, LifeBuoy, Edit3, X, Info, CalendarDays, FileText, AlertCircle, Megaphone, ChevronRight, Clock, MapPin, Home, CreditCard, QrCode, User, Grid, Menu, Sun, Moon } from 'lucide-react';
+import { LogOut, Download, MessageSquare, LifeBuoy, Edit3, X, Info, CalendarDays, FileText, AlertCircle, Megaphone, ChevronRight, Clock, MapPin, Home, CreditCard, QrCode, User, Grid, Menu, Sun, Moon, Bell } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useNavigate, Link } from 'react-router-dom';
 import { getHelpdeskButtons } from '../../lib/helpdesk';
@@ -442,6 +442,16 @@ export default function UserDashboard() {
               )}
             </AnimatePresence>
           </div>
+
+          {/* Notification Bell */}
+          <Link
+            to="/informasi"
+            className="w-8 h-8 sm:w-10 sm:h-10 flex items-center justify-center bg-slate-50 hover:bg-slate-100 dark:bg-[#252525]/45 dark:hover:bg-[#303030]/60 border border-slate-200 dark:border-slate-800 rounded-xl text-slate-600 dark:text-slate-350 hover:text-ppu-blue dark:hover:text-sky-400 transition-all duration-200 cursor-pointer focus:outline-none shrink-0"
+            aria-label="Notifikasi & Informasi"
+            title="Notifikasi & Informasi"
+          >
+            <Bell className="w-4 h-4 sm:w-5 sm:h-5" />
+          </Link>
 
           {/* Toggle Theme */}
           <button

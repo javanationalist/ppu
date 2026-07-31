@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { LogOut, Home, Users, Settings, BarChart, FileText, LifeBuoy, Menu, X, ShieldCheck, Layers, Lock, Clock, Timer, Monitor, ChevronRight } from 'lucide-react';
+import { LogOut, Home, Users, Settings, BarChart, FileText, LifeBuoy, Menu, X, ShieldCheck, Layers, Lock, Clock, Timer, Monitor, ChevronRight, Sparkles } from 'lucide-react';
 import { getAdminButtonSettings, AdminButtonSettings } from '../lib/adminButtonService';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -74,6 +74,7 @@ export const AdminLayout = () => {
       items: [
         { to: '/admin/audit', icon: FileText, label: 'Audit Log', key: 'audit_log' },
         { to: '/admin/export', icon: FileText, label: 'Export Data', key: 'export_data' },
+        { to: '/admin/system-update', icon: Sparkles, label: 'System Update', key: 'system_update' },
       ],
     },
   ];

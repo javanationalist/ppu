@@ -1,19 +1,33 @@
 import React, { useState, useEffect } from 'react';
-import { Info, Megaphone, CalendarDays, FileText, AlertCircle, Clock, ChevronRight, ArrowLeft } from 'lucide-react';
+import { Info, Megaphone, CalendarDays, FileText, AlertCircle, Clock, ChevronRight, ArrowLeft, Settings, Sparkles, Bell, BellRing } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useTheme } from '../contexts/ThemeContext';
-import { WafoAnnouncement } from '../types';
+import { WafoAnnouncement, SystemUpdate } from '../types';
+import { getSystemUpdates } from '../lib/systemUpdateService';
 import { Skeleton } from '../components/Skeleton';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import BackToHomeButton from '../components/BackToHomeButton';
+import NotificationModal from '../components/NotificationModal';
+import {
+  NotificationPermissionStatus,
+  getNotificationPermission,
+  showNewInformationNotification,
+  subscribeToNotificationBroadcast,
+} from '../lib/notificationService';
 
 export default function Informasi() {
   const { isDark } = useTheme();
   const { user, profile } = useAuth();
   const dashboardPath = profile?.role === 'admin' ? '/admin' : '/dashboard';
   const [announcements, setAnnouncements] = useState<WafoAnnouncement[]>([]);
+  const [systemUpdates, setSystemUpdates] = useState<SystemUpdate[]>([]);
   const [loading, setLoading] = useState(true);
+  const [updatesLoading, setUpdatesLoading] = useState(true);
+
+  // Notification State
+  const [notifPermission, setNotifPermission] = useState<NotificationPermissionStatus>(() => getNotificationPermission());
+  const [isNotifModalOpen, setIsNotifModalOpen] = useState(false);
 
   const fetchAnnouncements = async () => {
     try {
@@ -35,22 +49,69 @@ export default function Informasi() {
     }
   };
 
+  const fetchUpdates = async () => {
+    try {
+      const data = await getSystemUpdates();
+      setSystemUpdates(data.slice(0, 3));
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setUpdatesLoading(false);
+    }
+  };
+
   useEffect(() => {
     fetchAnnouncements();
-    
-    // Listen for updates
+    fetchUpdates();
+
+    // Check notification permission on mount
+    const currentPerm = getNotificationPermission();
+    setNotifPermission(currentPerm);
+
+    // If permission is 'default' (not yet asked) and notification API is supported, prompt modal automatically
+    if (currentPerm === 'default') {
+      setIsNotifModalOpen(true);
+    }
+
+    // Listen for window focus to detect if permission changed in browser settings
+    const handleFocus = () => {
+      setNotifPermission(getNotificationPermission());
+    };
+    window.addEventListener('focus', handleFocus);
+
+    // Listen for broadcast channel notification events
+    const unsubscribeBroadcast = subscribeToNotificationBroadcast(() => {
+      if (getNotificationPermission() === 'granted') {
+        showNewInformationNotification();
+      }
+      fetchAnnouncements();
+    });
+
+    // Listen for Supabase Realtime updates on wafo_announcements
     const channel = supabase
       .channel('wafo_changes_page')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'wafo_announcements' }, () => {
-        fetchAnnouncements();
-      })
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'wafo_announcements' },
+        (payload) => {
+          fetchAnnouncements();
+          // Trigger notification ONLY for new information (INSERT event)
+          if (payload.eventType === 'INSERT') {
+            if (getNotificationPermission() === 'granted') {
+              showNewInformationNotification();
+            }
+          }
+        }
+      )
       .subscribe();
 
     window.addEventListener('wafo_updated', fetchAnnouncements);
-    
+
     return () => {
       supabase.removeChannel(channel);
       window.removeEventListener('wafo_updated', fetchAnnouncements);
+      window.removeEventListener('focus', handleFocus);
+      unsubscribeBroadcast();
     };
   }, []);
 
@@ -65,18 +126,55 @@ export default function Informasi() {
 
   return (
     <div className="flex-1 flex flex-col items-center py-12 px-4 sm:px-6 lg:px-8 w-full max-w-4xl mx-auto transition-colors duration-300">
-      <div className="w-full flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-        <BackToHomeButton />
-        {user && (
-          <Link
-            to={dashboardPath}
-            className="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold bg-white dark:bg-[#2a2a2a] border border-slate-200 dark:border-[#333333] hover:bg-slate-50 dark:hover:bg-[#333333] text-slate-700 dark:text-[#f5f5f5] rounded-xl shadow-xs transition-all duration-200"
+      <div className="w-full flex flex-row justify-between items-center gap-4 mb-6">
+        <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
+          <BackToHomeButton />
+          {user && (
+            <Link
+              to={dashboardPath}
+              className="inline-flex items-center gap-2 px-3 sm:px-4 py-2 text-xs sm:text-sm font-semibold bg-white dark:bg-[#2a2a2a] border border-slate-200 dark:border-[#333333] hover:bg-slate-50 dark:hover:bg-[#333333] text-slate-700 dark:text-[#f5f5f5] rounded-xl shadow-xs transition-all duration-200"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              <span className="hidden sm:inline">Kembali ke Dashboard</span>
+              <span className="sm:hidden">Dashboard</span>
+            </Link>
+          )}
+        </div>
+
+        <div className="flex items-center gap-2">
+          {/* Notification Bell Button */}
+          <button
+            onClick={() => setIsNotifModalOpen(true)}
+            className={`inline-flex items-center gap-2 px-3 py-2 text-xs sm:text-sm font-semibold rounded-xl border shadow-xs transition-all duration-200 shrink-0 cursor-pointer ${
+              notifPermission === 'granted'
+                ? 'bg-indigo-50 dark:bg-sky-500/10 border-indigo-200 dark:border-sky-500/30 text-ppu-blue dark:text-sky-400 hover:bg-indigo-100 dark:hover:bg-sky-500/20'
+                : 'bg-white dark:bg-[#2a2a2a] border-slate-200 dark:border-[#333333] text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
+            }`}
+            aria-label="Atur Notifikasi"
+            title={notifPermission === 'granted' ? 'Notifikasi Aktif' : 'Aktifkan Notifikasi'}
           >
-            <ArrowLeft className="w-4 h-4" />
-            <span>Kembali ke Dashboard</span>
+            {notifPermission === 'granted' ? (
+              <BellRing className="w-4 h-4 text-ppu-blue dark:text-sky-400" />
+            ) : (
+              <Bell className="w-4 h-4" />
+            )}
+            <span className="hidden sm:inline font-bold">
+              {notifPermission === 'granted' ? 'Notifikasi Aktif' : 'Notifikasi'}
+            </span>
+          </button>
+
+          {/* Gear Icon Button for System Updates */}
+          <Link
+            to="/informasi/system-update"
+            className="inline-flex items-center gap-2 px-3 py-2 text-xs sm:text-sm font-semibold bg-white dark:bg-[#2a2a2a] border border-slate-200 dark:border-[#333333] hover:border-ppu-blue dark:hover:border-sky-500 text-slate-700 dark:text-[#f5f5f5] rounded-xl shadow-xs transition-all duration-200 shrink-0"
+            title="System Update"
+          >
+            <Settings className="w-4 h-4 text-slate-600 dark:text-slate-300" />
+            <span className="hidden sm:inline font-bold">System Update</span>
           </Link>
-        )}
+        </div>
       </div>
+
       <div className="text-center mb-10 w-full animate-fade-in">
         <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-ppu-blue/10 dark:bg-sky-500/10 border border-ppu-blue/20 dark:border-sky-500/20 mb-6 shadow-md shadow-ppu-blue/5">
           <Info className="w-8 h-8 text-ppu-blue dark:text-sky-400" />
@@ -181,7 +279,76 @@ export default function Informasi() {
           ))
         )}
       </div>
+
+      {/* SECTION: System Update */}
+      <div className="w-full mt-16 pt-10 border-t border-slate-200 dark:border-[#333333]">
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-indigo-50 dark:bg-sky-500/10 border border-indigo-100 dark:border-sky-500/20 flex items-center justify-center">
+              <Sparkles className="w-5 h-5 text-ppu-blue dark:text-sky-400" />
+            </div>
+            <div>
+              <h2 className="text-xl sm:text-2xl font-black text-slate-800 dark:text-slate-100 tracking-tight">
+                System Update
+              </h2>
+              <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 font-medium">
+                Pembaruan dan peningkatan aplikasi PPU Digital
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="space-y-4 mb-6">
+          {updatesLoading ? (
+            <div className="space-y-3">
+              <Skeleton className="h-20 w-full rounded-2xl" />
+              <Skeleton className="h-20 w-full rounded-2xl" />
+            </div>
+          ) : systemUpdates.length === 0 ? (
+            <div className="bg-white dark:bg-[#2a2a2a] border border-slate-200 dark:border-[#333333] p-6 rounded-2xl text-center text-sm text-slate-500 dark:text-slate-400">
+              Belum ada pembaruan sistem yang tercatat.
+            </div>
+          ) : (
+            systemUpdates.map((update) => (
+              <div
+                key={update.id}
+                className="bg-white dark:bg-[#2a2a2a] border border-slate-200 dark:border-[#333333] p-5 sm:p-6 rounded-2xl shadow-xs hover:border-ppu-blue/30 dark:hover:border-sky-500/30 transition-all"
+              >
+                <div className="flex items-center justify-between gap-2 mb-2">
+                  <span className="px-2.5 py-0.5 rounded-md text-xs font-extrabold bg-indigo-50 dark:bg-sky-500/10 text-ppu-blue dark:text-sky-400 border border-indigo-100 dark:border-sky-500/20">
+                    {update.version}
+                  </span>
+                  <span className="text-xs font-semibold text-slate-400 dark:text-slate-500 flex items-center gap-1">
+                    <Clock className="w-3 h-3" />
+                    {update.date}
+                  </span>
+                </div>
+                <p className="text-xs sm:text-sm text-slate-700 dark:text-slate-200 font-medium whitespace-pre-line leading-relaxed">
+                  {update.content}
+                </p>
+              </div>
+            ))
+          )}
+        </div>
+
+        <Link
+          to="/informasi/system-update"
+          className="inline-flex items-center justify-center gap-2 w-full py-3 px-4 bg-white dark:bg-[#2a2a2a] border border-slate-200 dark:border-[#333333] hover:border-ppu-blue dark:hover:border-sky-500 text-ppu-blue dark:text-sky-400 font-bold text-sm rounded-xl transition-all shadow-xs"
+        >
+          <span>Lihat Semua Update</span>
+          <ChevronRight className="w-4 h-4" />
+        </Link>
+      </div>
+
+      {/* Notification Permission Dialog / Modal */}
+      <NotificationModal
+        isOpen={isNotifModalOpen}
+        onClose={() => setIsNotifModalOpen(false)}
+        status={notifPermission}
+        onStatusChange={(newStatus) => setNotifPermission(newStatus)}
+      />
     </div>
   );
 }
+
 

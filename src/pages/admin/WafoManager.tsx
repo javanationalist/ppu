@@ -6,6 +6,7 @@ import {
   Megaphone, Plus, Search, Trash2, Edit2, 
   ToggleLeft, ToggleRight, X, AlertCircle
 } from 'lucide-react';
+import { broadcastNewInformationEvent } from '../../lib/notificationService';
 
 export default function WafoManager() {
   const { user } = useAuth();
@@ -126,6 +127,8 @@ export default function WafoManager() {
       } else {
         const { error } = await supabase.from('wafo_announcements').insert([newRecord]);
         if (error) throw error;
+        // Broadcast notification for new information
+        broadcastNewInformationEvent(formData.title, formData.content);
       }
       
       setMessage({ type: 'success', text: isEditMode ? 'Informasi berhasil diperbarui!' : 'Informasi berhasil ditambahkan!' });
