@@ -1,8 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { 
   Info, Megaphone, CalendarDays, FileText, AlertCircle, Clock, 
-  ChevronRight, ArrowLeft, Settings, Sparkles, Bell, BellRing, 
-  Send, CheckCircle2, XCircle, X 
+  ChevronRight, ArrowLeft, Settings, Sparkles, Bell, BellRing
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useTheme } from '../contexts/ThemeContext';
@@ -35,13 +34,6 @@ export default function Informasi() {
   // Notification State
   const [notifPermission, setNotifPermission] = useState<NotificationPermissionStatus>(() => getNotificationPermission());
   const [isNotifModalOpen, setIsNotifModalOpen] = useState(false);
-
-  // Demo status feedback state
-  const [demoStatus, setDemoStatus] = useState<{
-    type: 'success' | 'error';
-    message: string;
-    subtext?: string;
-  } | null>(null);
 
   // Ref to track seen WAFO IDs and avoid duplicate notifications on re-render / reconnect / refresh
   const seenWafoIdsRef = useRef<Set<string>>(new Set());
@@ -160,66 +152,6 @@ export default function Informasi() {
     };
   }, []);
 
-  const handleDemoNotification = async () => {
-    setDemoStatus(null);
-
-    // A. Check browser support
-    if (!isNotificationSupported()) {
-      setDemoStatus({
-        type: 'error',
-        message: 'Notifikasi belum dapat dikirim.',
-        subtext: 'Browser tidak mendukung notifikasi.',
-      });
-      return;
-    }
-
-    let currentPerm = getNotificationPermission();
-
-    // B. If permission = "default", request permission first
-    if (currentPerm === 'default') {
-      currentPerm = await requestNotificationPermission();
-      setNotifPermission(currentPerm);
-    }
-
-    // C. If permission = "denied"
-    if (currentPerm === 'denied') {
-      setDemoStatus({
-        type: 'error',
-        message: 'Notifikasi belum dapat dikirim.',
-        subtext: 'Notifikasi diblokir oleh browser. Aktifkan izin notifikasi pada pengaturan browser.',
-      });
-      return;
-    }
-
-    // D. If permission = "granted"
-    if (currentPerm === 'granted') {
-      const demoTitle = 'SUARAKU';
-      const demoContent = 'Ini adalah notifikasi demo WAFO. Jika kamu melihat notifikasi ini, fitur notifikasi sudah aktif.';
-      
-      const result = await showNewInformationNotification(demoTitle, demoContent);
-
-      if (result.success) {
-        setDemoStatus({
-          type: 'success',
-          message: 'Notifikasi berhasil dikirim.',
-          subtext: 'Notifikasi demo telah dikirimkan ke sistem notifikasi browser Anda.',
-        });
-      } else {
-        setDemoStatus({
-          type: 'error',
-          message: 'Notifikasi belum dapat dikirim.',
-          subtext: result.error || 'Gagal memicu notifikasi browser. Periksa konsol browser untuk detail error.',
-        });
-      }
-    } else {
-      setDemoStatus({
-        type: 'error',
-        message: 'Notifikasi belum dapat dikirim.',
-        subtext: `Izin notifikasi saat ini: ${currentPerm}.`,
-      });
-    }
-  };
-
   const getIcon = (type: string) => {
     switch (type) {
       case 'pengumuman': return <AlertCircle className="w-5 h-5 text-ppu-red dark:text-rose-400" />;
@@ -247,16 +179,6 @@ export default function Informasi() {
         </div>
 
         <div className="flex items-center gap-2 flex-wrap">
-          {/* Demo Notifikasi Button */}
-          <button
-            onClick={handleDemoNotification}
-            className="inline-flex items-center gap-2 px-3.5 py-2 text-xs sm:text-sm font-bold bg-indigo-600 hover:bg-indigo-700 dark:bg-sky-500 dark:hover:bg-sky-600 text-white rounded-xl shadow-sm transition-all duration-200 cursor-pointer"
-            title="Uji coba pengiriman Web Notification"
-          >
-            <Send className="w-4 h-4" />
-            <span>Demo Notifikasi</span>
-          </button>
-
           {/* Notification Bell Button */}
           <button
             onClick={() => setIsNotifModalOpen(true)}
@@ -290,55 +212,15 @@ export default function Informasi() {
         </div>
       </div>
 
-      {/* Demo Notification Status Banner */}
-      {demoStatus && (
-        <div
-          className={`w-full mb-6 p-4 rounded-2xl border transition-all animate-in fade-in slide-in-from-top-2 duration-300 flex items-start gap-3.5 shadow-sm ${
-            demoStatus.type === 'success'
-              ? 'bg-emerald-50 dark:bg-emerald-500/10 border-emerald-200 dark:border-emerald-500/30 text-emerald-900 dark:text-emerald-200'
-              : 'bg-rose-50 dark:bg-rose-500/10 border-rose-200 dark:border-rose-500/30 text-rose-900 dark:text-rose-200'
-          }`}
-        >
-          <div className={`p-2 rounded-xl shrink-0 ${
-            demoStatus.type === 'success'
-              ? 'bg-emerald-100 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400'
-              : 'bg-rose-100 dark:bg-rose-500/20 text-rose-600 dark:text-rose-400'
-          }`}>
-            {demoStatus.type === 'success' ? (
-              <CheckCircle2 className="w-5 h-5" />
-            ) : (
-              <XCircle className="w-5 h-5" />
-            )}
-          </div>
-          <div className="flex-1 text-left min-w-0 pt-0.5">
-            <h4 className="text-sm font-black tracking-wide leading-tight">
-              {demoStatus.message}
-            </h4>
-            {demoStatus.subtext && (
-              <p className="text-xs font-semibold opacity-90 mt-1 leading-relaxed">
-                {demoStatus.subtext}
-              </p>
-            )}
-          </div>
-          <button
-            onClick={() => setDemoStatus(null)}
-            className="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-lg transition-colors cursor-pointer"
-            aria-label="Tutup Status Demo"
-          >
-            <X className="w-4 h-4" />
-          </button>
-        </div>
-      )}
-
       <div className="text-center mb-10 w-full animate-fade-in">
         <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-ppu-blue/10 dark:bg-sky-500/10 border border-ppu-blue/20 dark:border-sky-500/20 mb-6 shadow-md shadow-ppu-blue/5">
           <Info className="w-8 h-8 text-ppu-blue dark:text-sky-400" />
         </div>
         <h1 className="text-3xl sm:text-4xl font-black text-ppu-blue dark:text-sky-400 tracking-tight uppercase mb-3 text-center w-full transition-colors">
-          Informasi & Pengumuman
+          WAFO<br />Warung Informasi
         </h1>
         <p className="text-slate-600 dark:text-[#a3a3a3] font-semibold sm:text-lg max-w-2xl mx-auto text-center w-full transition-colors">
-          Pusat WAFO (Warung Informasi) resmi, panduan, dan jadwal pelaksanaan pemilihan umum.
+          Kamu akan mendapatkan informasi resmi atau panduan dan jadwal pelaksanaan pemilihan di sini.
         </p>
       </div>
 
@@ -418,11 +300,7 @@ export default function Informasi() {
                     {item.content}
                   </div>
                   
-                  <div className="mt-5 flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                       <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></div>
-                       <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-[#a3a3a3] transition-colors">Status: Aktif</span>
-                    </div>
+                  <div className="mt-5 flex items-center justify-end">
                     <div className="text-ppu-blue dark:text-sky-400 font-bold text-xs flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                       <span>WAFO Digital</span>
                       <ChevronRight className="w-3.5 h-3.5" />
