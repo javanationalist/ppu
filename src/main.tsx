@@ -34,6 +34,14 @@ if (typeof window !== 'undefined') {
       console.warn('Suppressed sandboxed iframe unhandled promise rejection:', reason);
     }
   }, true);
+
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('/sw.js', { scope: '/' }).catch((err) => {
+        console.warn('Service worker registration failed on startup:', err);
+      });
+    });
+  }
 }
 
 createRoot(document.getElementById('root')!).render(

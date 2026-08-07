@@ -20,6 +20,7 @@ import {
   showNewInformationNotification,
   subscribeToNotificationBroadcast,
   isNotificationSupported,
+  registerNotificationServiceWorker,
 } from '../lib/notificationService';
 
 export default function Informasi() {
@@ -102,6 +103,11 @@ export default function Informasi() {
   useEffect(() => {
     fetchAnnouncements();
     fetchUpdates();
+
+    // Warm up / register Service Worker for notifications if supported
+    registerNotificationServiceWorker().catch((err) => {
+      console.warn('[Notification] Initial Service Worker registration warning:', err);
+    });
 
     // Check notification permission on mount
     const currentPerm = getNotificationPermission();

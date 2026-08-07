@@ -19,9 +19,15 @@ export async function requestNotificationPermission(): Promise<NotificationPermi
   }
   try {
     const permission = await Notification.requestPermission();
+    // Auto register service worker if granted
+    if (permission === 'granted') {
+      registerNotificationServiceWorker().catch((err) => {
+        console.warn('[Notification] Auto service worker registration after permission grant failed:', err);
+      });
+    }
     return permission as NotificationPermissionStatus;
   } catch (err) {
-    console.error('Error requesting notification permission:', err);
+    console.error('[Notification] Error requesting notification permission:', err);
     return getNotificationPermission();
   }
 }
@@ -31,14 +37,14 @@ export async function registerNotificationServiceWorker(): Promise<ServiceWorker
     return null;
   }
   try {
-    const existing = await navigator.serviceWorker.getRegistration();
-    if (existing) {
-      return existing;
+    let reg = await navigator.serviceWorker.getRegistration('/');
+    if (!reg) {
+      reg = await navigator.serviceWorker.register('/sw.js', { scope: '/' });
     }
-    const reg = await navigator.serviceWorker.register('/sw.js', { scope: '/' });
-    return reg;
+    const readyReg = await navigator.serviceWorker.ready;
+    return readyReg;
   } catch (err) {
-    console.warn('[Notification] Could not register /sw.js:', err);
+    console.error('[Notification] Could not register /sw.js:', err);
     return null;
   }
 }
@@ -47,12 +53,21 @@ export async function showNewInformationNotification(
   title?: string,
   content?: string
 ): Promise<{ success: boolean; error?: string }> {
+  // 1. Check browser Notification API support
   if (!isNotificationSupported()) {
     const msg = 'Browser/perangkat Anda tidak mendukung Web Notification API.';
     console.error('[Notification]', msg);
     return { success: false, error: msg };
   }
 
+  // 2. Check Service Worker API support
+  if (typeof navigator === 'undefined' || !('serviceWorker' in navigator)) {
+    const msg = 'Browser Anda tidak mendukung Service Worker yang diperlukan untuk Web Notification.';
+    console.error('[Notification]', msg);
+    return { success: false, error: msg };
+  }
+
+  // 3. Check browser notification permission status
   const currentPerm = Notification.permission;
   if (currentPerm !== 'granted') {
     const msg = `Izin notifikasi saat ini adalah "${currentPerm}". Silakan izinkan notifikasi pada browser Anda.`;
@@ -68,62 +83,28 @@ export async function showNewInformationNotification(
     tag: 'ppu-new-wafo-' + Date.now(),
   };
 
-  let primaryError: string | null = null;
-
-  // Method 1: Try standard new Notification() constructor first
   try {
-    const notification = new Notification(notificationTitle, notificationOptions);
-    notification.onclick = (event) => {
-      event.preventDefault();
-      window.focus();
-      if (window.location.pathname !== '/informasi') {
-        window.location.href = '/informasi';
-      }
-    };
-    console.log('[Notification] Successfully shown notification via Notification constructor.');
+    // 4. Register or retrieve Service Worker registration
+    let reg = await navigator.serviceWorker.getRegistration('/');
+    if (!reg) {
+      reg = await navigator.serviceWorker.register('/sw.js', { scope: '/' });
+    }
+
+    // 5. Wait for navigator.serviceWorker.ready before triggering notification
+    const readyRegistration = await navigator.serviceWorker.ready;
+
+    // 6. Show notification strictly using ServiceWorkerRegistration.showNotification()
+    await readyRegistration.showNotification(notificationTitle, notificationOptions);
+    console.log('[Notification] Successfully shown notification via ServiceWorkerRegistration.showNotification()');
     return { success: true };
   } catch (err: any) {
-    primaryError = err?.message || String(err);
-    console.warn('[Notification] new Notification() constructor failed:', err);
+    const rawError = err?.message || String(err);
+    console.error('[Notification] ServiceWorker showNotification failed:', err);
+    return {
+      success: false,
+      error: `Gagal memicu Service Worker notification: ${rawError}`,
+    };
   }
-
-  // Method 2: Fallback to Service Worker showNotification (for mobile Chrome / PWA / sandboxed context)
-  if ('serviceWorker' in navigator) {
-    try {
-      let reg = await navigator.serviceWorker.getRegistration();
-      if (!reg) {
-        reg = await registerNotificationServiceWorker();
-      }
-      if (reg) {
-        if (!reg.active && reg.installing) {
-          await new Promise<void>((resolve) => {
-            const sw = reg!.installing;
-            if (!sw) return resolve();
-            sw.addEventListener('statechange', () => {
-              if (sw.state === 'activated' || sw.state === 'redundant') resolve();
-            });
-            setTimeout(resolve, 1000);
-          });
-        }
-        await reg.showNotification(notificationTitle, notificationOptions);
-        console.log('[Notification] Successfully shown notification via ServiceWorkerRegistration.');
-        return { success: true };
-      }
-    } catch (swErr: any) {
-      console.error('[Notification] ServiceWorker showNotification failed:', swErr);
-      return {
-        success: false,
-        error: `Gagal memicu Service Worker notification: ${swErr?.message || String(swErr)}`,
-      };
-    }
-  }
-
-  return {
-    success: false,
-    error: primaryError 
-      ? `Gagal memicu notifikasi: ${primaryError}`
-      : 'Gagal memicu notifikasi browser.',
-  };
 }
 
 // Broadcast new announcement event across browser tabs
