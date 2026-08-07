@@ -17,7 +17,6 @@ const defaultHelpdeskButtons: HelpdeskButton[] = [
 ];
 
 export const getHelpdeskButtons = async (): Promise<HelpdeskButton[]> => {
-  // If not configured, or if any error occurs compiling or executing, use localStorage
   if (!isSupabaseConfigured) {
     const saved = localStorage.getItem(MOCK_STORAGE_KEY);
     if (!saved) {
@@ -27,40 +26,13 @@ export const getHelpdeskButtons = async (): Promise<HelpdeskButton[]> => {
     return JSON.parse(saved);
   }
 
-  try {
-    // Try querying the helpdesk_buttons table
-    const { data, error } = await supabase
-      .from('helpdesk_buttons')
-      .select('*')
-      .order('id', { ascending: true });
+  const { data, error } = await supabase
+    .from('helpdesk_buttons')
+    .select('*')
+    .order('id', { ascending: true });
 
-    if (error) {
-      // Graceful fallback to localStorage if table doesn't exist
-      console.warn('Supabase helpdesk_buttons table not found (or access error), falling back to localStorage:', error.message);
-      const saved = localStorage.getItem(MOCK_STORAGE_KEY);
-      if (!saved) {
-        localStorage.setItem(MOCK_STORAGE_KEY, JSON.stringify(defaultHelpdeskButtons));
-        return defaultHelpdeskButtons;
-      }
-      return JSON.parse(saved);
-    }
-
-    if (!data || data.length === 0) {
-      // If table is empty, insert default buttons
-      const { error: insertError } = await supabase
-        .from('helpdesk_buttons')
-        .insert(defaultHelpdeskButtons);
-
-      if (insertError) {
-        console.error('Failed to insert default helpdesk buttons to Supabase:', insertError.message);
-        return defaultHelpdeskButtons;
-      }
-      return defaultHelpdeskButtons;
-    }
-
-    return data as HelpdeskButton[];
-  } catch (err) {
-    console.error('Error fetching helpdesk buttons, using fallback:', err);
+  if (error) {
+    if (import.meta.env.DEV) console.warn('[DB] GET helpdesk_buttons warning:', error.message || error);
     const saved = localStorage.getItem(MOCK_STORAGE_KEY);
     if (!saved) {
       localStorage.setItem(MOCK_STORAGE_KEY, JSON.stringify(defaultHelpdeskButtons));
@@ -68,6 +40,22 @@ export const getHelpdeskButtons = async (): Promise<HelpdeskButton[]> => {
     }
     return JSON.parse(saved);
   }
+
+  if (!data || data.length === 0) {
+    const { error: insertError } = await supabase
+      .from('helpdesk_buttons')
+      .insert(defaultHelpdeskButtons);
+
+    if (insertError && import.meta.env.DEV) {
+      console.warn('[DB] INSERT default helpdesk_buttons warning:', insertError.message);
+    }
+    localStorage.setItem(MOCK_STORAGE_KEY, JSON.stringify(defaultHelpdeskButtons));
+    return defaultHelpdeskButtons;
+  }
+
+  if (import.meta.env.DEV) console.log('[DB] GET helpdesk_buttons SUCCESS', data.length);
+  localStorage.setItem(MOCK_STORAGE_KEY, JSON.stringify(data));
+  return data as HelpdeskButton[];
 };
 
 export const saveHelpdeskButton = async (button: Omit<HelpdeskButton, 'id'> & { id?: string }): Promise<HelpdeskButton> => {
@@ -89,18 +77,14 @@ export const saveHelpdeskButton = async (button: Omit<HelpdeskButton, 'id'> & { 
     return newButton;
   }
 
-  try {
-    const { error } = await supabase
-      .from('helpdesk_buttons')
-      .upsert(newButton);
+  const { error } = await supabase
+    .from('helpdesk_buttons')
+    .upsert(newButton);
 
-    if (error) {
-      throw error;
-    }
-    return newButton;
-  } catch (err: any) {
-    console.warn('Failed to upsert to Supabase helpdesk_buttons, saving to localStorage instead:', err.message);
-    const current = await getHelpdeskButtons();
+  if (error) {
+    if (import.meta.env.DEV) console.warn('[DB] UPSERT helpdesk_buttons warning:', error.message || error);
+    const saved = localStorage.getItem(MOCK_STORAGE_KEY);
+    const current: HelpdeskButton[] = saved ? JSON.parse(saved) : [...defaultHelpdeskButtons];
     const existingIndex = current.findIndex(b => b.id === newButton.id);
     if (existingIndex >= 0) {
       current[existingIndex] = newButton;
@@ -110,6 +94,9 @@ export const saveHelpdeskButton = async (button: Omit<HelpdeskButton, 'id'> & { 
     localStorage.setItem(MOCK_STORAGE_KEY, JSON.stringify(current));
     return newButton;
   }
+
+  if (import.meta.env.DEV) console.log('[DB] UPSERT helpdesk_buttons SUCCESS', newButton.id);
+  return newButton;
 };
 
 export const deleteHelpdeskButton = async (id: string): Promise<boolean> => {
@@ -120,21 +107,20 @@ export const deleteHelpdeskButton = async (id: string): Promise<boolean> => {
     return true;
   }
 
-  try {
-    const { error } = await supabase
-      .from('helpdesk_buttons')
-      .delete()
-      .eq('id', id);
+  const { error } = await supabase
+    .from('helpdesk_buttons')
+    .delete()
+    .eq('id', id);
 
-    if (error) {
-      throw error;
-    }
-    return true;
-  } catch (err: any) {
-    console.warn('Failed to delete from Supabase helpdesk_buttons, deleting from localStorage instead:', err.message);
-    const current = await getHelpdeskButtons();
+  if (error) {
+    if (import.meta.env.DEV) console.warn('[DB] DELETE helpdesk_buttons warning:', error.message || error);
+    const saved = localStorage.getItem(MOCK_STORAGE_KEY);
+    const current: HelpdeskButton[] = saved ? JSON.parse(saved) : [...defaultHelpdeskButtons];
     const filtered = current.filter(b => b.id !== id);
     localStorage.setItem(MOCK_STORAGE_KEY, JSON.stringify(filtered));
     return true;
   }
+
+  if (import.meta.env.DEV) console.log('[DB] DELETE helpdesk_buttons SUCCESS', id);
+  return true;
 };

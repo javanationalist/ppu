@@ -125,10 +125,10 @@ export default function WafoManager() {
         });
         if (error) throw error;
       } else {
-        const { error } = await supabase.from('wafo_announcements').insert([newRecord]);
+        const { data, error } = await supabase.from('wafo_announcements').insert([newRecord]).select().single();
         if (error) throw error;
         // Broadcast notification for new information
-        broadcastNewInformationEvent(formData.title, formData.content);
+        broadcastNewInformationEvent(data?.id, formData.title, formData.content);
       }
       
       setMessage({ type: 'success', text: isEditMode ? 'Informasi berhasil diperbarui!' : 'Informasi berhasil ditambahkan!' });

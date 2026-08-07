@@ -47,7 +47,7 @@ export default function SystemUpdateUser() {
           Catatan Pembaruan Sistem
         </h1>
         <p className="text-slate-600 dark:text-[#a3a3a3] font-semibold sm:text-lg max-w-2xl mx-auto text-center w-full transition-colors">
-          Riwayat lengkap pembaruan, peningkatan performa, dan fitur terbaru pada aplikasi PPU Digital.
+          Riwayat lengkap pembaruan, peningkatan performa, dan fitur terbaru pada aplikasi SUARAKU.
         </p>
       </div>
 

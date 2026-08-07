@@ -234,7 +234,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           }
         }
       )
-      .subscribe();
+      .subscribe((status, err) => {
+        if (import.meta.env.DEV) console.log(`[Realtime Auth] Profile channel status: ${status}`);
+        if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+          if (import.meta.env.DEV) {
+            console.warn(`[Realtime Auth] Profile channel status: ${status}. Fallback polling active.`, err?.message || err);
+          }
+        }
+      });
 
     // Fast polling fallback (every 3 seconds) for robust multi-tab and offline-reconnect support
     const pollInterval = setInterval(() => {
@@ -242,7 +249,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }, 3000);
 
     return () => {
-      channel.unsubscribe();
+      supabase.removeChannel(channel);
       clearInterval(pollInterval);
     };
   }, [user?.id]);

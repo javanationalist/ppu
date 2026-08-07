@@ -59,65 +59,52 @@ export const getGelombangConfigActive = async (): Promise<boolean> => {
     return local === 'true';
   }
 
-  try {
-    const { data, error } = await supabase
-      .from('gelombang_config')
-      .select('is_active')
-      .eq('id', 'default')
-      .maybeSingle();
+  const { data, error } = await supabase
+    .from('gelombang_config')
+    .select('is_active')
+    .eq('id', 'default')
+    .maybeSingle();
 
-    if (error) {
-      console.warn('Supabase error fetching gelombang_config, falling back to localStorage:', error);
-      const local = localStorage.getItem(STORAGE_KEY_CONFIG);
-      return local === 'true';
-    }
-
-    if (!data) {
-      // Insert default row
-      await supabase.from('gelombang_config').insert({ id: 'default', is_active: false });
-      return false;
-    }
-
-    return !!data.is_active;
-  } catch (err) {
-    console.error('Error in getGelombangConfigActive:', err);
-    const local = localStorage.getItem(STORAGE_KEY_CONFIG);
-    return local === 'true';
+  if (error) {
+    if (import.meta.env.DEV) console.error('[DB] GET gelombang_config ERROR:', error);
+    if (error.code === '42P01') return false;
+    throw new Error(`Gagal mengambil konfigurasi gelombang: ${error.message}`);
   }
+
+  if (!data) {
+    await supabase.from('gelombang_config').insert({ id: 'default', is_active: false });
+    return false;
+  }
+
+  return !!data.is_active;
 };
 
 export const setGelombangConfigActive = async (
   isActive: boolean,
   adminEmail: string
 ): Promise<boolean> => {
-  // Set local state anyway
-  localStorage.setItem(STORAGE_KEY_CONFIG, String(isActive));
-
-  let dbSuccess = false;
-  if (isSupabaseConfigured) {
-    try {
-      const { error } = await supabase
-        .from('gelombang_config')
-        .upsert({ id: 'default', is_active: isActive });
-      dbSuccess = !error;
-      if (error) {
-        console.error('Supabase error updating gelombang_config:', error);
-      }
-    } catch (err) {
-      console.error('Exception in setGelombangConfigActive:', err);
-    }
-  } else {
-    dbSuccess = true; // offline mock mode
+  if (!isSupabaseConfigured) {
+    localStorage.setItem(STORAGE_KEY_CONFIG, String(isActive));
+    await logAdminAction(adminEmail, `Mengubah Fitur Gelombang Voting (Mock)`, `Status diubah ke ${isActive ? 'AKTIF' : 'NONAKTIF'}`);
+    return true;
   }
 
-  // Audit log
+  const { error } = await supabase
+    .from('gelombang_config')
+    .upsert({ id: 'default', is_active: isActive });
+
+  if (error) {
+    if (import.meta.env.DEV) console.error('[DB] UPSERT gelombang_config ERROR:', error);
+    return false;
+  }
+
   await logAdminAction(
     adminEmail,
     `Mengubah Fitur Gelombang Voting`,
     `Status Fitur Gelombang Voting diubah menjadi: ${isActive ? 'AKTIF' : 'NONAKTIF'}`
   );
 
-  return dbSuccess;
+  return true;
 };
 
 // --- SESI CRUD SERVICE ---
@@ -140,34 +127,27 @@ export const getGelombangSesiList = async (): Promise<GelombangSesi[]> => {
     return readLocalSesi();
   }
 
-  try {
-    const { data, error } = await supabase
-      .from('gelombang_voting')
-      .select('*')
-      .order('created_at', { ascending: false });
+  const { data, error } = await supabase
+    .from('gelombang_voting')
+    .select('*')
+    .order('created_at', { ascending: false });
 
-    if (error) {
-      console.warn('Supabase error fetching gelombang_voting, falling back to localStorage:', error);
-      return readLocalSesi();
-    }
-
-    // Sync to localStorage as redundancy
-    const parsed: GelombangSesi[] = (data || []).map((row: any) => ({
-      id: row.id,
-      nama_sesi: row.nama_sesi,
-      kelas: Array.isArray(row.kelas) ? row.kelas : JSON.parse(row.kelas || '[]'),
-      jam_mulai: row.jam_mulai,
-      jam_selesai: row.jam_selesai,
-      is_active: !!row.is_active,
-      created_at: row.created_at,
-      updated_at: row.updated_at,
-    }));
-    writeLocalSesi(parsed);
-    return parsed;
-  } catch (err) {
-    console.error('Exception in getGelombangSesiList:', err);
-    return readLocalSesi();
+  if (error) {
+    if (import.meta.env.DEV) console.error('[DB] GET gelombang_voting ERROR:', error);
+    if (error.code === '42P01') return [];
+    throw new Error(`Gagal mengambil sesi gelombang: ${error.message}`);
   }
+
+  return (data || []).map((row: any) => ({
+    id: row.id,
+    nama_sesi: row.nama_sesi,
+    kelas: Array.isArray(row.kelas) ? row.kelas : JSON.parse(row.kelas || '[]'),
+    jam_mulai: row.jam_mulai,
+    jam_selesai: row.jam_selesai,
+    is_active: !!row.is_active,
+    created_at: row.created_at,
+    updated_at: row.updated_at,
+  }));
 };
 
 export const generateSafeUUID = (): string => {
@@ -189,30 +169,26 @@ export const addGelombangSesi = async (
     updated_at: new Date().toISOString(),
   };
 
-  // Add locally first
-  const localList = readLocalSesi();
-  localList.unshift(newSesi);
-  writeLocalSesi(localList);
+  if (!isSupabaseConfigured) {
+    const localList = readLocalSesi();
+    localList.unshift(newSesi);
+    writeLocalSesi(localList);
+    await logAdminAction(adminEmail, 'Menambah Gelombang Sesi (Mock)', `Sesi "${sesi.nama_sesi}"`);
+    return newSesi;
+  }
 
-  let success = true;
-  if (isSupabaseConfigured) {
-    try {
-      const { error } = await supabase.from('gelombang_voting').insert({
-        id: newId,
-        nama_sesi: sesi.nama_sesi,
-        kelas: sesi.kelas, // will be written as jsonb list
-        jam_mulai: sesi.jam_mulai,
-        jam_selesai: sesi.jam_selesai,
-        is_active: sesi.is_active,
-      });
-      if (error) {
-        console.error('Supabase error adding gelombang sesi:', error);
-        success = false;
-      }
-    } catch (err) {
-      console.error('Exception in addGelombangSesi:', err);
-      success = false;
-    }
+  const { error } = await supabase.from('gelombang_voting').insert({
+    id: newId,
+    nama_sesi: sesi.nama_sesi,
+    kelas: sesi.kelas,
+    jam_mulai: sesi.jam_mulai,
+    jam_selesai: sesi.jam_selesai,
+    is_active: sesi.is_active,
+  });
+
+  if (error) {
+    if (import.meta.env.DEV) console.error('[DB] INSERT gelombang_voting ERROR:', error);
+    throw new Error(`Gagal membuat sesi gelombang: ${error.message}`);
   }
 
   await logAdminAction(
@@ -221,7 +197,7 @@ export const addGelombangSesi = async (
     `Sesi "${sesi.nama_sesi}" (${sesi.jam_mulai}-${sesi.jam_selesai}) untuk kelas: ${sesi.kelas.join(', ')}`
   );
 
-  return success ? newSesi : null;
+  return newSesi;
 };
 
 export const updateGelombangSesi = async (
@@ -229,76 +205,61 @@ export const updateGelombangSesi = async (
   updatedData: Partial<Omit<GelombangSesi, 'id'>>,
   adminEmail: string
 ): Promise<boolean> => {
-  const localList = readLocalSesi();
-  const idx = localList.findIndex((s) => s.id === id);
-  if (idx !== -1) {
-    localList[idx] = {
-      ...localList[idx],
-      ...updatedData,
-      updated_at: new Date().toISOString(),
-    };
-    writeLocalSesi(localList);
-  }
-
-  let dbSuccess = false;
-  if (isSupabaseConfigured) {
-    try {
-      const { error } = await supabase
-        .from('gelombang_voting')
-        .update({
-          ...updatedData,
-        })
-        .eq('id', id);
-
-      dbSuccess = !error;
-      if (error) {
-        console.error('Supabase error updating gelombang sesi:', error);
-      }
-    } catch (err) {
-      console.error('Exception in updateGelombangSesi:', err);
+  if (!isSupabaseConfigured) {
+    const localList = readLocalSesi();
+    const idx = localList.findIndex((s) => s.id === id);
+    if (idx !== -1) {
+      localList[idx] = {
+        ...localList[idx],
+        ...updatedData,
+        updated_at: new Date().toISOString(),
+      };
+      writeLocalSesi(localList);
     }
-  } else {
-    dbSuccess = true;
+    await logAdminAction(adminEmail, 'Memperbarui Gelombang Sesi (Mock)', `ID: ${id}`);
+    return true;
   }
 
-  const sesName = updatedData.nama_sesi || (idx !== -1 ? localList[idx].nama_sesi : 'Sesi');
+  const { error } = await supabase
+    .from('gelombang_voting')
+    .update(updatedData)
+    .eq('id', id);
+
+  if (error) {
+    if (import.meta.env.DEV) console.error('[DB] UPDATE gelombang_voting ERROR:', error);
+    return false;
+  }
+
   await logAdminAction(
     adminEmail,
     'Memperbarui Gelombang Sesi',
-    `Sesi "${sesName}" berhasil diperbarui atau diubah statusnya.`
+    `Sesi ID "${id}" berhasil diperbarui.`
   );
 
-  return dbSuccess;
+  return true;
 };
 
 export const deleteGelombangSesi = async (id: string, adminEmail: string): Promise<boolean> => {
-  const localList = readLocalSesi();
-  const sesiToDelete = localList.find((s) => s.id === id);
-  const updated = localList.filter((s) => s.id !== id);
-  writeLocalSesi(updated);
-
-  let dbSuccess = false;
-  if (isSupabaseConfigured) {
-    try {
-      const { error } = await supabase.from('gelombang_voting').delete().eq('id', id);
-      dbSuccess = !error;
-      if (error) {
-        console.error('Supabase error deleting gelombang sesi:', error);
-      }
-    } catch (err) {
-      console.error('Exception in deleteGelombangSesi:', err);
-    }
-  } else {
-    dbSuccess = true;
+  if (!isSupabaseConfigured) {
+    const localList = readLocalSesi();
+    const updated = localList.filter((s) => s.id !== id);
+    writeLocalSesi(updated);
+    await logAdminAction(adminEmail, 'Menghapus Gelombang Sesi (Mock)', `ID: ${id}`);
+    return true;
   }
 
-  if (sesiToDelete) {
-    await logAdminAction(
-      adminEmail,
-      'Menghapus Gelombang Sesi',
-      `Sesi "${sesiToDelete.nama_sesi}" (${sesiToDelete.jam_mulai}-${sesiToDelete.jam_selesai}) berhasil dihapus.`
-    );
+  const { error } = await supabase.from('gelombang_voting').delete().eq('id', id);
+
+  if (error) {
+    if (import.meta.env.DEV) console.error('[DB] DELETE gelombang_voting ERROR:', error);
+    return false;
   }
 
-  return dbSuccess;
+  await logAdminAction(
+    adminEmail,
+    'Menghapus Gelombang Sesi',
+    `Sesi ID "${id}" berhasil dihapus.`
+  );
+
+  return true;
 };

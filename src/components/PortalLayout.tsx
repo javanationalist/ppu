@@ -105,7 +105,7 @@ export default function PortalLayout() {
                 className="w-9 h-9 object-contain select-none shrink-0"
               />
               <div className="inline-flex items-center px-2.5 py-0.5 rounded-full bg-ppu-blue/10 dark:bg-sky-500/10 text-ppu-blue dark:text-sky-400 text-[11px] font-semibold uppercase tracking-wider shrink-0 transition-colors group-hover:bg-ppu-blue/15 dark:group-hover:bg-sky-500/15">
-                PPU 2026
+                SUARAKU 2026
               </div>
             </Link>
 

@@ -134,7 +134,7 @@ export default function VoterCardTab({
                 </div>
                 <div className="min-w-0 flex-1">
                   <h3 className="text-white font-black tracking-[0.1em] sm:tracking-[0.2em] text-sm sm:text-2xl truncate">VOTERS CARD</h3>
-                  <p className="text-indigo-300 text-[8px] sm:text-xs font-bold uppercase tracking-widest leading-tight truncate">Portal Pemilihan Umum</p>
+                  <p className="text-indigo-300 text-[8px] sm:text-xs font-bold uppercase tracking-widest leading-tight truncate">SUARAKU</p>
                 </div>
               </div>
               <div className="text-right shrink-0 ml-1 sm:ml-2">
@@ -221,7 +221,7 @@ export default function VoterCardTab({
             {/* Card Footer */}
             <div className="sm:absolute bottom-0 left-0 right-0 h-auto sm:h-16 mt-auto sm:mt-0 bg-black/20 backdrop-blur-sm p-3 sm:px-8 flex items-center border-t border-white/10">
               <p className="text-white/60 text-[9px] sm:text-[11px] leading-relaxed italic text-center sm:text-left">
-                Tunjukkan kartu ini kepada panitia di tempat pemilihan untuk melakukan pemilihan. Kartu ini merupakan bukti identitas sah dalam sistem PPU Digital.
+                Tunjukkan kartu ini kepada panitia di tempat pemilihan untuk melakukan pemilihan. Kartu ini merupakan bukti identitas sah dalam sistem SUARAKU.
               </p>
             </div>
           </div>

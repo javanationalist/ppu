@@ -404,7 +404,7 @@ export default function Landing() {
 
           {/* Judul */}
           <h2 id="footer-title" className="text-slate-700 dark:text-slate-300 font-bold tracking-tight text-base sm:text-lg transition-colors">
-            Portal Pemilihan Umum (PPU) Digital
+            SUARAKU
           </h2>
 
 
@@ -448,7 +448,7 @@ export default function Landing() {
           {/* Bagian paling bawah */}
           <div id="footer-bottom-info" className="w-full flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 text-[11px] sm:text-xs text-slate-400 dark:text-slate-500 transition-colors">
             <span id="footer-copyright">
-              © 2026 PPU Digital v1.3.4 Genesis. All rights reserved.
+              © 2026 SUARAKU v1.3.4 Genesis. All rights reserved.
             </span>
             <span id="footer-attribution">
               Illustration by{' '}

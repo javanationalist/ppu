@@ -14,7 +14,7 @@ export default function Maintenance() {
         />
 
         <div className="space-y-3">
-          <h1 className="text-3xl font-black text-slate-900 tracking-tight italic uppercase">PPU Maintenance</h1>
+          <h1 className="text-3xl font-black text-slate-900 tracking-tight italic uppercase">SUARAKU Maintenance</h1>
           <div className="h-1 w-20 bg-amber-500 mx-auto rounded-full"></div>
           <p className="text-slate-600 text-sm sm:text-base leading-relaxed font-semibold">
             Sistem saat ini sedang dalam proses pemeliharaan rutin untuk meningkatkan performa dan stabilitas. 

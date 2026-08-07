@@ -269,7 +269,7 @@ export default function ExportData() {
             Pada hari {getIndonesianDay()}, tanggal {getIndonesianFormattedDate()}, telah dilaksanakan Pemilihan Anggota MPK dan Ketua OSIS SMA Negeri 1 Bangsal Tahun Ajaran {getAcademicYear()}.
           </p>
           <p>
-            Berdasarkan hasil pemungutan suara yang dilakukan melalui Platform PPU Digital, berikut merupakan hasil rekapitulasi suara yang telah diverifikasi dan dinyatakan sesuai dengan data yang tersimpan pada sistem.
+            Berdasarkan hasil pemungutan suara yang dilakukan melalui Platform SUARAKU, berikut merupakan hasil rekapitulasi suara yang telah diverifikasi dan dinyatakan sesuai dengan data yang tersimpan pada sistem.
           </p>
         </div>
 

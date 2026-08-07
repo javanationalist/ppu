@@ -16,10 +16,7 @@ export const logAdminAction = async (
       created_at: new Date().toISOString(),
     };
 
-    const { error } = await supabase.from('audit_logs').insert(newLog);
-
-    if (error) {
-      // localStorage Fallback
+    if (!isSupabaseConfigured) {
       const localLogsStr = localStorage.getItem('mock_audit_logs') || '[]';
       const localLogs = JSON.parse(localLogsStr);
       localLogs.push({
@@ -27,6 +24,14 @@ export const logAdminAction = async (
         ...newLog
       });
       localStorage.setItem('mock_audit_logs', JSON.stringify(localLogs));
+      return;
+    }
+
+    const { error } = await supabase.from('audit_logs').insert(newLog);
+    if (error) {
+      if (import.meta.env.DEV) console.error('[DB] INSERT audit_logs ERROR:', error);
+    } else if (import.meta.env.DEV) {
+      console.log('[DB] INSERT audit_logs SUCCESS');
     }
   } catch (err) {
     console.error('Failed to log admin action:', err);
@@ -35,39 +40,47 @@ export const logAdminAction = async (
 
 // Fetch audit logs
 export const getAuditLogs = async (): Promise<AuditLog[]> => {
-  try {
-    const { data, error } = await supabase
-      .from('audit_logs')
-      .select('*')
-      .order('created_at', { ascending: false });
-
-    if (error || !data) {
-      const localLogsStr = localStorage.getItem('mock_audit_logs') || '[]';
-      const logs: AuditLog[] = JSON.parse(localLogsStr);
-      logs.sort((a, b) => new Date(b.created_at || '').getTime() - new Date(a.created_at || '').getTime());
-      return logs;
-    }
-
-    return data as AuditLog[];
-  } catch (err) {
-    console.error('Error fetching audit logs:', err);
-    return [];
+  if (!isSupabaseConfigured) {
+    const localLogsStr = localStorage.getItem('mock_audit_logs') || '[]';
+    const logs: AuditLog[] = JSON.parse(localLogsStr);
+    logs.sort((a, b) => new Date(b.created_at || '').getTime() - new Date(a.created_at || '').getTime());
+    return logs;
   }
+
+  const { data, error } = await supabase
+    .from('audit_logs')
+    .select('*')
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    if (import.meta.env.DEV) console.error('[DB] GET audit_logs ERROR:', error);
+    if (error.code === '42P01') {
+      console.warn('[DB] Table audit_logs missing in Supabase.');
+      return [];
+    }
+    throw new Error(`Gagal mengambil data audit log: ${error.message}`);
+  }
+
+  if (import.meta.env.DEV) console.log('[DB] GET audit_logs SUCCESS', data?.length);
+  return (data as AuditLog[]) || [];
 };
 
 // Fetch all profiles (voters/admins)
 export const getAllProfiles = async (): Promise<Profile[]> => {
-  try {
-    const { data, error } = await supabase.from('profiles').select('*');
-    if (error || !data) {
-      const localProfilesStr = localStorage.getItem('mock_profiles') || '[]';
-      return JSON.parse(localProfilesStr) as Profile[];
-    }
-    return data as Profile[];
-  } catch (err) {
-    console.error('Error fetching profiles:', err);
-    return [];
+  if (!isSupabaseConfigured) {
+    const localProfilesStr = localStorage.getItem('mock_profiles') || '[]';
+    return JSON.parse(localProfilesStr) as Profile[];
   }
+
+  const { data, error } = await supabase.from('profiles').select('*');
+
+  if (error) {
+    if (import.meta.env.DEV) console.error('[DB] GET profiles ERROR:', error);
+    throw new Error(`Gagal mengambil data profil: ${error.message}`);
+  }
+
+  if (import.meta.env.DEV) console.log('[DB] GET profiles SUCCESS', data?.length);
+  return (data as Profile[]) || [];
 };
 
 // Confirm user account status
@@ -77,46 +90,34 @@ export const confirmVoterAccount = async (
   voterName: string,
   cardId: string
 ): Promise<boolean> => {
-  try {
-    const { error } = await supabase
-      .from('profiles')
-      .update({
-        account_status: 'dikonfirmasi'
-      })
-      .eq('id', voterId);
-
-    if (error) {
-      console.error('Supabase Error confirming voter:', error);
-      // Local fallback for offline-testing, but inform the UI it might not be permanent if DB failed
-      const localProfilesStr = localStorage.getItem('mock_profiles');
-      if (localProfilesStr) {
-        const profiles: Profile[] = JSON.parse(localProfilesStr);
-        const idx = profiles.findIndex(p => p.id === voterId);
-        if (idx >= 0) {
-          profiles[idx].account_status = 'dikonfirmasi';
-          localStorage.setItem('mock_profiles', JSON.stringify(profiles));
-          
-          await logAdminAction(
-            adminEmail,
-            'Admin confirmed voter (Local Fallback)',
-            `${voterName} (Card ID: ${cardId})`
-          );
-          return true; // Return true as local fallback succeeded
-        }
+  if (!isSupabaseConfigured) {
+    const localProfilesStr = localStorage.getItem('mock_profiles');
+    if (localProfilesStr) {
+      const profiles: Profile[] = JSON.parse(localProfilesStr);
+      const idx = profiles.findIndex(p => p.id === voterId);
+      if (idx >= 0) {
+        profiles[idx].account_status = 'dikonfirmasi';
+        localStorage.setItem('mock_profiles', JSON.stringify(profiles));
+        await logAdminAction(adminEmail, 'Admin confirmed voter (Mock)', `${voterName} (Card ID: ${cardId})`);
+        return true;
       }
-      return false; // Return false to indicate DB persistence failed
     }
-
-    await logAdminAction(
-      adminEmail,
-      'Admin confirmed voter',
-      `${voterName} (Card ID: ${cardId})`
-    );
-    return true;
-  } catch (err) {
-    console.error('Failed to confirm voter:', err);
     return false;
   }
+
+  const { error } = await supabase
+    .from('profiles')
+    .update({ account_status: 'dikonfirmasi' })
+    .eq('id', voterId);
+
+  if (error) {
+    if (import.meta.env.DEV) console.error('[DB] UPDATE profiles confirm ERROR:', error);
+    return false;
+  }
+
+  if (import.meta.env.DEV) console.log('[DB] UPDATE profiles confirm SUCCESS', voterId);
+  await logAdminAction(adminEmail, 'Admin confirmed voter', `${voterName} (Card ID: ${cardId})`);
+  return true;
 };
 
 // Reset confirmation status
@@ -126,97 +127,65 @@ export const resetVoterConfirmation = async (
   voterName: string,
   cardId: string
 ): Promise<boolean> => {
-  try {
-    const { error } = await supabase
-      .from('profiles')
-      .update({
-        account_status: 'belum_dikonfirmasi'
-      })
-      .eq('id', voterId);
-
-    if (error) {
-      console.error('Supabase Error resetting voter confirmation:', error);
-      const localProfilesStr = localStorage.getItem('mock_profiles');
-      if (localProfilesStr) {
-        const profiles: Profile[] = JSON.parse(localProfilesStr);
-        const idx = profiles.findIndex(p => p.id === voterId);
-        if (idx >= 0) {
-          profiles[idx].account_status = 'belum_dikonfirmasi';
-          localStorage.setItem('mock_profiles', JSON.stringify(profiles));
-          
-          await logAdminAction(
-            adminEmail,
-            'Admin reset confirmation (Local Fallback)',
-            `${voterName} (Card ID: ${cardId})`
-          );
-          return true; // Return true as local fallback succeeded
-        }
+  if (!isSupabaseConfigured) {
+    const localProfilesStr = localStorage.getItem('mock_profiles');
+    if (localProfilesStr) {
+      const profiles: Profile[] = JSON.parse(localProfilesStr);
+      const idx = profiles.findIndex(p => p.id === voterId);
+      if (idx >= 0) {
+        profiles[idx].account_status = 'belum_dikonfirmasi';
+        localStorage.setItem('mock_profiles', JSON.stringify(profiles));
+        await logAdminAction(adminEmail, 'Admin reset confirmation (Mock)', `${voterName} (Card ID: ${cardId})`);
+        return true;
       }
-      return false;
     }
-
-    await logAdminAction(
-      adminEmail,
-      'Admin reset confirmation',
-      `${voterName} (Card ID: ${cardId})`
-    );
-    return true;
-  } catch (err) {
-    console.error('Failed to reset voter confirmation:', err);
     return false;
   }
+
+  const { error } = await supabase
+    .from('profiles')
+    .update({ account_status: 'belum_dikonfirmasi' })
+    .eq('id', voterId);
+
+  if (error) {
+    if (import.meta.env.DEV) console.error('[DB] UPDATE profiles reset confirmation ERROR:', error);
+    return false;
+  }
+
+  if (import.meta.env.DEV) console.log('[DB] UPDATE profiles reset confirmation SUCCESS', voterId);
+  await logAdminAction(adminEmail, 'Admin reset confirmation', `${voterName} (Card ID: ${cardId})`);
+  return true;
 };
 
 // Reset confirmation status for ALL voters
 export const resetAllVotersConfirmation = async (
   adminEmail: string
 ): Promise<boolean> => {
-  try {
-    const { error } = await supabase
-      .from('profiles')
-      .update({
-        account_status: 'belum_dikonfirmasi'
-      })
-      .eq('role', 'user');
-
-    // Also update mock profiles in localStorage
+  if (!isSupabaseConfigured) {
     const localProfilesStr = localStorage.getItem('mock_profiles');
-    let localSucceeded = false;
     if (localProfilesStr) {
       const profiles: Profile[] = JSON.parse(localProfilesStr);
-      const updated = profiles.map(p => {
-        if (p.role === 'user') {
-          return { ...p, account_status: 'belum_dikonfirmasi' as const };
-        }
-        return p;
-      });
+      const updated = profiles.map(p => p.role === 'user' ? { ...p, account_status: 'belum_dikonfirmasi' as const } : p);
       localStorage.setItem('mock_profiles', JSON.stringify(updated));
-      localSucceeded = true;
+      await logAdminAction(adminEmail, 'Admin reset all voter confirmations (Mock)', 'Seluruh status konfirmasi akun di-reset ke Belum Dikonfirmasi');
+      return true;
     }
-
-    if (error) {
-      console.error('Database error in resetAllVotersConfirmation:', error);
-      if (localSucceeded) {
-        await logAdminAction(
-          adminEmail,
-          'Admin reset all voter confirmations (Local Fallback)',
-          'Seluruh status konfirmasi akun di-reset ke Belum Dikonfirmasi'
-        );
-        return true; // Return true as local fallback succeeded
-      }
-      return false;
-    }
-
-    await logAdminAction(
-      adminEmail,
-      'Admin reset all voter confirmations',
-      'Seluruh status konfirmasi akun di-reset ke Belum Dikonfirmasi'
-    );
-    return true;
-  } catch (err) {
-    console.error('Failed to reset all voter confirmations:', err);
     return false;
   }
+
+  const { error } = await supabase
+    .from('profiles')
+    .update({ account_status: 'belum_dikonfirmasi' })
+    .eq('role', 'user');
+
+  if (error) {
+    if (import.meta.env.DEV) console.error('[DB] UPDATE resetAllVotersConfirmation ERROR:', error);
+    return false;
+  }
+
+  if (import.meta.env.DEV) console.log('[DB] UPDATE resetAllVotersConfirmation SUCCESS');
+  await logAdminAction(adminEmail, 'Admin reset all voter confirmations', 'Seluruh status konfirmasi akun di-reset ke Belum Dikonfirmasi');
+  return true;
 };
 
 // Reset voter history and votes
@@ -226,51 +195,56 @@ export const resetVoterHistory = async (
   voterName: string,
   cardId: string
 ): Promise<boolean> => {
-  try {
-    // Delete recorded votes belonging to that voter
-    const { error: deleteError } = await supabase
-      .from('votes')
-      .delete()
-      .eq('voter_id', voterId);
-
-    // Delete matching votes from localStorage in any case to keep fallback synced
+  if (!isSupabaseConfigured) {
     const localVotesStr = localStorage.getItem('mock_votes');
     if (localVotesStr) {
       const votes = JSON.parse(localVotesStr);
       const remainingVotes = votes.filter((v: any) => v.voter_id !== voterId);
       localStorage.setItem('mock_votes', JSON.stringify(remainingVotes));
     }
-
-    // Reset voting_status to "belum"
-    const { error: profileError } = await supabase
-      .from('profiles')
-      .upsert({
-        id: voterId,
-        voting_status: 'belum'
-      });
-
-    if (profileError) {
-      const localProfilesStr = localStorage.getItem('mock_profiles');
-      if (localProfilesStr) {
-        const profiles: Profile[] = JSON.parse(localProfilesStr);
-        const idx = profiles.findIndex(p => p.id === voterId);
-        if (idx >= 0) {
-          profiles[idx].voting_status = 'belum';
-          localStorage.setItem('mock_profiles', JSON.stringify(profiles));
-        }
+    const localProfilesStr = localStorage.getItem('mock_profiles');
+    if (localProfilesStr) {
+      const profiles: Profile[] = JSON.parse(localProfilesStr);
+      const idx = profiles.findIndex(p => p.id === voterId);
+      if (idx >= 0) {
+        profiles[idx].voting_status = 'belum';
+        localStorage.setItem('mock_profiles', JSON.stringify(profiles));
       }
     }
-
-    await logAdminAction(
-      adminEmail,
-      'Admin reset voting history',
-      `${voterName} (Card ID: ${cardId})`
-    );
+    await logAdminAction(adminEmail, 'Admin reset voting history (Mock)', `${voterName} (Card ID: ${cardId})`);
     return true;
-  } catch (err) {
-    console.error('Failed to reset voting history:', err);
-    return false;
   }
+
+  const { error: deleteError } = await supabase
+    .from('votes')
+    .delete()
+    .eq('voter_id', voterId);
+
+  if (deleteError && import.meta.env.DEV) {
+    console.error('[DB] DELETE votes ERROR:', deleteError);
+  }
+
+  const { error: profileError } = await supabase
+    .from('profiles')
+    .update({ voting_status: 'belum' })
+    .eq('id', voterId);
+
+  if (profileError) {
+    if (import.meta.env.DEV) console.warn('[DB] UPDATE profile voting_status warning:', profileError.message || profileError);
+    const localProfilesStr = localStorage.getItem('mock_profiles');
+    if (localProfilesStr) {
+      const profiles: Profile[] = JSON.parse(localProfilesStr);
+      const idx = profiles.findIndex(p => p.id === voterId);
+      if (idx >= 0) {
+        profiles[idx].voting_status = 'belum';
+        localStorage.setItem('mock_profiles', JSON.stringify(profiles));
+      }
+    }
+  }
+
+  if (import.meta.env.DEV) console.log('[DB] RESET voter history SUCCESS', voterId);
+  await logAdminAction(adminEmail, 'Admin reset voting history', `${voterName} (Card ID: ${cardId})`);
+  return true;
 };
 
 // Soft delete account
@@ -280,39 +254,50 @@ export const softDeleteVoter = async (
   voterName: string,
   cardId: string
 ): Promise<boolean> => {
-  try {
-    const deletionTime = new Date().toISOString();
-    const { error } = await supabase
-      .from('profiles')
-      .upsert({
-        id: voterId,
-        is_deleted: true,
-        deleted_at: deletionTime
-      });
+  const deletionTime = new Date().toISOString();
 
-    if (error) {
-      const localProfilesStr = localStorage.getItem('mock_profiles');
-      if (localProfilesStr) {
-        const profiles: Profile[] = JSON.parse(localProfilesStr);
-        const idx = profiles.findIndex(p => p.id === voterId);
-        if (idx >= 0) {
-          profiles[idx].is_deleted = true;
-          profiles[idx].deleted_at = deletionTime;
-          localStorage.setItem('mock_profiles', JSON.stringify(profiles));
-        }
+  if (!isSupabaseConfigured) {
+    const localProfilesStr = localStorage.getItem('mock_profiles');
+    if (localProfilesStr) {
+      const profiles: Profile[] = JSON.parse(localProfilesStr);
+      const idx = profiles.findIndex(p => p.id === voterId);
+      if (idx >= 0) {
+        profiles[idx].is_deleted = true;
+        profiles[idx].deleted_at = deletionTime;
+        localStorage.setItem('mock_profiles', JSON.stringify(profiles));
       }
     }
-
-    await logAdminAction(
-      adminEmail,
-      'Admin deleted account',
-      `${voterName} (Card ID: ${cardId})`
-    );
+    await logAdminAction(adminEmail, 'Admin deleted account (Mock)', `${voterName} (Card ID: ${cardId})`);
     return true;
-  } catch (err) {
-    console.error('Failed to delete voter account:', err);
-    return false;
   }
+
+  const { error } = await supabase
+    .from('profiles')
+    .update({
+      is_deleted: true,
+      deleted_at: deletionTime
+    })
+    .eq('id', voterId);
+
+  if (error) {
+    if (import.meta.env.DEV) console.warn('[DB] SOFT DELETE voter warning:', error.message || error);
+    const localProfilesStr = localStorage.getItem('mock_profiles');
+    if (localProfilesStr) {
+      const profiles: Profile[] = JSON.parse(localProfilesStr);
+      const idx = profiles.findIndex(p => p.id === voterId);
+      if (idx >= 0) {
+        profiles[idx].is_deleted = true;
+        profiles[idx].deleted_at = deletionTime;
+        localStorage.setItem('mock_profiles', JSON.stringify(profiles));
+      }
+    }
+    await logAdminAction(adminEmail, 'Admin deleted account', `${voterName} (Card ID: ${cardId})`);
+    return true;
+  }
+
+  if (import.meta.env.DEV) console.log('[DB] SOFT DELETE voter SUCCESS', voterId);
+  await logAdminAction(adminEmail, 'Admin deleted account', `${voterName} (Card ID: ${cardId})`);
+  return true;
 };
 
 // Restore account
@@ -322,38 +307,48 @@ export const restoreVoter = async (
   voterName: string,
   cardId: string
 ): Promise<boolean> => {
-  try {
-    const { error } = await supabase
-      .from('profiles')
-      .upsert({
-        id: voterId,
-        is_deleted: false,
-        deleted_at: null
-      });
-
-    if (error) {
-      const localProfilesStr = localStorage.getItem('mock_profiles');
-      if (localProfilesStr) {
-        const profiles: Profile[] = JSON.parse(localProfilesStr);
-        const idx = profiles.findIndex(p => p.id === voterId);
-        if (idx >= 0) {
-          profiles[idx].is_deleted = false;
-          profiles[idx].deleted_at = null;
-          localStorage.setItem('mock_profiles', JSON.stringify(profiles));
-        }
+  if (!isSupabaseConfigured) {
+    const localProfilesStr = localStorage.getItem('mock_profiles');
+    if (localProfilesStr) {
+      const profiles: Profile[] = JSON.parse(localProfilesStr);
+      const idx = profiles.findIndex(p => p.id === voterId);
+      if (idx >= 0) {
+        profiles[idx].is_deleted = false;
+        profiles[idx].deleted_at = null;
+        localStorage.setItem('mock_profiles', JSON.stringify(profiles));
       }
     }
-
-    await logAdminAction(
-      adminEmail,
-      'Admin restored account',
-      `${voterName} (Card ID: ${cardId})`
-    );
+    await logAdminAction(adminEmail, 'Admin restored account (Mock)', `${voterName} (Card ID: ${cardId})`);
     return true;
-  } catch (err) {
-    console.error('Failed to restore voter account:', err);
-    return false;
   }
+
+  const { error } = await supabase
+    .from('profiles')
+    .update({
+      is_deleted: false,
+      deleted_at: null
+    })
+    .eq('id', voterId);
+
+  if (error) {
+    if (import.meta.env.DEV) console.warn('[DB] RESTORE voter warning:', error.message || error);
+    const localProfilesStr = localStorage.getItem('mock_profiles');
+    if (localProfilesStr) {
+      const profiles: Profile[] = JSON.parse(localProfilesStr);
+      const idx = profiles.findIndex(p => p.id === voterId);
+      if (idx >= 0) {
+        profiles[idx].is_deleted = false;
+        profiles[idx].deleted_at = null;
+        localStorage.setItem('mock_profiles', JSON.stringify(profiles));
+      }
+    }
+    await logAdminAction(adminEmail, 'Admin restored account', `${voterName} (Card ID: ${cardId})`);
+    return true;
+  }
+
+  if (import.meta.env.DEV) console.log('[DB] RESTORE voter SUCCESS', voterId);
+  await logAdminAction(adminEmail, 'Admin restored account', `${voterName} (Card ID: ${cardId})`);
+  return true;
 };
 
 // CREATE BOOTH

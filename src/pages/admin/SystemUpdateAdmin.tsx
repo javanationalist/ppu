@@ -114,7 +114,7 @@ export default function SystemUpdateAdmin() {
               Kelola System Update
             </h1>
             <p className="text-xs sm:text-sm text-gray-500 font-medium">
-              Tambah, edit, dan hapus riwayat pembaruan sistem aplikasi PPU Digital.
+              Tambah, edit, dan hapus riwayat pembaruan sistem aplikasi SUARAKU.
             </p>
           </div>
         </div>

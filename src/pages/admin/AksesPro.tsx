@@ -92,15 +92,15 @@ export default function AksesPro() {
           {/* Badge & Crown Icon */}
           <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-400/30 text-indigo-300 text-[10px] font-black tracking-widest uppercase">
             <Crown className="w-3.5 h-3.5 text-amber-400 fill-amber-400 animate-pulse" />
-            <span>PPU Pro</span>
+            <span>SUARAKU Pro</span>
           </div>
 
           <h1 className="text-2xl sm:text-4xl font-extrabold tracking-tight bg-gradient-to-r from-white via-indigo-100 to-indigo-300 bg-clip-text text-transparent">
-            PPU Pro
+            SUARAKU Pro
           </h1>
 
           <p className="text-slate-400 text-sm sm:text-base leading-relaxed font-medium">
-            Maaf, menu fitur ini memerlukan upgrade PPU Pro. Akun ada belum berlangganan fitur Pro.
+            Maaf, menu fitur ini memerlukan upgrade SUARAKU Pro. Akun ada belum berlangganan fitur Pro.
           </p>
 
           <div className="w-full max-w-md h-px bg-gradient-to-r from-transparent via-slate-800 to-transparent my-2" />
@@ -109,7 +109,7 @@ export default function AksesPro() {
         {/* Benefits Grid Section */}
         <div className="relative z-10 mt-8 max-w-xl mx-auto">
           <h3 className="text-center text-xs font-black uppercase tracking-widest text-slate-400 mb-4">
-            Alasan Mengapa Anda Memerlukan PPU PRO:
+            Alasan Mengapa Anda Memerlukan SUARAKU PRO:
           </h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {proFeatures.map((feat, idx) => (
@@ -127,13 +127,13 @@ export default function AksesPro() {
         {/* Action Button Section */}
         <div className="relative z-10 mt-10 text-center flex flex-col sm:flex-row items-center justify-center gap-4">
           <a
-            href="https://wa.me/6285174181228?text=Halo!%20Saya%20ingin%20_upgrade_%20PPU%20Pro"
+            href="https://wa.me/6285174181228?text=Halo!%20Saya%20ingin%20_upgrade_%20SUARAKU%20Pro"
             target="_blank"
             rel="noreferrer"
             className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white rounded-2xl text-xs font-black uppercase tracking-widest shadow-xl shadow-indigo-900/40 hover:shadow-indigo-900/60 hover:-translate-y-0.5 active:translate-y-0 transition-all"
           >
             <Zap className="w-4 h-4 text-amber-300 fill-amber-300 font-bold" />
-            <span>Aktifkan PPU PRO Sekarang</span>
+            <span>Aktifkan SUARAKU PRO Sekarang</span>
           </a>
           
           <button

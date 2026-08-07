@@ -347,7 +347,7 @@ export default function StatusTab({
           <span>Secure Node: Jakarta-S-01</span>
         </div>
         <div>
-          Copyright &copy; 2026 PPU Digital
+          Copyright &copy; 2026 SUARAKU
         </div>
       </footer>
     </div>

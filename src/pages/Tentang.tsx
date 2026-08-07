@@ -44,7 +44,7 @@ export default function Tentang() {
           <Building2 className="w-8 h-8 text-ppu-blue dark:text-sky-400" />
         </div>
         <h1 className="text-3xl sm:text-4xl font-black text-ppu-blue dark:text-sky-400 tracking-tight uppercase mb-3 text-center transition-colors">
-          Tentang PPU
+          Tentang SUARAKU
         </h1>
         <p className="text-slate-600 dark:text-[#a3a3a3] font-semibold sm:text-lg max-w-2xl mx-auto text-center transition-colors">
           Membangun iklim demokrasi digital yang transparan dan dapat diandalkan.
@@ -61,7 +61,7 @@ export default function Tentang() {
           <div>
             <h2 className="text-xs font-bold text-ppu-blue dark:text-sky-400 uppercase tracking-widest mb-4 transition-colors">Pengenalan Sistem</h2>
             <p className="text-slate-600 dark:text-[#f5f5f5] text-sm sm:text-base leading-relaxed font-medium transition-colors">
-              Portal Pemilihan Umum (PPU) adalah sistem pemungutan suara berbasis web yang dirancang untuk memfasilitasi kebutuhan demokrasi di lingkungan institusi pendidikan, organisasi, dan komunitas. PPU berfokus pada kecepatan, keamanan, dan pengalaman pengguna yang modern.
+              SUARAKU adalah sistem pemungutan suara berbasis web yang dirancang untuk memfasilitasi kebutuhan demokrasi di lingkungan institusi pendidikan, organisasi, dan komunitas. SUARAKU berfokus pada kecepatan, keamanan, dan pengalaman pengguna yang modern.
             </p>
           </div>
 
@@ -85,7 +85,7 @@ export default function Tentang() {
           <div className="border-t border-ppu-border dark:border-[#333333] pt-8 mt-4 text-center pb-4 transition-colors">
              <p className="text-xs font-semibold text-slate-500 dark:text-[#a3a3a3] uppercase tracking-widest mb-2 transition-colors">Penyelenggara / Pengembang</p>
              <h3 className="text-xl font-black text-ppu-blue dark:text-sky-400 tracking-widest uppercase transition-colors">SMA NEGERI 1</h3>
-             <p className="text-sm text-slate-600 dark:text-[#a3a3a3] mt-2 font-medium transition-colors">Tim Pengembang Teknologi Informasi PPU</p>
+             <p className="text-sm text-slate-600 dark:text-[#a3a3a3] mt-2 font-medium transition-colors">Tim Pengembang Teknologi Informasi SUARAKU</p>
           </div>
         </div>
       </div>

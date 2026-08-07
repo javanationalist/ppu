@@ -264,7 +264,7 @@ export default function Signup() {
             className="mx-auto w-24 h-auto mb-6 animate-pulse-subtle"
           />
           <h2 className="text-center text-3xl font-extrabold text-ppu-blue">
-            Daftar Akun PPU
+            Daftar Akun SUARAKU
           </h2>
         </div>
         <form className="mt-8 space-y-6" onSubmit={handleSignup}>
@@ -428,19 +428,28 @@ export default function Signup() {
               />
             </div>
             <div>
-              <label htmlFor="captcha" className="block text-xs font-bold uppercase text-slate-500 mb-1 tracking-wider">
-                Verifikasi Keamanan: Berapakah hasil dari [{num1} + {num2} =]
-              </label>
-              <input
-                id="captcha"
-                name="captcha"
-                type="number"
-                required
-                className="appearance-none rounded-xl relative block w-full px-3.5 py-2.5 border border-ppu-border placeholder-slate-400 text-slate-800 focus:outline-none focus:ring-2 focus:ring-ppu-blue/20 focus:border-ppu-blue sm:text-sm font-medium"
-                placeholder="Masukkan hasil penjumlahan"
-                value={captchaInput}
-                onChange={(e) => setCaptchaInput(e.target.value)}
-              />
+              <div className="bg-slate-50 p-3 rounded-2xl border border-ppu-border/80">
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
+                  {/* KOTAK SOAL */}
+                  <div className="bg-white px-3.5 py-2.5 rounded-xl border border-slate-200 text-slate-800 text-xs sm:text-sm font-bold font-mono shadow-xs flex items-center justify-center shrink-0 select-none min-w-[100px]">
+                    <span className="text-ppu-blue font-black">{num1} + {num2} =</span>
+                  </div>
+
+                  {/* FORM JAWAB */}
+                  <div className="flex-1">
+                    <input
+                      id="captcha"
+                      name="captcha"
+                      type="number"
+                      required
+                      className="appearance-none rounded-xl relative block w-full px-3.5 py-2 border border-ppu-border placeholder-slate-400 text-slate-800 focus:outline-none focus:ring-2 focus:ring-ppu-blue/20 focus:border-ppu-blue text-sm font-semibold bg-white"
+                      placeholder="Masukkan jawaban"
+                      value={captchaInput}
+                      onChange={(e) => setCaptchaInput(e.target.value)}
+                    />
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
 

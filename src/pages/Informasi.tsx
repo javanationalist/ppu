@@ -1,5 +1,9 @@
-import React, { useState, useEffect } from 'react';
-import { Info, Megaphone, CalendarDays, FileText, AlertCircle, Clock, ChevronRight, ArrowLeft, Settings, Sparkles, Bell, BellRing } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { 
+  Info, Megaphone, CalendarDays, FileText, AlertCircle, Clock, 
+  ChevronRight, ArrowLeft, Settings, Sparkles, Bell, BellRing, 
+  Send, CheckCircle2, XCircle, X 
+} from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useTheme } from '../contexts/ThemeContext';
 import { WafoAnnouncement, SystemUpdate } from '../types';
@@ -12,8 +16,10 @@ import NotificationModal from '../components/NotificationModal';
 import {
   NotificationPermissionStatus,
   getNotificationPermission,
+  requestNotificationPermission,
   showNewInformationNotification,
   subscribeToNotificationBroadcast,
+  isNotificationSupported,
 } from '../lib/notificationService';
 
 export default function Informasi() {
@@ -29,6 +35,17 @@ export default function Informasi() {
   const [notifPermission, setNotifPermission] = useState<NotificationPermissionStatus>(() => getNotificationPermission());
   const [isNotifModalOpen, setIsNotifModalOpen] = useState(false);
 
+  // Demo status feedback state
+  const [demoStatus, setDemoStatus] = useState<{
+    type: 'success' | 'error';
+    message: string;
+    subtext?: string;
+  } | null>(null);
+
+  // Ref to track seen WAFO IDs and avoid duplicate notifications on re-render / reconnect / refresh
+  const seenWafoIdsRef = useRef<Set<string>>(new Set());
+  const isInitialFetchDone = useRef<boolean>(false);
+
   const fetchAnnouncements = async () => {
     try {
       const { data, error } = await supabase
@@ -40,7 +57,14 @@ export default function Informasi() {
       if (error) {
         console.error("Error fetching WAFO for Informasi page:", error);
       } else {
-        setAnnouncements(data || []);
+        const fetchedData = data || [];
+        setAnnouncements(fetchedData);
+
+        // Track initial WAFO IDs so existing items do not trigger notification on page load
+        if (!isInitialFetchDone.current) {
+          fetchedData.forEach(item => seenWafoIdsRef.current.add(item.id));
+          isInitialFetchDone.current = true;
+        }
       }
     } catch (e) {
       console.error(e);
@@ -58,6 +82,21 @@ export default function Informasi() {
     } finally {
       setUpdatesLoading(false);
     }
+  };
+
+  const handleNewWafoArrival = (newWafo?: { id?: string; title?: string; content?: string }) => {
+    if (newWafo?.id) {
+      if (seenWafoIdsRef.current.has(newWafo.id)) {
+        // Already processed / notified
+        return;
+      }
+      seenWafoIdsRef.current.add(newWafo.id);
+    }
+
+    if (getNotificationPermission() === 'granted') {
+      showNewInformationNotification('SUARAKU', 'Informasi baru tersedia di WAFO.');
+    }
+    fetchAnnouncements();
   };
 
   useEffect(() => {
@@ -80,11 +119,8 @@ export default function Informasi() {
     window.addEventListener('focus', handleFocus);
 
     // Listen for broadcast channel notification events
-    const unsubscribeBroadcast = subscribeToNotificationBroadcast(() => {
-      if (getNotificationPermission() === 'granted') {
-        showNewInformationNotification();
-      }
-      fetchAnnouncements();
+    const unsubscribeBroadcast = subscribeToNotificationBroadcast((detail) => {
+      handleNewWafoArrival(detail);
     });
 
     // Listen for Supabase Realtime updates on wafo_announcements
@@ -94,12 +130,15 @@ export default function Informasi() {
         'postgres_changes',
         { event: '*', schema: 'public', table: 'wafo_announcements' },
         (payload) => {
-          fetchAnnouncements();
-          // Trigger notification ONLY for new information (INSERT event)
           if (payload.eventType === 'INSERT') {
-            if (getNotificationPermission() === 'granted') {
-              showNewInformationNotification();
-            }
+            const newRecord = payload.new as WafoAnnouncement;
+            handleNewWafoArrival({
+              id: newRecord?.id,
+              title: newRecord?.title,
+              content: newRecord?.content,
+            });
+          } else {
+            fetchAnnouncements();
           }
         }
       )
@@ -115,6 +154,66 @@ export default function Informasi() {
     };
   }, []);
 
+  const handleDemoNotification = async () => {
+    setDemoStatus(null);
+
+    // A. Check browser support
+    if (!isNotificationSupported()) {
+      setDemoStatus({
+        type: 'error',
+        message: 'Notifikasi belum dapat dikirim.',
+        subtext: 'Browser tidak mendukung notifikasi.',
+      });
+      return;
+    }
+
+    let currentPerm = getNotificationPermission();
+
+    // B. If permission = "default", request permission first
+    if (currentPerm === 'default') {
+      currentPerm = await requestNotificationPermission();
+      setNotifPermission(currentPerm);
+    }
+
+    // C. If permission = "denied"
+    if (currentPerm === 'denied') {
+      setDemoStatus({
+        type: 'error',
+        message: 'Notifikasi belum dapat dikirim.',
+        subtext: 'Notifikasi diblokir oleh browser. Aktifkan izin notifikasi pada pengaturan browser.',
+      });
+      return;
+    }
+
+    // D. If permission = "granted"
+    if (currentPerm === 'granted') {
+      const demoTitle = 'SUARAKU';
+      const demoContent = 'Ini adalah notifikasi demo WAFO. Jika kamu melihat notifikasi ini, fitur notifikasi sudah aktif.';
+      
+      const sent = showNewInformationNotification(demoTitle, demoContent);
+
+      if (sent) {
+        setDemoStatus({
+          type: 'success',
+          message: 'Notifikasi berhasil dikirim.',
+          subtext: 'Notifikasi demo telah dikirimkan ke browser Anda.',
+        });
+      } else {
+        setDemoStatus({
+          type: 'error',
+          message: 'Notifikasi belum dapat dikirim.',
+          subtext: 'Gagal memicu notifikasi browser. Pastikan izin notifikasi aktif.',
+        });
+      }
+    } else {
+      setDemoStatus({
+        type: 'error',
+        message: 'Notifikasi belum dapat dikirim.',
+        subtext: 'Izin notifikasi tidak diberikan.',
+      });
+    }
+  };
+
   const getIcon = (type: string) => {
     switch (type) {
       case 'pengumuman': return <AlertCircle className="w-5 h-5 text-ppu-red dark:text-rose-400" />;
@@ -126,7 +225,7 @@ export default function Informasi() {
 
   return (
     <div className="flex-1 flex flex-col items-center py-12 px-4 sm:px-6 lg:px-8 w-full max-w-4xl mx-auto transition-colors duration-300">
-      <div className="w-full flex flex-row justify-between items-center gap-4 mb-6">
+      <div className="w-full flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
           <BackToHomeButton />
           {user && (
@@ -141,7 +240,17 @@ export default function Informasi() {
           )}
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
+          {/* Demo Notifikasi Button */}
+          <button
+            onClick={handleDemoNotification}
+            className="inline-flex items-center gap-2 px-3.5 py-2 text-xs sm:text-sm font-bold bg-indigo-600 hover:bg-indigo-700 dark:bg-sky-500 dark:hover:bg-sky-600 text-white rounded-xl shadow-sm transition-all duration-200 cursor-pointer"
+            title="Uji coba pengiriman Web Notification"
+          >
+            <Send className="w-4 h-4" />
+            <span>Demo Notifikasi</span>
+          </button>
+
           {/* Notification Bell Button */}
           <button
             onClick={() => setIsNotifModalOpen(true)}
@@ -174,6 +283,46 @@ export default function Informasi() {
           </Link>
         </div>
       </div>
+
+      {/* Demo Notification Status Banner */}
+      {demoStatus && (
+        <div
+          className={`w-full mb-6 p-4 rounded-2xl border transition-all animate-in fade-in slide-in-from-top-2 duration-300 flex items-start gap-3.5 shadow-sm ${
+            demoStatus.type === 'success'
+              ? 'bg-emerald-50 dark:bg-emerald-500/10 border-emerald-200 dark:border-emerald-500/30 text-emerald-900 dark:text-emerald-200'
+              : 'bg-rose-50 dark:bg-rose-500/10 border-rose-200 dark:border-rose-500/30 text-rose-900 dark:text-rose-200'
+          }`}
+        >
+          <div className={`p-2 rounded-xl shrink-0 ${
+            demoStatus.type === 'success'
+              ? 'bg-emerald-100 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400'
+              : 'bg-rose-100 dark:bg-rose-500/20 text-rose-600 dark:text-rose-400'
+          }`}>
+            {demoStatus.type === 'success' ? (
+              <CheckCircle2 className="w-5 h-5" />
+            ) : (
+              <XCircle className="w-5 h-5" />
+            )}
+          </div>
+          <div className="flex-1 text-left min-w-0 pt-0.5">
+            <h4 className="text-sm font-black tracking-wide leading-tight">
+              {demoStatus.message}
+            </h4>
+            {demoStatus.subtext && (
+              <p className="text-xs font-semibold opacity-90 mt-1 leading-relaxed">
+                {demoStatus.subtext}
+              </p>
+            )}
+          </div>
+          <button
+            onClick={() => setDemoStatus(null)}
+            className="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-lg transition-colors cursor-pointer"
+            aria-label="Tutup Status Demo"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
 
       <div className="text-center mb-10 w-full animate-fade-in">
         <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-ppu-blue/10 dark:bg-sky-500/10 border border-ppu-blue/20 dark:border-sky-500/20 mb-6 shadow-md shadow-ppu-blue/5">
@@ -292,7 +441,7 @@ export default function Informasi() {
                 System Update
               </h2>
               <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 font-medium">
-                Pembaruan dan peningkatan aplikasi PPU Digital
+                Pembaruan dan peningkatan aplikasi SUARAKU
               </p>
             </div>
           </div>

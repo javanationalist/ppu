@@ -100,7 +100,7 @@ export default function DashboardOverview() {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">Admin Dashboard</h1>
-          <p className="text-slate-500 text-sm mt-1">Sistem Pemilihan Umum Intra Sekolah (PPU) Real-Time Control Center.</p>
+          <p className="text-slate-500 text-sm mt-1">Sistem SUARAKU Real-Time Control Center.</p>
         </div>
         <div className="flex items-center gap-2 text-xs font-mono bg-slate-100 text-slate-600 px-3 py-1.5 rounded-lg border border-slate-200">
           <Database className="w-3.5 h-3.5 text-indigo-600" />

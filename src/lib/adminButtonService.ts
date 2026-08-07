@@ -48,103 +48,85 @@ export const getAdminButtonSettings = async (): Promise<AdminButtonSettings> => 
     }
   }
 
-  try {
-    const { data, error } = await supabase
-      .from('admin_button')
-      .select('*')
-      .eq('id', 'default')
-      .maybeSingle();
+  const { data, error } = await supabase
+    .from('admin_button')
+    .select('*')
+    .eq('id', 'default')
+    .maybeSingle();
 
-    if (error) {
-      console.warn('Database admin_button table not found or loaded incorrectly, using localStorage:', error.message);
-      const saved = localStorage.getItem(STORAGE_KEY);
-      if (!saved) {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(DEFAULT_BUTTON_SETTINGS));
-        return DEFAULT_BUTTON_SETTINGS;
-      }
-      try {
-        return { ...DEFAULT_BUTTON_SETTINGS, ...JSON.parse(saved) };
-      } catch {
-        return DEFAULT_BUTTON_SETTINGS;
-      }
+  if (error) {
+    if (import.meta.env.DEV) console.error('[DB] GET admin_button ERROR:', error);
+    if (error.code === '42P01') {
+      console.warn('[DB] Table admin_button missing in Supabase. Returning default settings.');
     }
-
-    if (!data) {
-      // Table exists but record doesn't, insert default settings
-      const { error: insertError } = await supabase
-        .from('admin_button')
-        .insert({
-          id: 'default',
-          ...DEFAULT_BUTTON_SETTINGS,
-        });
-
-      if (insertError) {
-        console.error('Failed to create default admin button settings record:', insertError.message);
-      }
-      return DEFAULT_BUTTON_SETTINGS;
-    }
-
-    return {
-      gelombang_voting: data.gelombang_voting !== false,
-      kelola_kategori: data.kelola_kategori !== false,
-      kelola_kandidat: data.kelola_kandidat !== false,
-      konfirmasi_pemilih: data.konfirmasi_pemilih !== false,
-      kelola_pemilih: data.kelola_pemilih !== false,
-      wafo: data.wafo !== false,
-      kelola_helpdesk: data.kelola_helpdesk !== false,
-      visibilitas_user: data.visibilitas_user !== false,
-      hasil_voting: data.hasil_voting !== false,
-      audit_log: data.audit_log !== false,
-      export_data: data.export_data !== false,
-      maintenance: data.maintenance !== false,
-      countdown: data.countdown !== false,
-    };
-  } catch (err) {
-    console.error('Error fetching admin button settings, falling back to local storage:', err);
-    const saved = localStorage.getItem(STORAGE_KEY);
-    if (!saved) return DEFAULT_BUTTON_SETTINGS;
-    try {
-      return { ...DEFAULT_BUTTON_SETTINGS, ...JSON.parse(saved) };
-    } catch {
-      return DEFAULT_BUTTON_SETTINGS;
-    }
+    return DEFAULT_BUTTON_SETTINGS;
   }
+
+  if (!data) {
+    // Table exists but record doesn't, insert default settings
+    const { error: insertError } = await supabase
+      .from('admin_button')
+      .insert({
+        id: 'default',
+        ...DEFAULT_BUTTON_SETTINGS,
+      });
+
+    if (insertError && import.meta.env.DEV) {
+      console.error('[DB] INSERT admin_button DEFAULT ERROR:', insertError.message);
+    }
+    return DEFAULT_BUTTON_SETTINGS;
+  }
+
+  if (import.meta.env.DEV) console.log('[DB] GET admin_button SUCCESS');
+
+  return {
+    gelombang_voting: data.gelombang_voting !== false,
+    kelola_kategori: data.kelola_kategori !== false,
+    kelola_kandidat: data.kelola_kandidat !== false,
+    konfirmasi_pemilih: data.konfirmasi_pemilih !== false,
+    kelola_pemilih: data.kelola_pemilih !== false,
+    wafo: data.wafo !== false,
+    kelola_helpdesk: data.kelola_helpdesk !== false,
+    visibilitas_user: data.visibilitas_user !== false,
+    hasil_voting: data.hasil_voting !== false,
+    audit_log: data.audit_log !== false,
+    export_data: data.export_data !== false,
+    maintenance: data.maintenance !== false,
+    countdown: data.countdown !== false,
+  };
 };
 
 export const saveAdminButtonSettings = async (settings: AdminButtonSettings): Promise<boolean> => {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
-
   if (!isSupabaseConfigured) {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
     return true;
   }
 
-  try {
-    const { error } = await supabase
-      .from('admin_button')
-      .upsert({
-        id: 'default',
-        gelombang_voting: settings.gelombang_voting,
-        kelola_kategori: settings.kelola_kategori,
-        kelola_kandidat: settings.kelola_kandidat,
-        konfirmasi_pemilih: settings.konfirmasi_pemilih,
-        kelola_pemilih: settings.kelola_pemilih,
-        wafo: settings.wafo,
-        kelola_helpdesk: settings.kelola_helpdesk,
-        visibilitas_user: settings.visibilitas_user,
-        hasil_voting: settings.hasil_voting,
-        audit_log: settings.audit_log,
-        export_data: settings.export_data,
-        maintenance: settings.maintenance,
-        countdown: settings.countdown,
-      });
+  const { error } = await supabase
+    .from('admin_button')
+    .upsert({
+      id: 'default',
+      gelombang_voting: settings.gelombang_voting,
+      kelola_kategori: settings.kelola_kategori,
+      kelola_kandidat: settings.kelola_kandidat,
+      konfirmasi_pemilih: settings.konfirmasi_pemilih,
+      kelola_pemilih: settings.kelola_pemilih,
+      wafo: settings.wafo,
+      kelola_helpdesk: settings.kelola_helpdesk,
+      visibilitas_user: settings.visibilitas_user,
+      hasil_voting: settings.hasil_voting,
+      audit_log: settings.audit_log,
+      export_data: settings.export_data,
+      maintenance: settings.maintenance,
+      countdown: settings.countdown,
+    });
 
-    if (error) {
-      console.warn('Failed to upsert to Supabase admin_button:', error.message);
-      return false;
-    }
-    return true;
-  } catch (err) {
-    console.error('Error saving admin button settings to Supabase:', err);
+  if (error) {
+    if (import.meta.env.DEV) console.error('[DB] UPSERT admin_button ERROR:', error.message);
     return false;
   }
+
+  if (import.meta.env.DEV) console.log('[DB] UPSERT admin_button SUCCESS');
+  return true;
 };
+

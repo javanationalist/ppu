@@ -548,31 +548,30 @@ export const resetAllVotingData = async (adminEmail: string): Promise<boolean> =
     // 1. Delete all database votes
     const { error: errorVotes } = await supabase.from('votes').delete().neq('id', '00000000-0000-0000-0000-000000000000');
     if (errorVotes) {
-      console.error('Error deleting votes:', errorVotes);
+      if (import.meta.env.DEV) console.error('Error deleting votes:', errorVotes);
       return false;
     }
 
     // 2. Set all voter profiles back to 'belum'
     const { error: errorProfiles } = await supabase.from('profiles').update({ voting_status: 'belum' }).eq('role', 'user');
     if (errorProfiles) {
-      console.error('Error updating profiles:', errorProfiles);
+      if (import.meta.env.DEV) console.error('Error updating profiles:', errorProfiles);
       return false;
     }
-    
-    // Clear localStorage votes
-    localStorage.setItem('mock_votes', '[]');
-    
-    // Also update mock_profiles in localStorage
-    const mockProfilesStr = localStorage.getItem('mock_profiles');
-    if (mockProfilesStr) {
-      const mockProfiles = JSON.parse(mockProfilesStr);
-      const updatedProfiles = mockProfiles.map((p: any) => {
-        if (p.role === 'user') {
-          return { ...p, voting_status: 'belum' };
-        }
-        return p;
-      });
-      localStorage.setItem('mock_profiles', JSON.stringify(updatedProfiles));
+
+    if (!isSupabaseConfigured) {
+      localStorage.setItem('mock_votes', '[]');
+      const mockProfilesStr = localStorage.getItem('mock_profiles');
+      if (mockProfilesStr) {
+        const mockProfiles = JSON.parse(mockProfilesStr);
+        const updatedProfiles = mockProfiles.map((p: any) => {
+          if (p.role === 'user') {
+            return { ...p, voting_status: 'belum' };
+          }
+          return p;
+        });
+        localStorage.setItem('mock_profiles', JSON.stringify(updatedProfiles));
+      }
     }
 
     return true;
@@ -614,26 +613,27 @@ export const verifyVoterByCardId = async (cardId: string): Promise<Profile | nul
 
 // Get all votes submitted by a specific voter
 export const getVoterSubmittedVotes = async (voterId: string): Promise<Vote[]> => {
-  try {
-    const { data, error } = await supabase
-      .from('votes')
-      .select('*')
-      .eq('voter_id', voterId);
-
-    if (error) {
-      // Fallback to localStorage if table doesn't exist
-      const localVotesStr = localStorage.getItem('mock_votes');
-      if (localVotesStr) {
-        const localVotes: Vote[] = JSON.parse(localVotesStr);
-        return localVotes.filter(v => v.voter_id === voterId);
-      }
-      return [];
+  if (!isSupabaseConfigured) {
+    const localVotesStr = localStorage.getItem('mock_votes');
+    if (localVotesStr) {
+      const localVotes: Vote[] = JSON.parse(localVotesStr);
+      return localVotes.filter(v => v.voter_id === voterId);
     }
-    return (data || []) as Vote[];
-  } catch (err) {
-    console.error('Error fetching voter submitted votes:', err);
     return [];
   }
+
+  const { data, error } = await supabase
+    .from('votes')
+    .select('*')
+    .eq('voter_id', voterId);
+
+  if (error) {
+    if (import.meta.env.DEV) console.error('[DB] GET votes ERROR:', error);
+    if (error.code === '42P01') return [];
+    throw new Error(`Gagal mengambil data vote: ${error.message}`);
+  }
+
+  return (data || []) as Vote[];
 };
 
 export interface VotingCompletion {
@@ -868,22 +868,7 @@ export const submitMultipleVotes = async (votes: Vote[]): Promise<boolean> => {
 
 // Update voting status to "sudah" when finalized, reset verification, and expire voter card
 export const finalizeVotingStatus = async (voterId: string): Promise<boolean> => {
-  try {
-    const { error } = await supabase
-      .from('profiles')
-      .update({
-        voting_status: 'sudah',
-        account_status: 'belum_dikonfirmasi',
-        card_visibility: false
-      })
-      .eq('id', voterId);
-
-    if (error) {
-      console.error('Database finalize error:', error);
-      throw new Error(error.message || 'Gagal menyimpan status akhir pemilihan ke database.');
-    }
-
-    // Update profile in localStorage mock for matching both environments
+  if (!isSupabaseConfigured) {
     const mockProfilesStr = localStorage.getItem('mock_profiles');
     if (mockProfilesStr) {
       const mockProfiles: Profile[] = JSON.parse(mockProfilesStr);
@@ -896,10 +881,24 @@ export const finalizeVotingStatus = async (voterId: string): Promise<boolean> =>
       }
     }
     return true;
-  } catch (err: any) {
-    console.error('Error finalizing voting status:', err);
-    throw err;
   }
+
+  const { error } = await supabase
+    .from('profiles')
+    .update({
+      voting_status: 'sudah',
+      account_status: 'belum_dikonfirmasi',
+      card_visibility: false
+    })
+    .eq('id', voterId);
+
+  if (error) {
+    if (import.meta.env.DEV) console.error('[DB] finalizeVotingStatus ERROR:', error);
+    throw new Error(error.message || 'Gagal menyimpan status akhir pemilihan ke database.');
+  }
+
+  if (import.meta.env.DEV) console.log('[DB] finalizeVotingStatus SUCCESS', voterId);
+  return true;
 };
 
 export interface ElectionStatistics {
@@ -1004,48 +1003,32 @@ export const getElectionStatistics = async (): Promise<ElectionStatistics> => {
   let dapils: Dapil[] = [];
   let mpkCandidates: any[] = [];
 
-  try {
-    const { data: pData, error: pErr } = await supabase.from('profiles').select('*');
-    if (pErr) throw pErr;
-    profiles = pData || [];
-  } catch (e) {
-    const localProfilesStr = localStorage.getItem('mock_profiles') || '[]';
-    profiles = JSON.parse(localProfilesStr);
-  }
-
-  try {
-    const { data: cData, error: cErr } = await supabase.from('categories').select('*');
-    if (cErr) throw cErr;
-    categories = cData || [];
-  } catch (e) {
+  if (!isSupabaseConfigured) {
+    profiles = JSON.parse(localStorage.getItem('mock_profiles') || '[]');
     categories = [];
-  }
+    votes = JSON.parse(localStorage.getItem('mock_votes') || '[]');
+    dapils = JSON.parse(localStorage.getItem('mock_dapils') || '[]');
+    mpkCandidates = JSON.parse(localStorage.getItem('mock_candidates_mpk') || '[]');
+  } else {
+    const { data: pData, error: pErr } = await supabase.from('profiles').select('*');
+    if (pErr) throw new Error(`Gagal mengambil statistik profil: ${pErr.message}`);
+    profiles = pData || [];
 
-  try {
+    const { data: cData, error: cErr } = await supabase.from('categories').select('*');
+    if (cErr && cErr.code !== '42P01') throw new Error(`Gagal mengambil statistik kategori: ${cErr.message}`);
+    categories = cData || [];
+
     const { data: vData, error: vErr } = await supabase.from('votes').select('*');
-    if (vErr) throw vErr;
+    if (vErr && vErr.code !== '42P01') throw new Error(`Gagal mengambil statistik vote: ${vErr.message}`);
     votes = vData || [];
-  } catch (e) {
-    const localVotesStr = localStorage.getItem('mock_votes') || '[]';
-    votes = JSON.parse(localVotesStr);
-  }
 
-  try {
     const { data: dData, error: dErr } = await supabase.from('dapils').select('*');
-    if (dErr) throw dErr;
+    if (dErr && dErr.code !== '42P01') throw new Error(`Gagal mengambil statistik dapil: ${dErr.message}`);
     dapils = dData || [];
-  } catch (e) {
-    const localDapilsStr = localStorage.getItem('mock_dapils') || '[]';
-    dapils = JSON.parse(localDapilsStr);
-  }
 
-  try {
     const { data: mData, error: mErr } = await supabase.from('candidates_mpk').select('*');
-    if (mErr) throw mErr;
+    if (mErr && mErr.code !== '42P01') throw new Error(`Gagal mengambil statistik kandidat MPK: ${mErr.message}`);
     mpkCandidates = mData || [];
-  } catch (e) {
-    const localMpkStr = localStorage.getItem('mock_candidates_mpk') || '[]';
-    mpkCandidates = JSON.parse(localMpkStr);
   }
 
   const activeVoters = profiles.filter(p => p.role === 'user' && !p.is_deleted);

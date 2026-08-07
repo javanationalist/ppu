@@ -161,7 +161,7 @@ const defaultHelpdeskButtons: HelpdeskButton[] = [
 const defaultWafoAnnouncements: WafoAnnouncement[] = [
   {
     id: 'wafo-1',
-    title: 'Selamat Datang di PPU SMAN 1 Bangsal',
+    title: 'Selamat Datang di SUARAKU SMAN 1 Bangsal',
     content: 'Voting pemilihan raya akan segera dimulai. Persiapkan diri Anda dan cermati visi misi setiap kandidat.',
     is_active: true,
     created_at: new Date(Date.now() - 3600000).toISOString(), // 1 hour ago

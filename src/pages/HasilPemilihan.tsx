@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { 
-  BarChart, RefreshCw, Users, ShieldCheck, 
-  Award, Clock, AlertTriangle, MapPin, ArrowLeft, ShieldAlert, Vote
+  BarChart, RefreshCw, Users, 
+  Clock, AlertTriangle, MapPin, ArrowLeft, ShieldAlert, Vote
 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
@@ -239,7 +239,7 @@ export default function HasilPemilihan() {
                 <BarChart className="w-5 h-5 text-blue-600" />
                 <span>Hasil Voting Terkini</span>
               </h1>
-              <p className="text-xs text-slate-500 font-medium">Portal Pemilihan Umum Digital</p>
+              <p className="text-xs text-slate-500 font-medium">SUARAKU</p>
             </div>
           </div>
           <button 
@@ -721,68 +721,20 @@ export default function HasilPemilihan() {
 
               </div>
 
-              {/* Right Column (Statistics Cards & Class Attendance) */}
+              {/* Right Column (Partisipasi Pemilu & Per Kelas) */}
               <div className="space-y-6 self-start">
                 
-                {/* Stats board container */}
-                <div className="space-y-4">
-                  <div className="flex items-center gap-2">
-                    <span className="w-1.5 h-4 bg-blue-600 rounded"></span>
-                    <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider font-mono">Statistik Pemilu</h3>
+                {/* Participation Rate Card */}
+                <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm flex items-start justify-between">
+                  <div className="space-y-1.5 w-full">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block font-mono">Tingkat Partisipasi</span>
+                    <h2 className="text-2xl font-black text-slate-800">{participationRate}%</h2>
+                    <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden mt-1.5">
+                      <div className="bg-blue-600 h-full rounded-full transition-all duration-750" style={{ width: `${participationRate}%` }}></div>
+                    </div>
                   </div>
-
-                  <div className="grid grid-cols-1 gap-4">
-                    
-                    {/* Total Voters */}
-                    <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm flex items-start justify-between">
-                      <div className="space-y-1.5">
-                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block font-mono">DPT Terdaftar</span>
-                        <h2 className="text-2xl font-black text-slate-800">{totalVoters}</h2>
-                        <p className="text-[11px] text-slate-500 font-medium">Target potensial kesiswaan</p>
-                      </div>
-                      <div className="p-2.5 bg-blue-50 text-blue-600 rounded-xl">
-                        <ShieldCheck className="w-5 h-5" />
-                      </div>
-                    </div>
-
-                    {/* Total Votes Cast */}
-                    <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm flex items-start justify-between">
-                      <div className="space-y-1.5">
-                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block font-mono">Suara Selesai</span>
-                        <h2 className="text-2xl font-black text-slate-800">{votedVoters}</h2>
-                        <p className="text-[11px] text-slate-500 font-medium">Suara sah masuk sistem</p>
-                      </div>
-                      <div className="p-2.5 bg-blue-50 text-blue-600 rounded-xl">
-                        <Award className="w-5 h-5" />
-                      </div>
-                    </div>
-
-                    {/* Abstentions */}
-                    <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm flex items-start justify-between">
-                      <div className="space-y-1.5">
-                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block font-mono">Belum Memilih / Abstain</span>
-                        <h2 className="text-2xl font-black text-slate-800">{abstentions}</h2>
-                        <p className="text-[11px] text-slate-500 font-medium">Belum menyalurkan suara</p>
-                      </div>
-                      <div className="p-2.5 bg-blue-50 text-blue-600 rounded-xl">
-                        <AlertTriangle className="w-5 h-5" />
-                      </div>
-                    </div>
-
-                    {/* Participation Rate */}
-                    <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm flex items-start justify-between">
-                      <div className="space-y-1.5 w-full">
-                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block font-mono">Partisipasi</span>
-                        <h2 className="text-2xl font-black text-slate-800">{participationRate}%</h2>
-                        <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden mt-1.5">
-                          <div className="bg-blue-600 h-full rounded-full transition-all duration-750" style={{ width: `${participationRate}%` }}></div>
-                        </div>
-                      </div>
-                      <div className="p-2.5 bg-blue-50 text-blue-600 rounded-xl shrink-0 self-start">
-                        <Users className="w-5 h-5" />
-                      </div>
-                    </div>
-
+                  <div className="p-2.5 bg-blue-50 text-blue-600 rounded-xl shrink-0 self-start">
+                    <Users className="w-5 h-5" />
                   </div>
                 </div>
 
@@ -844,40 +796,6 @@ export default function HasilPemilihan() {
                         <span>Kurang (&lt;50%)</span>
                       </div>
                     </div>
-                  </div>
-                </div>
-
-                {/* Tingkat Kontribusi Suara Berdasarkan Kelas */}
-                <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm space-y-6">
-                  <div>
-                    <h3 className="text-base font-extrabold text-slate-800">Kontribusi Suara</h3>
-                    <p className="text-xs text-slate-400 mt-0.5">Proporsi suara selesai masing-masing kelas</p>
-                  </div>
-
-                  <div className="overflow-y-auto max-h-[260px] pr-2 space-y-4">
-                    {!stats || stats.classContribution.length === 0 ? (
-                      <p className="text-center py-6 text-xs text-slate-400">Belum ada data terekam.</p>
-                    ) : (
-                      stats.classContribution.map((item) => {
-                        const pct = Math.round(item.percentage);
-                        return (
-                          <div key={item.className} className="space-y-1">
-                            <div className="flex justify-between items-center text-xs">
-                              <span className="font-bold text-slate-700">{item.className}</span>
-                              <span className="font-mono text-slate-500">
-                                {item.completedCount} Suara <span className="font-bold text-blue-600">({pct}%)</span>
-                              </span>
-                            </div>
-                            <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
-                              <div 
-                                className="h-full bg-blue-600 rounded-full transition-all duration-700"
-                                style={{ width: `${item.percentage}%` }}
-                              ></div>
-                            </div>
-                          </div>
-                        );
-                      })
-                    )}
                   </div>
                 </div>
 
