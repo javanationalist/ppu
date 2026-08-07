@@ -26,24 +26,53 @@ export async function requestNotificationPermission(): Promise<NotificationPermi
   }
 }
 
-export function showNewInformationNotification(title?: string, content?: string): boolean {
-  if (!isNotificationSupported()) {
-    return false;
+export async function registerNotificationServiceWorker(): Promise<ServiceWorkerRegistration | null> {
+  if (typeof window === 'undefined' || !('serviceWorker' in navigator)) {
+    return null;
   }
-  if (Notification.permission !== 'granted') {
-    return false;
-  }
-
   try {
-    const notificationTitle = title || 'SUARAKU';
-    const notificationBody = content || 'Informasi baru tersedia di WAFO.';
+    const existing = await navigator.serviceWorker.getRegistration();
+    if (existing) {
+      return existing;
+    }
+    const reg = await navigator.serviceWorker.register('/sw.js', { scope: '/' });
+    return reg;
+  } catch (err) {
+    console.warn('[Notification] Could not register /sw.js:', err);
+    return null;
+  }
+}
 
-    const notification = new Notification(notificationTitle, {
-      body: notificationBody,
-      icon: '/favicon.ico',
-      tag: 'ppu-new-wafo-' + Date.now(),
-    });
+export async function showNewInformationNotification(
+  title?: string,
+  content?: string
+): Promise<{ success: boolean; error?: string }> {
+  if (!isNotificationSupported()) {
+    const msg = 'Browser/perangkat Anda tidak mendukung Web Notification API.';
+    console.error('[Notification]', msg);
+    return { success: false, error: msg };
+  }
 
+  const currentPerm = Notification.permission;
+  if (currentPerm !== 'granted') {
+    const msg = `Izin notifikasi saat ini adalah "${currentPerm}". Silakan izinkan notifikasi pada browser Anda.`;
+    console.warn('[Notification]', msg);
+    return { success: false, error: msg };
+  }
+
+  const notificationTitle = title || 'SUARAKU';
+  const notificationOptions: NotificationOptions = {
+    body: content || 'Informasi baru tersedia di WAFO.',
+    icon: '/favicon.ico',
+    badge: '/favicon.ico',
+    tag: 'ppu-new-wafo-' + Date.now(),
+  };
+
+  let primaryError: string | null = null;
+
+  // Method 1: Try standard new Notification() constructor first
+  try {
+    const notification = new Notification(notificationTitle, notificationOptions);
     notification.onclick = (event) => {
       event.preventDefault();
       window.focus();
@@ -51,11 +80,50 @@ export function showNewInformationNotification(title?: string, content?: string)
         window.location.href = '/informasi';
       }
     };
-    return true;
-  } catch (err) {
-    console.error('Error displaying notification:', err);
-    return false;
+    console.log('[Notification] Successfully shown notification via Notification constructor.');
+    return { success: true };
+  } catch (err: any) {
+    primaryError = err?.message || String(err);
+    console.warn('[Notification] new Notification() constructor failed:', err);
   }
+
+  // Method 2: Fallback to Service Worker showNotification (for mobile Chrome / PWA / sandboxed context)
+  if ('serviceWorker' in navigator) {
+    try {
+      let reg = await navigator.serviceWorker.getRegistration();
+      if (!reg) {
+        reg = await registerNotificationServiceWorker();
+      }
+      if (reg) {
+        if (!reg.active && reg.installing) {
+          await new Promise<void>((resolve) => {
+            const sw = reg!.installing;
+            if (!sw) return resolve();
+            sw.addEventListener('statechange', () => {
+              if (sw.state === 'activated' || sw.state === 'redundant') resolve();
+            });
+            setTimeout(resolve, 1000);
+          });
+        }
+        await reg.showNotification(notificationTitle, notificationOptions);
+        console.log('[Notification] Successfully shown notification via ServiceWorkerRegistration.');
+        return { success: true };
+      }
+    } catch (swErr: any) {
+      console.error('[Notification] ServiceWorker showNotification failed:', swErr);
+      return {
+        success: false,
+        error: `Gagal memicu Service Worker notification: ${swErr?.message || String(swErr)}`,
+      };
+    }
+  }
+
+  return {
+    success: false,
+    error: primaryError 
+      ? `Gagal memicu notifikasi: ${primaryError}`
+      : 'Gagal memicu notifikasi browser.',
+  };
 }
 
 // Broadcast new announcement event across browser tabs

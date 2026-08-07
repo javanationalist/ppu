@@ -84,7 +84,7 @@ export default function Informasi() {
     }
   };
 
-  const handleNewWafoArrival = (newWafo?: { id?: string; title?: string; content?: string }) => {
+  const handleNewWafoArrival = async (newWafo?: { id?: string; title?: string; content?: string }) => {
     if (newWafo?.id) {
       if (seenWafoIdsRef.current.has(newWafo.id)) {
         // Already processed / notified
@@ -94,7 +94,7 @@ export default function Informasi() {
     }
 
     if (getNotificationPermission() === 'granted') {
-      showNewInformationNotification('SUARAKU', 'Informasi baru tersedia di WAFO.');
+      await showNewInformationNotification('SUARAKU', 'Informasi baru tersedia di WAFO.');
     }
     fetchAnnouncements();
   };
@@ -190,26 +190,26 @@ export default function Informasi() {
       const demoTitle = 'SUARAKU';
       const demoContent = 'Ini adalah notifikasi demo WAFO. Jika kamu melihat notifikasi ini, fitur notifikasi sudah aktif.';
       
-      const sent = showNewInformationNotification(demoTitle, demoContent);
+      const result = await showNewInformationNotification(demoTitle, demoContent);
 
-      if (sent) {
+      if (result.success) {
         setDemoStatus({
           type: 'success',
           message: 'Notifikasi berhasil dikirim.',
-          subtext: 'Notifikasi demo telah dikirimkan ke browser Anda.',
+          subtext: 'Notifikasi demo telah dikirimkan ke sistem notifikasi browser Anda.',
         });
       } else {
         setDemoStatus({
           type: 'error',
           message: 'Notifikasi belum dapat dikirim.',
-          subtext: 'Gagal memicu notifikasi browser. Pastikan izin notifikasi aktif.',
+          subtext: result.error || 'Gagal memicu notifikasi browser. Periksa konsol browser untuk detail error.',
         });
       }
     } else {
       setDemoStatus({
         type: 'error',
         message: 'Notifikasi belum dapat dikirim.',
-        subtext: 'Izin notifikasi tidak diberikan.',
+        subtext: `Izin notifikasi saat ini: ${currentPerm}.`,
       });
     }
   };

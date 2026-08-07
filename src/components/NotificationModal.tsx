@@ -32,7 +32,7 @@ export default function NotificationModal({
       onStatusChange(result);
       if (result === 'granted') {
         // Show test notification
-        showNewInformationNotification();
+        await showNewInformationNotification('SUARAKU', 'Notifikasi berhasil diaktifkan!');
         onClose();
       } else if (result === 'denied') {
         setShowSettingsGuide(true);
@@ -236,7 +236,9 @@ export default function NotificationModal({
               <div className="space-y-2 pt-2">
                 <button
                   type="button"
-                  onClick={() => showNewInformationNotification('SUARAKU', 'Ini adalah notifikasi demo WAFO. Jika kamu melihat notifikasi ini, fitur notifikasi sudah aktif.')}
+                  onClick={async () => {
+                    await showNewInformationNotification('SUARAKU', 'Ini adalah notifikasi demo WAFO. Jika kamu melihat notifikasi ini, fitur notifikasi sudah aktif.');
+                  }}
                   className="w-full py-2.5 px-4 bg-indigo-50 dark:bg-sky-500/10 hover:bg-indigo-100 dark:hover:bg-sky-500/20 text-ppu-blue dark:text-sky-400 font-bold text-xs sm:text-sm rounded-xl border border-indigo-100 dark:border-sky-500/20 transition-colors flex items-center justify-center gap-2 cursor-pointer"
                 >
                   <Bell className="w-4 h-4" />
