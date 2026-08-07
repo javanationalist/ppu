@@ -32,19 +32,29 @@ export async function requestNotificationPermission(): Promise<NotificationPermi
   }
 }
 
+export function getServiceWorkerPathAndScope(): { scriptUrl: string; scope: string } {
+  const rawBase = import.meta.env.BASE_URL || '/';
+  const baseUrl = rawBase.endsWith('/') ? rawBase : `${rawBase}/`;
+  return {
+    scriptUrl: `${baseUrl}sw.js`,
+    scope: baseUrl,
+  };
+}
+
 export async function registerNotificationServiceWorker(): Promise<ServiceWorkerRegistration | null> {
   if (typeof window === 'undefined' || !('serviceWorker' in navigator)) {
     return null;
   }
   try {
-    let reg = await navigator.serviceWorker.getRegistration('/');
+    const { scriptUrl, scope } = getServiceWorkerPathAndScope();
+    let reg = await navigator.serviceWorker.getRegistration(scope);
     if (!reg) {
-      reg = await navigator.serviceWorker.register('/sw.js', { scope: '/' });
+      reg = await navigator.serviceWorker.register(scriptUrl, { scope });
     }
     const readyReg = await navigator.serviceWorker.ready;
     return readyReg;
   } catch (err) {
-    console.error('[Notification] Could not register /sw.js:', err);
+    console.error('[Notification] Could not register Service Worker:', err);
     return null;
   }
 }
@@ -75,19 +85,24 @@ export async function showNewInformationNotification(
     return { success: false, error: msg };
   }
 
+  const rawBase = import.meta.env.BASE_URL || '/';
+  const baseUrl = rawBase.endsWith('/') ? rawBase : `${rawBase}/`;
+  const iconUrl = `${baseUrl}favicon.ico`;
+
   const notificationTitle = title || 'SUARAKU';
   const notificationOptions: NotificationOptions = {
     body: content || 'Informasi baru tersedia di WAFO.',
-    icon: '/favicon.ico',
-    badge: '/favicon.ico',
+    icon: iconUrl,
+    badge: iconUrl,
     tag: 'ppu-new-wafo-' + Date.now(),
   };
 
   try {
     // 4. Register or retrieve Service Worker registration
-    let reg = await navigator.serviceWorker.getRegistration('/');
+    const { scriptUrl, scope } = getServiceWorkerPathAndScope();
+    let reg = await navigator.serviceWorker.getRegistration(scope);
     if (!reg) {
-      reg = await navigator.serviceWorker.register('/sw.js', { scope: '/' });
+      reg = await navigator.serviceWorker.register(scriptUrl, { scope });
     }
 
     // 5. Wait for navigator.serviceWorker.ready before triggering notification

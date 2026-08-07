@@ -37,7 +37,10 @@ if (typeof window !== 'undefined') {
 
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
-      navigator.serviceWorker.register('/sw.js', { scope: '/' }).catch((err) => {
+      const rawBase = import.meta.env.BASE_URL || '/';
+      const baseUrl = rawBase.endsWith('/') ? rawBase : `${rawBase}/`;
+      const scriptUrl = `${baseUrl}sw.js`;
+      navigator.serviceWorker.register(scriptUrl, { scope: baseUrl }).catch((err) => {
         console.warn('Service worker registration failed on startup:', err);
       });
     });
