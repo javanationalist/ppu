@@ -41,6 +41,7 @@ export function DashboardNavigation({
             return (
               <button
                 key={item.id}
+                data-tour={item.id}
                 onClick={() => {
                   if (isScanDisabled || isTabLocked) return;
                   setActiveTab(item.id as any);

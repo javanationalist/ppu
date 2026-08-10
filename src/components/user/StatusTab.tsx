@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { 
   Vote, 
-  Check 
+  Check,
+  HelpCircle
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { HelpdeskButton, Dapil } from '../../types';
@@ -22,6 +23,7 @@ interface StatusTabProps {
   voteMode?: 'regular' | 'booth';
   isVoting?: boolean;
   setIsEditModalOpen?: (open: boolean) => void;
+  onOpenTutorial?: () => void;
 }
 
 export default function StatusTab({
@@ -36,6 +38,7 @@ export default function StatusTab({
   voteMode = 'regular',
   isVoting = false,
   setIsEditModalOpen,
+  onOpenTutorial,
 }: StatusTabProps) {
   // Calculate completion and active statuses for the stepper
   const isProfileComplete = !!(profile?.full_name && profile?.class);
@@ -170,13 +173,28 @@ export default function StatusTab({
     <div className="space-y-4 sm:space-y-6 text-left max-w-2xl mx-auto">
       {/* Progress Stepper Card */}
       <div className="bg-white dark:bg-[#1a1a1a] border border-slate-200 dark:border-[#2a2a2a] rounded-[24px] p-6 sm:p-8 shadow-sm transition-colors duration-300">
-        <div className="border-b border-slate-100 dark:border-[#2a2a2a] pb-4 mb-6 text-center">
-          <h3 className="text-base sm:text-lg font-black text-slate-800 dark:text-[#f5f5f5] tracking-tight">
-            Alur Status Pemilu
-          </h3>
-          <p className="text-slate-400 dark:text-[#a3a3a3] text-[11px] sm:text-xs transition-colors font-medium mt-0.5">
-            Kamu bisa lihat progres partisipasi Kamu di sini.
-          </p>
+        <div className="border-b border-slate-100 dark:border-[#2a2a2a] pb-4 mb-6 relative">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex-1 text-center sm:text-left">
+              <h3 className="text-base sm:text-lg font-black text-slate-800 dark:text-[#f5f5f5] tracking-tight">
+                Alur Status Pemilu
+              </h3>
+              <p className="text-slate-400 dark:text-[#a3a3a3] text-[11px] sm:text-xs transition-colors font-medium mt-0.5">
+                Kamu bisa lihat progres partisipasi Kamu di sini.
+              </p>
+            </div>
+            {onOpenTutorial && (
+              <button
+                type="button"
+                onClick={onOpenTutorial}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-50 dark:bg-sky-500/10 hover:bg-indigo-100 dark:hover:bg-sky-500/20 text-indigo-650 dark:text-sky-400 border border-indigo-100 dark:border-sky-500/20 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer shadow-xs active:scale-95"
+                title="Buka tutorial panduan"
+              >
+                <HelpCircle className="w-3.5 h-3.5" />
+                <span>Tutorial</span>
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Stepper Timeline */}

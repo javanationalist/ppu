@@ -2,8 +2,31 @@ import { useState, useEffect } from 'react';
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { LogOut, Home, Users, Settings, BarChart, FileText, LifeBuoy, Menu, X, ShieldCheck, Layers, Lock, Clock, Timer, Monitor, ChevronRight, Sparkles } from 'lucide-react';
-import { getAdminButtonSettings, AdminButtonSettings } from '../lib/adminButtonService';
+import { getAdminButtonSettings, AdminButtonSettings, subscribeToAdminButtonSettings } from '../lib/adminButtonService';
 import { motion, AnimatePresence } from 'motion/react';
+
+const ROUTE_KEY_MAP: Record<string, keyof AdminButtonSettings> = {
+  '/admin/gelombang': 'gelombang_voting',
+  '/admin/mode-vote': 'mode_vote',
+  '/admin/pengaturan': 'kelola_kategori',
+  '/admin/kategori': 'kelola_kategori',
+  '/admin/kandidat': 'kelola_kandidat',
+  '/admin/pemilih': 'kelola_pemilih',
+  '/admin/admins': 'kelola_admin',
+  '/admin/bilik': 'kelola_bilik',
+  '/admin/helpdesk': 'kelola_helpdesk',
+  '/admin/hasil': 'hasil_voting',
+  '/admin/konfirmasi': 'konfirmasi_pemilih',
+  '/admin/scanner-pro': 'konfirmasi_pemilih',
+  '/admin/confirm-account': 'konfirmasi_pemilih',
+  '/confirm-account': 'konfirmasi_pemilih',
+  '/admin/countdown': 'countdown',
+  '/admin/wafo': 'wafo',
+  '/admin/maintenance': 'maintenance',
+  '/admin/audit': 'audit_log',
+  '/admin/export': 'export_data',
+  '/admin/system-update': 'system_update',
+};
 
 interface GroupItem {
   to: string;
@@ -36,7 +59,7 @@ export const AdminLayout = () => {
       items: [
         { to: '/admin', icon: Home, label: 'Utama' },
         { to: '/admin/gelombang', icon: Clock, label: 'Gelombang Voting', key: 'gelombang_voting' },
-        { to: '/admin/mode-vote', icon: Settings, label: 'Mode Vote' },
+        { to: '/admin/mode-vote', icon: Settings, label: 'Mode Vote', key: 'mode_vote' },
       ],
     },
     {
@@ -47,7 +70,7 @@ export const AdminLayout = () => {
         { to: '/admin/kandidat', icon: Layers, label: 'Kelola Kandidat', key: 'kelola_kandidat' },
         { to: '/admin/pemilih', icon: Users, label: 'Kelola Pemilih', key: 'kelola_pemilih' },
         { to: '/admin/admins', icon: ShieldCheck, label: 'Kelola Admin', key: 'kelola_admin' },
-        ...(voteMode === 'booth' ? [{ to: '/admin/bilik', icon: Monitor, label: 'Kelola Bilik Suara' }] : []),
+        ...(voteMode === 'booth' ? [{ to: '/admin/bilik', icon: Monitor, label: 'Kelola Bilik Suara', key: 'kelola_bilik' }] : []),
         { to: '/admin/helpdesk', icon: LifeBuoy, label: 'Kelola Helpdesk', key: 'kelola_helpdesk' },
         { to: '/admin/hasil', icon: BarChart, label: 'Hasil Voting', key: 'hasil_voting' },
       ],
@@ -108,24 +131,36 @@ export const AdminLayout = () => {
         console.error('Failed to load vote mode', err);
       }
     };
+
     loadBtnSettings();
     loadVoteMode();
+
+    const unsubscribeRealtime = subscribeToAdminButtonSettings((updatedSettings) => {
+      setBtnSettings(updatedSettings);
+    });
+
     const interval = setInterval(() => {
       loadBtnSettings();
       loadVoteMode();
     }, 4000);
-    return () => clearInterval(interval);
+
+    return () => {
+      unsubscribeRealtime();
+      clearInterval(interval);
+    };
   }, []);
 
   useEffect(() => {
-    if (btnSettings) {
-      const allItems = groups.flatMap(g => g.items);
-      const currentLink = allItems.find(link => 
-        location.pathname === link.to || 
-        (link.to !== '/admin' && location.pathname.startsWith(link.to + '/'))
+    if (btnSettings && location.pathname !== '/admin' && location.pathname !== '/admin/akses-pro') {
+      const currentPath = location.pathname;
+      const matchedRoute = Object.keys(ROUTE_KEY_MAP).find(route => 
+        currentPath === route || currentPath.startsWith(route + '/')
       );
-      if (currentLink && currentLink.key && !isLinkEnabled(currentLink.key)) {
-        navigate('/admin/akses-pro', { replace: true });
+      if (matchedRoute) {
+        const key = ROUTE_KEY_MAP[matchedRoute];
+        if (key && (btnSettings as any)[key] === false) {
+          navigate('/admin/akses-pro', { replace: true });
+        }
       }
     }
   }, [location.pathname, btnSettings, voteMode]);

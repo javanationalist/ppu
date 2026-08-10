@@ -2,10 +2,13 @@ import { supabase, isSupabaseConfigured } from './supabase';
 
 export interface AdminButtonSettings {
   gelombang_voting: boolean;
+  mode_vote: boolean;
   kelola_kategori: boolean;
   kelola_kandidat: boolean;
   konfirmasi_pemilih: boolean;
   kelola_pemilih: boolean;
+  kelola_admin: boolean;
+  kelola_bilik: boolean;
   wafo: boolean;
   kelola_helpdesk: boolean;
   visibilitas_user: boolean;
@@ -14,14 +17,18 @@ export interface AdminButtonSettings {
   export_data: boolean;
   maintenance: boolean;
   countdown: boolean;
+  system_update: boolean;
 }
 
 const DEFAULT_BUTTON_SETTINGS: AdminButtonSettings = {
   gelombang_voting: true,
+  mode_vote: true,
   kelola_kategori: true,
   kelola_kandidat: true,
   konfirmasi_pemilih: true,
   kelola_pemilih: true,
+  kelola_admin: true,
+  kelola_bilik: true,
   wafo: true,
   kelola_helpdesk: true,
   visibilitas_user: true,
@@ -30,6 +37,7 @@ const DEFAULT_BUTTON_SETTINGS: AdminButtonSettings = {
   export_data: true,
   maintenance: true,
   countdown: true,
+  system_update: true,
 };
 
 const STORAGE_KEY = 'ppu_admin_button_settings';
@@ -81,10 +89,13 @@ export const getAdminButtonSettings = async (): Promise<AdminButtonSettings> => 
 
   return {
     gelombang_voting: data.gelombang_voting !== false,
+    mode_vote: data.mode_vote !== false,
     kelola_kategori: data.kelola_kategori !== false,
     kelola_kandidat: data.kelola_kandidat !== false,
     konfirmasi_pemilih: data.konfirmasi_pemilih !== false,
     kelola_pemilih: data.kelola_pemilih !== false,
+    kelola_admin: data.kelola_admin !== false,
+    kelola_bilik: data.kelola_bilik !== false,
     wafo: data.wafo !== false,
     kelola_helpdesk: data.kelola_helpdesk !== false,
     visibilitas_user: data.visibilitas_user !== false,
@@ -93,6 +104,7 @@ export const getAdminButtonSettings = async (): Promise<AdminButtonSettings> => 
     export_data: data.export_data !== false,
     maintenance: data.maintenance !== false,
     countdown: data.countdown !== false,
+    system_update: data.system_update !== false,
   };
 };
 
@@ -107,10 +119,13 @@ export const saveAdminButtonSettings = async (settings: AdminButtonSettings): Pr
     .upsert({
       id: 'default',
       gelombang_voting: settings.gelombang_voting,
+      mode_vote: settings.mode_vote,
       kelola_kategori: settings.kelola_kategori,
       kelola_kandidat: settings.kelola_kandidat,
       konfirmasi_pemilih: settings.konfirmasi_pemilih,
       kelola_pemilih: settings.kelola_pemilih,
+      kelola_admin: settings.kelola_admin,
+      kelola_bilik: settings.kelola_bilik,
       wafo: settings.wafo,
       kelola_helpdesk: settings.kelola_helpdesk,
       visibilitas_user: settings.visibilitas_user,
@@ -119,6 +134,7 @@ export const saveAdminButtonSettings = async (settings: AdminButtonSettings): Pr
       export_data: settings.export_data,
       maintenance: settings.maintenance,
       countdown: settings.countdown,
+      system_update: settings.system_update,
     });
 
   if (error) {
@@ -129,4 +145,25 @@ export const saveAdminButtonSettings = async (settings: AdminButtonSettings): Pr
   if (import.meta.env.DEV) console.log('[DB] UPSERT admin_button SUCCESS');
   return true;
 };
+
+export const subscribeToAdminButtonSettings = (callback: (settings: AdminButtonSettings) => void) => {
+  if (!isSupabaseConfigured) return () => {};
+
+  const channel = supabase
+    .channel('admin_button_changes')
+    .on(
+      'postgres_changes',
+      { event: '*', schema: 'public', table: 'admin_button' },
+      async () => {
+        const settings = await getAdminButtonSettings();
+        callback(settings);
+      }
+    )
+    .subscribe();
+
+  return () => {
+    supabase.removeChannel(channel);
+  };
+};
+
 

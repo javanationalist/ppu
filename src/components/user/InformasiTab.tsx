@@ -1,13 +1,14 @@
 import React from 'react';
-import { Info, Megaphone, AlertCircle, CalendarDays, FileText, Clock } from 'lucide-react';
+import { Info, Megaphone, AlertCircle, CalendarDays, FileText, Clock, HelpCircle } from 'lucide-react';
 import { Skeleton } from '../Skeleton';
 
 interface InformasiTabProps {
   announcements: any[];
   infoLoading: boolean;
+  onOpenTutorial?: () => void;
 }
 
-export default function InformasiTab({ announcements, infoLoading }: InformasiTabProps) {
+export default function InformasiTab({ announcements, infoLoading, onOpenTutorial }: InformasiTabProps) {
   const getAnnouncementIcon = (type: string) => {
     switch (type) {
       case 'pengumuman': return <AlertCircle className="w-4 h-4 text-rose-500 dark:text-rose-400" />;
@@ -19,14 +20,30 @@ export default function InformasiTab({ announcements, infoLoading }: InformasiTa
 
   return (
     <div className="space-y-4 sm:space-y-6 max-w-4xl mx-auto text-left">
-      <div className="text-center mb-6 sm:mb-8">
-        <div className="inline-flex items-center justify-center w-12 h-12 sm:w-14 sm:h-14 rounded-xl sm:rounded-2xl bg-indigo-50 dark:bg-sky-500/10 border border-indigo-100 dark:border-sky-500/20 mb-3 sm:mb-4 shadow-sm">
-          <Info className="w-6 h-6 sm:w-7 sm:h-7 text-indigo-650 dark:text-sky-400" />
+      <div className="relative mb-6 sm:mb-8">
+        <div className="text-center">
+          <div className="inline-flex items-center justify-center w-12 h-12 sm:w-14 sm:h-14 rounded-xl sm:rounded-2xl bg-indigo-50 dark:bg-sky-500/10 border border-indigo-100 dark:border-sky-500/20 mb-3 sm:mb-4 shadow-sm">
+            <Info className="w-6 h-6 sm:w-7 sm:h-7 text-indigo-650 dark:text-sky-400" />
+          </div>
+          <h2 className="text-lg sm:text-2xl font-black text-slate-800 dark:text-sky-400 tracking-tight uppercase mb-1 sm:mb-2">Informasi & Pengumuman</h2>
+          <p className="text-[11px] sm:text-xs text-slate-500 dark:text-[#a3a3a3] font-medium max-w-md mx-auto leading-relaxed px-2">
+            Pusat pengumuman resmi dan jadwal pelaksanaan pemilihan umum digital dari panitia kesiswaan.
+          </p>
         </div>
-        <h2 className="text-lg sm:text-2xl font-black text-slate-800 dark:text-sky-400 tracking-tight uppercase mb-1 sm:mb-2">Informasi & Pengumuman</h2>
-        <p className="text-[11px] sm:text-xs text-slate-500 dark:text-[#a3a3a3] font-medium max-w-md mx-auto leading-relaxed px-2">
-          Pusat pengumuman resmi dan jadwal pelaksanaan pemilihan umum digital dari panitia kesiswaan.
-        </p>
+
+        {onOpenTutorial && (
+          <div className="absolute top-0 right-0">
+            <button
+              type="button"
+              onClick={onOpenTutorial}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-50 dark:bg-sky-500/10 hover:bg-indigo-100 dark:hover:bg-sky-500/20 text-indigo-650 dark:text-sky-400 border border-indigo-100 dark:border-sky-500/20 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer shadow-xs active:scale-95"
+              title="Buka tutorial panduan"
+            >
+              <HelpCircle className="w-3.5 h-3.5" />
+              <span>Tutorial</span>
+            </button>
+          </div>
+        )}
       </div>
 
       <div className="space-y-3 sm:space-y-4">

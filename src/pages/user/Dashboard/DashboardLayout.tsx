@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { X } from 'lucide-react';
 import { DashboardHeader } from './DashboardHeader';
 import { DashboardNavigation } from './DashboardNavigation';
+import { DashboardOnboarding } from './DashboardOnboarding';
 import { StatusTab, VoterCardTab, ScanQrTab, ProfileTab, InformasiTab } from './tabs';
 import { ALL_CLASSES } from '../../../lib/classConstants';
 import { Profile } from '../../../types';
@@ -57,6 +58,26 @@ export function DashboardLayout({ data }: DashboardLayoutProps) {
     handleLogout,
     handleDownload,
   } = data;
+
+  const [isOnboardingOpen, setIsOnboardingOpen] = useState(false);
+
+  useEffect(() => {
+    try {
+      const isCompleted = localStorage.getItem('suaraku_dashboard_onboarding_completed') === 'true';
+      if (!isCompleted) {
+        const timer = setTimeout(() => {
+          setIsOnboardingOpen(true);
+        }, 500);
+        return () => clearTimeout(timer);
+      }
+    } catch (e) {
+      console.error('Failed to read onboarding status from localStorage:', e);
+    }
+  }, []);
+
+  const handleOpenTutorial = () => {
+    setIsOnboardingOpen(true);
+  };
 
   if (!profile) return null;
 
@@ -118,6 +139,12 @@ export function DashboardLayout({ data }: DashboardLayoutProps) {
         isVoting={isVoting}
       />
 
+      <DashboardOnboarding
+        isOpen={isOnboardingOpen}
+        onClose={() => setIsOnboardingOpen(false)}
+        setActiveTab={setActiveTab}
+      />
+
       {/* Alert if Profile is Incomplete */}
       {accessSettings.edit_profil_enabled && (!profile.full_name || !profile.class) && (
         <div className="bg-amber-50 dark:bg-amber-950/40 border-b border-amber-200 dark:border-amber-900/50 px-4 py-3 sm:px-8 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 z-10 shrink-0 select-none animate-fade-in transition-colors">
@@ -153,6 +180,7 @@ export function DashboardLayout({ data }: DashboardLayoutProps) {
               voteMode={voteMode}
               isVoting={isVoting}
               setIsEditModalOpen={setIsEditModalOpen}
+              onOpenTutorial={handleOpenTutorial}
             />
           )}
 
@@ -195,6 +223,7 @@ export function DashboardLayout({ data }: DashboardLayoutProps) {
             <InformasiTab
               announcements={announcements}
               infoLoading={infoLoading}
+              onOpenTutorial={handleOpenTutorial}
             />
           )}
         </div>

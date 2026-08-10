@@ -28,6 +28,7 @@ import HelpdeskManager from './pages/admin/HelpdeskManager';
 import VotePage from './pages/Vote';
 import KonfirmasiPemilih from './pages/admin/KonfirmasiPemilih';
 import ScannerPro from './pages/admin/ScannerPro';
+import ConfirmAccount from './pages/admin/ConfirmAccount';
 import KelolaPemilih from './pages/admin/KelolaPemilih';
 import AuditLog from './pages/admin/AuditLog';
 import DashboardOverview from './pages/admin/DashboardOverview';
@@ -121,6 +122,7 @@ function AppContent() {
           <Route path="kategori" element={<KelolaKategori />} />
           <Route path="konfirmasi" element={<KonfirmasiPemilih />} />
           <Route path="scanner-pro" element={<ScannerPro />} />
+          <Route path="confirm-account" element={<ConfirmAccount />} />
           <Route path="pemilih" element={<KelolaPemilih />} />
           <Route path="admins" element={<KelolaAdmin />} />
           <Route path="wafo" element={<WafoManager />} />
@@ -133,6 +135,18 @@ function AppContent() {
           <Route path="export" element={<ExportData />} />
           <Route path="system-update" element={<SystemUpdateAdmin />} />
           <Route path="akses-pro" element={<AksesPro />} />
+        </Route>
+
+        {/* Direct Confirm Account Route */}
+        <Route
+          path="/confirm-account"
+          element={
+            <ProtectedRoute allowedRoles={['admin']}>
+              <AdminLayout />
+            </ProtectedRoute>
+          }
+        >
+          <Route index element={<ConfirmAccount />} />
         </Route>
 
         {/* Experimental Route (Creator Only) */}

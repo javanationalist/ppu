@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { 
   Users, CheckCircle2, Award, ClipboardCheck, Monitor,
   ChevronRight, ArrowUpRight, LifeBuoy, Database, History,
-  Settings, Layers, FileText, ShieldAlert, BarChart3, RefreshCw, Lock, Unlock, ShieldCheck, Clock
+  Settings, Layers, FileText, ShieldAlert, BarChart3, RefreshCw, Lock, Unlock, ShieldCheck, Clock, Sparkles
 } from 'lucide-react';
 import { getAllProfiles } from '../../lib/adminService';
 import { getCategories, getAllVotes } from '../../lib/votingService';
@@ -21,10 +21,13 @@ export default function DashboardOverview() {
   const [loading, setLoading] = useState(true);
   const [btnSettings, setBtnSettings] = useState<AdminButtonSettings>({
     gelombang_voting: true,
+    mode_vote: true,
     kelola_kategori: true,
     kelola_kandidat: true,
     konfirmasi_pemilih: true,
     kelola_pemilih: true,
+    kelola_admin: true,
+    kelola_bilik: true,
     wafo: true,
     kelola_helpdesk: true,
     visibilitas_user: true,
@@ -33,6 +36,7 @@ export default function DashboardOverview() {
     export_data: true,
     maintenance: true,
     countdown: true,
+    system_update: true,
   });
 
   useEffect(() => {
@@ -242,18 +246,22 @@ export default function DashboardOverview() {
                 <tbody className="bg-white divide-y divide-slate-100">
                   {[
                     { key: 'gelombang_voting', label: 'Gelombang Voting', icon: Clock },
+                    { key: 'mode_vote', label: 'Mode Vote', icon: Settings },
                     { key: 'kelola_kategori', label: 'Kelola Kategori', icon: Settings },
                     { key: 'kelola_kandidat', label: 'Kelola Kandidat', icon: Layers },
-                    { key: 'konfirmasi_pemilih', label: 'Konfirmasi', icon: ShieldCheck },
+                    { key: 'konfirmasi_pemilih', label: 'Konfirmasi Pemilih', icon: ShieldCheck },
                     { key: 'kelola_pemilih', label: 'Kelola Pemilih', icon: Users },
+                    { key: 'kelola_admin', label: 'Kelola Admin', icon: ShieldCheck },
+                    { key: 'kelola_bilik', label: 'Kelola Bilik Suara', icon: Monitor },
                     { key: 'wafo', label: 'WAFO', icon: FileText },
                     { key: 'countdown', label: 'Countdown', icon: Clock },
                     { key: 'kelola_helpdesk', label: 'Helpdesk', icon: LifeBuoy },
-                    { key: 'visibilitas_user', label: 'Visibilitas', icon: ShieldAlert },
+                    { key: 'visibilitas_user', label: 'Visibilitas User', icon: ShieldAlert },
                     { key: 'hasil_voting', label: 'Hasil Voting', icon: BarChart3 },
                     { key: 'audit_log', label: 'Audit Log', icon: FileText },
                     { key: 'export_data', label: 'Export Data', icon: FileText },
                     { key: 'maintenance', label: 'Maintenance', icon: Settings },
+                    { key: 'system_update', label: 'System Update', icon: Sparkles },
                   ].map((item) => {
                     const isEnabled = (btnSettings as any)[item.key];
                     return (
