@@ -35,15 +35,21 @@ export const ProtectedRoute = ({
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
+  const isScanner = profile.role === 'scan' || profile.class === 'Petugas Scanner' || (profile as any).status === 'scan';
+
   const hasAccess = 
     !allowedRoles || 
     allowedRoles.includes(profile.role) || 
+    (isScanner && allowedRoles.includes('scan')) ||
     (profile.role === 'creator' && allowedRoles.includes('admin')) ||
     (profile.role === 'bilik' && allowedRoles.includes('vote')) ||
     (profile.role === 'vote' && allowedRoles.includes('bilik'));
 
   if (!hasAccess) {
     // Redirect to their respective dashboard if they don't have access
+    if (isScanner) {
+      return <Navigate to="/scanner" replace />;
+    }
     if (profile.role === 'admin' || profile.role === 'creator') {
       return <Navigate to="/admin" replace />;
     }

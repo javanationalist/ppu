@@ -57,7 +57,9 @@ export default function Login() {
     }
 
     if (user && profile && isValidSession) {
-      if (profile.role === 'admin' || profile.role === 'creator') {
+      if (profile.role === 'scan' || profile.class === 'Petugas Scanner' || (profile as any).status === 'scan') {
+        navigate('/scanner', { replace: true });
+      } else if (profile.role === 'admin' || profile.role === 'creator') {
         navigate('/admin', { replace: true });
       } else if (profile.role === 'vote') {
         const checkVoteRoleSession = async () => {
@@ -173,17 +175,22 @@ export default function Login() {
       if (error) throw error;
 
       if (data.user) {
-        // Fetch role and is_deleted to determine redirect
+        // Fetch role, class, booth_code and is_deleted to determine redirect
         const { data: profileData, error: profileError } = await supabase
           .from('profiles')
-          .select('role, is_deleted, booth_code')
+          .select('role, is_deleted, booth_code, class')
           .eq('id', data.user.id)
           .single();
           
         if (profileError) throw profileError;
 
+        const isScannerAccount = profileData?.role === 'scan' || profileData?.class === 'Petugas Scanner' || (profileData as any)?.status === 'scan';
+
         if (profileData?.is_deleted) {
           await supabase.auth.signOut();
+          if (isScannerAccount) {
+            throw new Error('Akun scanner Anda sedang dinonaktifkan oleh administrator.');
+          }
           throw new Error('Akun Anda dinonaktifkan atau dihapus oleh administrator.');
         }
 
@@ -217,7 +224,9 @@ export default function Login() {
         }
 
         let nextPath = '/dashboard';
-        if (profileData?.role === 'admin' || profileData?.role === 'creator') {
+        if (isScannerAccount) {
+          nextPath = '/scanner';
+        } else if (profileData?.role === 'admin' || profileData?.role === 'creator') {
           nextPath = '/admin';
         } else if (profileData?.role === 'vote') {
           nextPath = '/bilik';

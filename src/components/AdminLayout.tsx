@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { LogOut, Home, Users, Settings, BarChart, FileText, LifeBuoy, Menu, X, ShieldCheck, Layers, Lock, Clock, Timer, Monitor, ChevronRight, Sparkles } from 'lucide-react';
+import { LogOut, Home, Users, Settings, BarChart, FileText, LifeBuoy, Menu, X, ShieldCheck, Layers, Lock, Clock, Timer, Monitor, ChevronRight, Sparkles, Zap } from 'lucide-react';
 import { getAdminButtonSettings, AdminButtonSettings, subscribeToAdminButtonSettings } from '../lib/adminButtonService';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -12,6 +12,7 @@ const ROUTE_KEY_MAP: Record<string, keyof AdminButtonSettings> = {
   '/admin/kategori': 'kelola_kategori',
   '/admin/kandidat': 'kelola_kandidat',
   '/admin/pemilih': 'kelola_pemilih',
+  '/admin/scanner': 'kelola_pemilih',
   '/admin/admins': 'kelola_admin',
   '/admin/bilik': 'kelola_bilik',
   '/admin/helpdesk': 'kelola_helpdesk',
@@ -69,6 +70,7 @@ export const AdminLayout = () => {
         { to: '/admin/pengaturan', icon: Settings, label: 'Kelola Kategori', key: 'kelola_kategori' },
         { to: '/admin/kandidat', icon: Layers, label: 'Kelola Kandidat', key: 'kelola_kandidat' },
         { to: '/admin/pemilih', icon: Users, label: 'Kelola Pemilih', key: 'kelola_pemilih' },
+        { to: '/admin/scanner', icon: Zap, label: 'Kelola Scanner', key: 'kelola_pemilih' },
         { to: '/admin/admins', icon: ShieldCheck, label: 'Kelola Admin', key: 'kelola_admin' },
         ...(voteMode === 'booth' ? [{ to: '/admin/bilik', icon: Monitor, label: 'Kelola Bilik Suara', key: 'kelola_bilik' }] : []),
         { to: '/admin/helpdesk', icon: LifeBuoy, label: 'Kelola Helpdesk', key: 'kelola_helpdesk' },
@@ -188,6 +190,16 @@ export const AdminLayout = () => {
     return (btnSettings as any)[key] !== false;
   };
 
+  const getSortedGroupItems = (items: GroupItem[]) => {
+    return [...items].sort((a, b) => {
+      const aEnabled = isLinkEnabled(a.key);
+      const bEnabled = isLinkEnabled(b.key);
+      if (aEnabled && !bEnabled) return -1;
+      if (!aEnabled && bEnabled) return 1;
+      return 0;
+    });
+  };
+
   const closeSidebar = () => setIsMobileOpen(false);
 
   const handleLogout = async () => {
@@ -201,6 +213,7 @@ export const AdminLayout = () => {
         {groups.map((group) => {
           const isOpen = !!openGroups[group.id];
           const hasActiveChild = isGroupActive(group);
+          const sortedItems = getSortedGroupItems(group.items);
 
           return (
             <div key={group.id} className="space-y-1">
@@ -232,7 +245,7 @@ export const AdminLayout = () => {
                     transition={{ duration: 0.25, ease: 'easeInOut' }}
                     className="overflow-hidden space-y-1 pl-4"
                   >
-                    {group.items.map((item) => {
+                    {sortedItems.map((item) => {
                       const isActive = isItemActive(item.to);
                       const enabled = isLinkEnabled(item.key);
 

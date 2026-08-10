@@ -1,4 +1,4 @@
-export type Role = 'user' | 'admin' | 'creator' | 'vote' | 'bilik';
+export type Role = 'user' | 'admin' | 'creator' | 'vote' | 'bilik' | 'scan';
 export type AccountStatus = 'belum_dikonfirmasi' | 'dikonfirmasi' | 'ditolak' | 'tidak_valid';
 export type VotingStatus = 'belum' | 'sudah' | 'waiting' | 'connected' | 'voting' | 'offline';
 
@@ -16,4 +16,5 @@ export interface Profile {
   deleted_at?: string | null;
   card_visibility?: boolean;
   booth_code?: string;
+  status?: string;
 }

@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { useScrollLock } from '../../hooks/useScrollLock';
 import { 
   Settings, Trash2, ShieldAlert, CheckCircle, 
-  Save, Lock, Unlock, Database, ArrowUp, ArrowDown, Plus, Edit2, X, PlusCircle, Check, Zap
+  Save, Lock, Unlock, Database, ArrowUp, ArrowDown, Plus, Edit2, X, PlusCircle, Check
 } from 'lucide-react';
 import { getCategories, resetAllVotingData, saveCategory, deleteCategory, getDapils, saveDapil, deleteDapil } from '../../lib/votingService';
 import { getAllProfiles, logAdminAction } from '../../lib/adminService';
@@ -305,13 +305,6 @@ export default function PengaturanVoting() {
             Konfigurasi gerbang akses, format kategori bilik suara, dan utilitas reset data.
           </p>
         </div>
-        <Link
-          to="/admin/scanner-pro"
-          className="bg-slate-900 hover:bg-slate-800 text-white hover:text-indigo-300 px-5 py-3 rounded-2xl text-sm font-black flex items-center gap-2 shadow-md hover:shadow-lg transition-all border border-indigo-500/20 cursor-pointer self-stretch sm:self-auto justify-center sm:justify-start shrink-0"
-        >
-          <Zap className="w-5 h-5 text-indigo-400 fill-indigo-400 animate-pulse" />
-          <span>Scanner (PRO)</span>
-        </Link>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8">

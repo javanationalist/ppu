@@ -38,7 +38,9 @@ import PengaturanVoting from './pages/admin/PengaturanVoting';
 import ModeVote from './pages/admin/ModeVote';
 import KelolaBilik from './pages/admin/KelolaBilik';
 import KelolaAdmin from './pages/admin/KelolaAdmin';
+import KelolaScanner from './pages/admin/KelolaScanner';
 import BilikPage from './pages/Bilik';
+import ScannerPage from './pages/Scanner';
 import HasilAdmin from './pages/admin/HasilAdmin';
 import ExportData from './pages/admin/ExportData';
 import Maintenance from './pages/admin/Maintenance';
@@ -105,6 +107,16 @@ function AppContent() {
           }
         />
 
+        {/* Scanner Route */}
+        <Route
+          path="/scanner"
+          element={
+            <ProtectedRoute allowedRoles={['scan']}>
+              <ScannerPage />
+            </ProtectedRoute>
+          }
+        />
+
         {/* Admin Routes */}
         <Route
           path="/admin"
@@ -124,6 +136,7 @@ function AppContent() {
           <Route path="scanner-pro" element={<ScannerPro />} />
           <Route path="confirm-account" element={<ConfirmAccount />} />
           <Route path="pemilih" element={<KelolaPemilih />} />
+          <Route path="scanner" element={<KelolaScanner />} />
           <Route path="admins" element={<KelolaAdmin />} />
           <Route path="wafo" element={<WafoManager />} />
           <Route path="countdown" element={<CountdownManager />} />

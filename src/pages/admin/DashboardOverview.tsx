@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { 
   Users, CheckCircle2, Award, ClipboardCheck, Monitor,
   ChevronRight, ArrowUpRight, LifeBuoy, Database, History,
-  Settings, Layers, FileText, ShieldAlert, BarChart3, RefreshCw, Lock, Unlock, ShieldCheck, Clock, Sparkles
+  Settings, Layers, FileText, ShieldAlert, BarChart3, RefreshCw, Lock, Unlock, ShieldCheck, Clock, Sparkles, Zap
 } from 'lucide-react';
 import { getAllProfiles } from '../../lib/adminService';
 import { getCategories, getAllVotes } from '../../lib/votingService';
@@ -99,6 +99,39 @@ export default function DashboardOverview() {
       <div className="flex justify-start">
         <BackToHomeButton />
       </div>
+
+      {/* Primary Action Feature Banner: KONFIRMASI AKUN SISWA */}
+      <Link
+        to="/admin/scanner-pro"
+        className="w-full bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 hover:from-slate-800 hover:via-indigo-900 hover:to-slate-800 text-white p-5 sm:p-6 rounded-2xl shadow-xl hover:shadow-2xl hover:shadow-indigo-500/25 transition-all duration-300 flex flex-col sm:flex-row items-center justify-between gap-4 border-2 border-indigo-500/40 group cursor-pointer relative overflow-hidden ring-4 ring-indigo-500/10"
+      >
+        <div className="absolute -right-10 -bottom-10 w-48 h-48 bg-indigo-500/20 rounded-full blur-3xl pointer-events-none"></div>
+        <div className="flex items-center gap-4 text-left relative z-10">
+          <div className="p-3.5 bg-indigo-500/20 backdrop-blur-md rounded-xl text-amber-400 group-hover:scale-110 transition-transform shrink-0 border border-indigo-400/30 shadow-inner">
+            <Zap className="w-8 h-8 fill-amber-400 text-amber-400 animate-pulse" />
+          </div>
+          <div>
+            <div className="flex items-center gap-2 mb-1">
+              <span className="text-[10px] font-black tracking-widest text-amber-300 uppercase bg-amber-400/10 px-2.5 py-0.5 rounded-full border border-amber-400/20">
+                FITUR UTAMA PRO
+              </span>
+              <span className="text-xs text-emerald-400 font-bold flex items-center gap-1">
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span> Realtime Scanner
+              </span>
+            </div>
+            <h2 className="text-xl sm:text-2xl font-black text-white tracking-tight">
+              KONFIRMASI AKUN SISWA
+            </h2>
+            <p className="text-xs sm:text-sm text-indigo-200 font-medium mt-0.5">
+              Buka Scanner PRO QR / Barcode untuk melakukan verifikasi & konfirmasi langsung akun siswa.
+            </p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2.5 bg-indigo-600 hover:bg-indigo-500 text-white px-6 py-3.5 rounded-xl font-black text-sm transition-all shadow-lg shrink-0 w-full sm:w-auto justify-center group-hover:shadow-indigo-500/40 border border-indigo-400/30 relative z-10">
+          <span>KONFIRMASI AKUN SISWA</span>
+          <ArrowUpRight className="w-5 h-5 group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" />
+        </div>
+      </Link>
 
       {/* Title */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -262,8 +295,14 @@ export default function DashboardOverview() {
                     { key: 'export_data', label: 'Export Data', icon: FileText },
                     { key: 'maintenance', label: 'Maintenance', icon: Settings },
                     { key: 'system_update', label: 'System Update', icon: Sparkles },
-                  ].map((item) => {
-                    const isEnabled = (btnSettings as any)[item.key];
+                  ].sort((a, b) => {
+                    const aEnabled = (btnSettings as any)[a.key] !== false;
+                    const bEnabled = (btnSettings as any)[b.key] !== false;
+                    if (aEnabled && !bEnabled) return -1;
+                    if (!aEnabled && bEnabled) return 1;
+                    return 0;
+                  }).map((item) => {
+                    const isEnabled = (btnSettings as any)[item.key] !== false;
                     return (
                       <tr key={item.key} className="hover:bg-slate-50/50 transition-colors">
                         <td className="px-4 py-2.5 whitespace-nowrap">
@@ -298,68 +337,83 @@ export default function DashboardOverview() {
           <h3 className="text-lg font-bold text-slate-900">Akses Cepat Panel</h3>
 
           <div className="grid grid-cols-1 gap-3">
-            <button 
-              onClick={() => navigate('/admin/konfirmasi')}
-              disabled={!btnSettings.konfirmasi_pemilih}
-              className={`flex items-center justify-between p-4 rounded-xl border transition-all font-medium text-sm group text-left ${
-                !btnSettings.konfirmasi_pemilih 
-                  ? 'bg-slate-50 border-slate-100 opacity-60 grayscale cursor-not-allowed text-slate-400' 
-                  : 'border-slate-100 bg-slate-50 hover:bg-indigo-50 hover:border-indigo-100 text-slate-700'
-              }`}
-            >
-              <div className="flex items-center gap-3">
-                <div className={`p-2 rounded-lg transition-colors ${!btnSettings.konfirmasi_pemilih ? 'bg-slate-200 text-slate-400' : 'bg-indigo-100 text-indigo-700 group-hover:bg-indigo-200'}`}>
-                  {btnSettings.konfirmasi_pemilih ? <CheckCircle2 className="w-4 h-4" /> : <Lock className="w-4 h-4" />}
-                </div>
-                <div>
-                  <span className={`block font-bold truncate ${!btnSettings.konfirmasi_pemilih ? 'text-slate-400' : 'text-slate-800'}`}>Verifikasi Barcode</span>
-                  <span className="text-[10px] text-slate-400 font-normal">Konfirmasi pendaftaran siswa</span>
-                </div>
-              </div>
-              {btnSettings.konfirmasi_pemilih && <ChevronRight className="w-4 h-4 text-slate-400 group-hover:translate-x-1 transition-transform" />}
-            </button>
-
-            <button 
-              onClick={() => navigate('/admin/pemilih')}
-              disabled={!btnSettings.kelola_pemilih}
-              className={`flex items-center justify-between p-4 rounded-xl border transition-all font-medium text-sm group text-left ${
-                !btnSettings.kelola_pemilih 
-                  ? 'bg-slate-50 border-slate-100 opacity-60 grayscale cursor-not-allowed text-slate-400' 
-                  : 'border-slate-100 bg-slate-50 hover:bg-emerald-50 hover:border-emerald-100 text-slate-700'
-              }`}
-            >
-              <div className="flex items-center gap-3">
-                <div className={`p-2 rounded-lg transition-colors ${!btnSettings.kelola_pemilih ? 'bg-slate-200 text-slate-400' : 'bg-emerald-100 text-emerald-700 group-hover:bg-emerald-200'}`}>
-                  {btnSettings.kelola_pemilih ? <Users className="w-4 h-4" /> : <Lock className="w-4 h-4" />}
-                </div>
-                <div>
-                  <span className={`block font-bold truncate ${!btnSettings.kelola_pemilih ? 'text-slate-400' : 'text-slate-800'}`}>Kelola Daftar Pemilih</span>
-                  <span className="text-[10px] text-slate-400 font-normal">Tambah / hapus pemilih</span>
-                </div>
-              </div>
-              {btnSettings.kelola_pemilih && <ChevronRight className="w-4 h-4 text-slate-400 group-hover:translate-x-1 transition-transform" />}
-            </button>
-
-            <button 
-              onClick={() => navigate('/admin/helpdesk')}
-              disabled={!btnSettings.kelola_helpdesk}
-              className={`flex items-center justify-between p-4 rounded-xl border transition-all font-medium text-sm group text-left ${
-                !btnSettings.kelola_helpdesk 
-                  ? 'bg-slate-50 border-slate-100 opacity-60 grayscale cursor-not-allowed text-slate-400' 
-                  : 'border-slate-100 bg-slate-50 hover:bg-amber-50 hover:border-amber-100 text-slate-700'
-              }`}
-            >
-              <div className="flex items-center gap-3">
-                <div className={`p-2 rounded-lg transition-colors ${!btnSettings.kelola_helpdesk ? 'bg-slate-200 text-slate-400' : 'bg-amber-100 text-amber-700 group-hover:bg-amber-200'}`}>
-                  {btnSettings.kelola_helpdesk ? <LifeBuoy className="w-4 h-4" /> : <Lock className="w-4 h-4" />}
-                </div>
-                <div>
-                  <span className={`block font-bold truncate ${!btnSettings.kelola_helpdesk ? 'text-slate-400' : 'text-slate-800'}`}>Saluran Helpdesk</span>
-                  <span className="text-[10px] text-slate-400 font-normal">{ticketsCount} Tombol panduan keluhan aktif</span>
-                </div>
-              </div>
-              {btnSettings.kelola_helpdesk && <ChevronRight className="w-4 h-4 text-slate-400 group-hover:translate-x-1 transition-transform" />}
-            </button>
+            {[
+              {
+                key: 'konfirmasi_pemilih',
+                label: 'Verifikasi Barcode',
+                desc: 'Konfirmasi pendaftaran siswa',
+                path: '/admin/konfirmasi',
+                icon: CheckCircle2,
+                colorClasses: {
+                  enabledIconBg: 'bg-indigo-100 text-indigo-700 group-hover:bg-indigo-200',
+                  hoverBorder: 'hover:bg-indigo-50 hover:border-indigo-100',
+                }
+              },
+              {
+                key: 'kelola_pemilih',
+                label: 'Kelola Daftar Pemilih',
+                desc: 'Tambah / hapus pemilih',
+                path: '/admin/pemilih',
+                icon: Users,
+                colorClasses: {
+                  enabledIconBg: 'bg-emerald-100 text-emerald-700 group-hover:bg-emerald-200',
+                  hoverBorder: 'hover:bg-emerald-50 hover:border-emerald-100',
+                }
+              },
+              {
+                key: 'kelola_scanner',
+                label: 'Kelola Scanner',
+                desc: 'Kelola akun petugas scanner',
+                path: '/admin/scanner',
+                icon: Zap,
+                colorClasses: {
+                  enabledIconBg: 'bg-purple-100 text-purple-700 group-hover:bg-purple-200',
+                  hoverBorder: 'hover:bg-purple-50 hover:border-purple-100',
+                }
+              },
+              {
+                key: 'kelola_helpdesk',
+                label: 'Saluran Helpdesk',
+                desc: `${ticketsCount} Tombol panduan keluhan aktif`,
+                path: '/admin/helpdesk',
+                icon: LifeBuoy,
+                colorClasses: {
+                  enabledIconBg: 'bg-amber-100 text-amber-700 group-hover:bg-amber-200',
+                  hoverBorder: 'hover:bg-amber-50 hover:border-amber-100',
+                }
+              },
+            ].sort((a, b) => {
+              const aEnabled = (btnSettings as any)[a.key] !== false;
+              const bEnabled = (btnSettings as any)[b.key] !== false;
+              if (aEnabled && !bEnabled) return -1;
+              if (!aEnabled && bEnabled) return 1;
+              return 0;
+            }).map((item) => {
+              const isEnabled = (btnSettings as any)[item.key] !== false;
+              return (
+                <button 
+                  key={item.path}
+                  onClick={() => navigate(item.path)}
+                  disabled={!isEnabled}
+                  className={`flex items-center justify-between p-4 rounded-xl border transition-all font-medium text-sm group text-left ${
+                    !isEnabled 
+                      ? 'bg-slate-50 border-slate-100 opacity-60 grayscale cursor-not-allowed text-slate-400' 
+                      : `border-slate-100 bg-slate-50 ${item.colorClasses.hoverBorder} text-slate-700 cursor-pointer`
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <div className={`p-2 rounded-lg transition-colors ${!isEnabled ? 'bg-slate-200 text-slate-400' : item.colorClasses.enabledIconBg}`}>
+                      {isEnabled ? <item.icon className="w-4 h-4" /> : <Lock className="w-4 h-4" />}
+                    </div>
+                    <div>
+                      <span className={`block font-bold truncate ${!isEnabled ? 'text-slate-400' : 'text-slate-800'}`}>{item.label}</span>
+                      <span className="text-[10px] text-slate-400 font-normal">{item.desc}</span>
+                    </div>
+                  </div>
+                  {isEnabled && <ChevronRight className="w-4 h-4 text-slate-400 group-hover:translate-x-1 transition-transform" />}
+                </button>
+              );
+            })}
           </div>
 
           <div className="border-t border-slate-100 pt-5 space-y-3">

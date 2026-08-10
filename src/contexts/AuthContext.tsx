@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useEffect, useState, useRef } from 'react';
 import { User, Session } from '@supabase/supabase-js';
-import { supabase } from '../lib/supabase';
+import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { Profile } from '../types';
 import { clearSessionInDb, updateLastSeen } from '../lib/sessionService';
 
@@ -39,6 +39,16 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const fetchProfile = async (userId: string) => {
     try {
+      if (!isSupabaseConfigured) {
+        const mockProfiles = JSON.parse(localStorage.getItem('mock_profiles') || '[]');
+        const found = mockProfiles.find((p: any) => p.id === userId);
+        if (found) {
+          setProfile(found);
+        }
+        setLoading(false);
+        return;
+      }
+
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
@@ -46,7 +56,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         .maybeSingle();
 
       if (error) {
-        console.error('Error fetching profile:', error);
+        console.warn('Note fetching profile from Supabase:', error.message || error);
+        const mockProfiles = JSON.parse(localStorage.getItem('mock_profiles') || '[]');
+        const found = mockProfiles.find((p: any) => p.id === userId);
+        if (found) {
+          setProfile(found);
+        }
       } else if (data) {
         const prof = data as Profile;
         if (prof.is_deleted) {
@@ -67,9 +82,15 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             return prev;
           });
         }
+      } else {
+        const mockProfiles = JSON.parse(localStorage.getItem('mock_profiles') || '[]');
+        const found = mockProfiles.find((p: any) => p.id === userId);
+        if (found) {
+          setProfile(found);
+        }
       }
     } catch (e) {
-      console.error(e);
+      console.warn('Exception fetching profile:', e);
     } finally {
       setLoading(false);
     }

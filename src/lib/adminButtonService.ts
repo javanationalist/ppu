@@ -63,10 +63,7 @@ export const getAdminButtonSettings = async (): Promise<AdminButtonSettings> => 
     .maybeSingle();
 
   if (error) {
-    if (import.meta.env.DEV) console.error('[DB] GET admin_button ERROR:', error);
-    if (error.code === '42P01') {
-      console.warn('[DB] Table admin_button missing in Supabase. Returning default settings.');
-    }
+    if (import.meta.env.DEV) console.warn('[DB] GET admin_button Note:', error.message || error);
     return DEFAULT_BUTTON_SETTINGS;
   }
 

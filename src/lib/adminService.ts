@@ -120,6 +120,28 @@ export const confirmVoterAccount = async (
   return true;
 };
 
+// Fetch confirmed voters list in real-time
+export const getConfirmedVoters = async (): Promise<Profile[]> => {
+  if (!isSupabaseConfigured) {
+    const localProfilesStr = localStorage.getItem('mock_profiles') || '[]';
+    const profiles: Profile[] = JSON.parse(localProfilesStr);
+    return profiles.filter(p => p.account_status === 'dikonfirmasi');
+  }
+
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('*')
+    .eq('account_status', 'dikonfirmasi')
+    .order('updated_at', { ascending: false });
+
+  if (error) {
+    console.error('Error fetching confirmed voters:', error);
+    return [];
+  }
+
+  return (data as Profile[]) || [];
+};
+
 // Reset confirmation status
 export const resetVoterConfirmation = async (
   adminEmail: string,
@@ -753,5 +775,320 @@ export const createAdminOrCreator = async (
   } catch (err: any) {
     console.error(err);
     return { success: false, error: err.message || 'Terjadi kesalahan sistem.' };
+  }
+};
+
+// ==========================================
+// SCANNER ACCOUNT MANAGEMENT
+// ==========================================
+
+// GET SCANNER PROFILES
+export const getScannerProfiles = async (): Promise<Profile[]> => {
+  if (!isSupabaseConfigured) {
+    const localProfilesStr = localStorage.getItem('mock_profiles') || '[]';
+    const profiles: Profile[] = JSON.parse(localProfilesStr);
+    return profiles.filter(p => p.role === 'scan' || p.class === 'Petugas Scanner' || p.status === 'scan');
+  }
+
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('*')
+    .or('role.eq.scan,class.eq.Petugas Scanner');
+
+  if (error) {
+    if (import.meta.env.DEV) console.error('[DB] GET scanner profiles ERROR:', error);
+    throw new Error(`Gagal mengambil data scanner: ${error.message}`);
+  }
+
+  return (data as Profile[]) || [];
+};
+
+// CREATE SCANNER ACCOUNT
+export const createScannerAccount = async (
+  adminEmail: string,
+  name: string,
+  email: string,
+  password: string
+): Promise<{ success: boolean; error?: string }> => {
+  // Validate unique email in profiles first
+  try {
+    const existing = await supabase.from('profiles').select('*').eq('email', email).maybeSingle();
+    if (existing && existing.data) {
+      return { success: false, error: 'Email login sudah terdaftar.' };
+    }
+  } catch (e) {}
+
+  const uniqueCardId = 'scan-' + Math.random().toString(36).substring(2, 11);
+
+  if (!isSupabaseConfigured) {
+    const localProfilesStr = localStorage.getItem('mock_profiles') || '[]';
+    const profiles = JSON.parse(localProfilesStr);
+    
+    const localUsersStr = localStorage.getItem('mock_users') || '[]';
+    const users = JSON.parse(localUsersStr);
+
+    if (users.find((u: any) => u.email === email)) {
+      return { success: false, error: 'Email login sudah terdaftar.' };
+    }
+
+    const newUserId = 'usr-' + Math.random().toString(36).substring(2, 11);
+    users.push({ id: newUserId, email, password });
+    localStorage.setItem('mock_users', JSON.stringify(users));
+
+    const newProfile: Profile = {
+      id: newUserId,
+      full_name: name,
+      email: email,
+      role: 'admin',
+      status: 'scan',
+      account_status: 'dikonfirmasi',
+      voting_status: 'offline',
+      class: 'Petugas Scanner',
+      card_id: uniqueCardId,
+      booth_code: password,
+      created_at: new Date().toISOString(),
+      is_deleted: false,
+    };
+
+    profiles.push(newProfile);
+    localStorage.setItem('mock_profiles', JSON.stringify(profiles));
+
+    await logAdminAction(adminEmail, 'Membuat Akun Scanner Baru (Mock)', `${name} (${email})`);
+    return { success: true };
+  }
+
+  try {
+    const tempClient = createClient(
+      import.meta.env.VITE_SUPABASE_URL || '',
+      import.meta.env.VITE_SUPABASE_ANON_KEY || '',
+      { auth: { persistSession: false } }
+    );
+
+    const { data: authData, error: authError } = await tempClient.auth.signUp({
+      email,
+      password,
+    });
+
+    if (authError) {
+      return { success: false, error: authError.message };
+    }
+
+    if (authData.user) {
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .upsert({
+          id: authData.user.id,
+          full_name: name,
+          email: email,
+          role: 'admin',
+          account_status: 'dikonfirmasi',
+          voting_status: 'offline',
+          class: 'Petugas Scanner',
+          card_id: uniqueCardId,
+          booth_code: password,
+          is_deleted: false,
+        });
+
+      if (profileError) {
+        return { success: false, error: profileError.message };
+      }
+
+      await logAdminAction(adminEmail, 'Membuat Akun Scanner Baru', `${name} (${email})`);
+      return { success: true };
+    }
+
+    return { success: false, error: 'Gagal membuat akun Auth scanner.' };
+  } catch (err: any) {
+    console.error(err);
+    return { success: false, error: err.message || 'Terjadi kesalahan sistem.' };
+  }
+};
+
+// UPDATE SCANNER ACCOUNT
+export const updateScannerAccount = async (
+  adminEmail: string,
+  scannerId: string,
+  name: string,
+  email: string,
+  newPassword?: string
+): Promise<{ success: boolean; error?: string }> => {
+  // Check email uniqueness if changed
+  try {
+    const existing = await supabase.from('profiles').select('id').eq('email', email).neq('id', scannerId).maybeSingle();
+    if (existing && existing.data) {
+      return { success: false, error: 'Email login sudah digunakan akun lain.' };
+    }
+  } catch (e) {}
+
+  if (!isSupabaseConfigured) {
+    const localProfilesStr = localStorage.getItem('mock_profiles') || '[]';
+    const profiles = JSON.parse(localProfilesStr);
+    const idx = profiles.findIndex((p: any) => p.id === scannerId);
+    if (idx >= 0) {
+      profiles[idx].full_name = name;
+      profiles[idx].email = email;
+      if (newPassword) {
+        profiles[idx].booth_code = newPassword;
+      }
+      localStorage.setItem('mock_profiles', JSON.stringify(profiles));
+    }
+
+    if (newPassword) {
+      const localUsersStr = localStorage.getItem('mock_users') || '[]';
+      const users = JSON.parse(localUsersStr);
+      const uIdx = users.findIndex((u: any) => u.id === scannerId || u.email === email);
+      if (uIdx >= 0) {
+        users[uIdx].password = newPassword;
+        users[uIdx].email = email;
+        localStorage.setItem('mock_users', JSON.stringify(users));
+      }
+    }
+
+    await logAdminAction(adminEmail, 'Mengubah Akun Scanner (Mock)', `${name} (${email})`);
+    return { success: true };
+  }
+
+  try {
+    const updatePayload: any = {
+      full_name: name,
+      email: email,
+    };
+    if (newPassword) {
+      updatePayload.booth_code = newPassword;
+    }
+
+    const { error: profileError } = await supabase
+      .from('profiles')
+      .update(updatePayload)
+      .eq('id', scannerId);
+
+    if (profileError) throw profileError;
+
+    await logAdminAction(adminEmail, 'Mengubah Akun Scanner', `${name} (${email})`);
+    return { success: true };
+  } catch (err: any) {
+    console.error(err);
+    return { success: false, error: err.message || 'Terjadi kesalahan saat memperbarui akun scanner.' };
+  }
+};
+
+// VERIFY ADMIN PASSWORD FOR SENSITIVE ACTIONS
+export const verifyAdminPassword = async (
+  adminEmail: string,
+  adminPassword: string
+): Promise<{ success: boolean; error?: string }> => {
+  if (!isSupabaseConfigured) {
+    const localUsersStr = localStorage.getItem('mock_users') || '[]';
+    const users = JSON.parse(localUsersStr);
+    const adminUser = users.find((u: any) => u.email === adminEmail && u.password === adminPassword);
+    if (adminUser) {
+      return { success: true };
+    }
+    return { success: false, error: 'Password Admin tidak benar.' };
+  }
+
+  try {
+    const tempClient = createClient(
+      import.meta.env.VITE_SUPABASE_URL || '',
+      import.meta.env.VITE_SUPABASE_ANON_KEY || '',
+      { auth: { persistSession: false } }
+    );
+
+    const { data, error } = await tempClient.auth.signInWithPassword({
+      email: adminEmail,
+      password: adminPassword,
+    });
+
+    if (error || !data.user) {
+      return { success: false, error: 'Password Admin tidak benar.' };
+    }
+
+    return { success: true };
+  } catch (err: any) {
+    return { success: false, error: err.message || 'Verifikasi password Admin gagal.' };
+  }
+};
+
+// TOGGLE SCANNER ACTIVATION (AKTIF / NONAKTIF)
+export const toggleScannerActivation = async (
+  adminEmail: string,
+  scannerId: string,
+  scannerName: string,
+  currentlyActive: boolean
+): Promise<boolean> => {
+  const nextDeletedState = currentlyActive; // if currently active (is_deleted: false), next state is is_deleted: true
+
+  if (!isSupabaseConfigured) {
+    const localProfilesStr = localStorage.getItem('mock_profiles') || '[]';
+    const profiles = JSON.parse(localProfilesStr);
+    const idx = profiles.findIndex((p: any) => p.id === scannerId);
+    if (idx >= 0) {
+      profiles[idx].is_deleted = nextDeletedState;
+      localStorage.setItem('mock_profiles', JSON.stringify(profiles));
+      await logAdminAction(
+        adminEmail,
+        nextDeletedState ? 'Menonaktifkan Akun Scanner (Mock)' : 'Mengaktifkan Akun Scanner (Mock)',
+        scannerName
+      );
+      return true;
+    }
+    return false;
+  }
+
+  try {
+    const { error } = await supabase
+      .from('profiles')
+      .update({ is_deleted: nextDeletedState })
+      .eq('id', scannerId);
+
+    if (error) throw error;
+
+    await logAdminAction(
+      adminEmail,
+      nextDeletedState ? 'Menonaktifkan Akun Scanner' : 'Mengaktifkan Akun Scanner',
+      scannerName
+    );
+    return true;
+  } catch (err) {
+    console.error(err);
+    return false;
+  }
+};
+
+// DELETE SCANNER ACCOUNT
+export const deleteScannerAccount = async (
+  adminEmail: string,
+  scannerId: string,
+  scannerName: string,
+  scannerEmail: string
+): Promise<boolean> => {
+  if (!isSupabaseConfigured) {
+    const localProfilesStr = localStorage.getItem('mock_profiles') || '[]';
+    const profiles = JSON.parse(localProfilesStr);
+    const remaining = profiles.filter((p: any) => p.id !== scannerId);
+    localStorage.setItem('mock_profiles', JSON.stringify(remaining));
+
+    const localUsersStr = localStorage.getItem('mock_users') || '[]';
+    const users = JSON.parse(localUsersStr);
+    const remainingUsers = users.filter((u: any) => u.email !== scannerEmail && u.id !== scannerId);
+    localStorage.setItem('mock_users', JSON.stringify(remainingUsers));
+
+    await logAdminAction(adminEmail, 'Menghapus Akun Scanner (Mock)', scannerName);
+    return true;
+  }
+
+  try {
+    const { error } = await supabase
+      .from('profiles')
+      .delete()
+      .eq('id', scannerId);
+
+    if (error) throw error;
+
+    await logAdminAction(adminEmail, 'Menghapus Akun Scanner', scannerName);
+    return true;
+  } catch (err) {
+    console.error(err);
+    return false;
   }
 };

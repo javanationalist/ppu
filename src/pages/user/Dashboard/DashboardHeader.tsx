@@ -1,7 +1,7 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Link } from 'react-router-dom';
-import { LogOut, Home, Sun, Moon, Bell } from 'lucide-react';
+import { LogOut, Home, Sun, Moon } from 'lucide-react';
 import { Profile } from '../../../types';
 
 interface DashboardHeaderProps {
@@ -81,16 +81,6 @@ export function DashboardHeader({
             )}
           </AnimatePresence>
         </div>
-
-        {/* Notification Bell */}
-        <Link
-          to="/informasi"
-          className="w-8 h-8 sm:w-10 sm:h-10 flex items-center justify-center bg-slate-50 hover:bg-slate-100 dark:bg-[#252525]/45 dark:hover:bg-[#303030]/60 border border-slate-200 dark:border-slate-800 rounded-xl text-slate-600 dark:text-slate-350 hover:text-ppu-blue dark:hover:text-sky-400 transition-all duration-200 cursor-pointer focus:outline-none shrink-0"
-          aria-label="Notifikasi & Informasi"
-          title="Notifikasi & Informasi"
-        >
-          <Bell className="w-4 h-4 sm:w-5 sm:h-5" />
-        </Link>
 
         {/* Toggle Theme */}
         <button
