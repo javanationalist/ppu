@@ -60,8 +60,8 @@ export default function VotingFlow({ voteMode, initialVoterCardId, onComplete, o
 
   const [accessSettings, setAccessSettings] = useState<UserAccessSettings | null>(null);
 
-  // Screen state: 'scan' | 'profile' | 'categories' | 'candidates' | 'success' | 'thankyou' | 'forbidden' | 'gelombang_aktif' | 'gelombang_blokir' | 'auto_finalize'
-  const [screen, setScreen] = useState<'scan' | 'profile' | 'categories' | 'candidates' | 'success' | 'thankyou' | 'forbidden' | 'gelombang_aktif' | 'gelombang_blokir' | 'auto_finalize'>(
+  // Screen state: 'scan' | 'profile' | 'categories' | 'candidates' | 'success' | 'thankyou' | 'forbidden' | 'gelombang_aktif' | 'gelombang_blokir' | 'auto_finalize' | 'db_error'
+  const [screen, setScreen] = useState<'scan' | 'profile' | 'categories' | 'candidates' | 'success' | 'thankyou' | 'forbidden' | 'gelombang_aktif' | 'gelombang_blokir' | 'auto_finalize' | 'db_error'>(
     isFreeVote ? 'categories' : (voteMode === 'booth' ? 'profile' : 'scan')
   );
 
@@ -69,6 +69,7 @@ export default function VotingFlow({ voteMode, initialVoterCardId, onComplete, o
   const [cardIdInput, setCardIdInput] = useState(initialVoterCardId || '');
   const [searchLoading, setSearchLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [freeVoteDbError, setFreeVoteDbError] = useState<string | null>(null);
 
   // Gelombang states
   const [detectedActiveSession, setDetectedActiveSession] = useState<GelombangSesi | null>(null);
@@ -897,7 +898,9 @@ export default function VotingFlow({ voteMode, initialVoterCardId, onComplete, o
         }
       }, 1000);
     } catch (err: any) {
-      alert(err.message || 'Gagal menyimpan pilihan suara akhir. Silakan coba kembali.');
+      console.error("Free vote submission error:", err);
+      setFreeVoteDbError(err.message || 'Gagal menyimpan pilihan suara akhir.');
+      setScreen('db_error');
     } finally {
       setIsSubmitting(false);
     }
@@ -2448,6 +2451,183 @@ export default function VotingFlow({ voteMode, initialVoterCardId, onComplete, o
               </>
             )}
           </button>
+        </main>
+      )}
+
+      {/* SCREEN 8: DATABASE FUNCTION ERROR FALLBACK */}
+      {screen === 'db_error' && (
+        <main className="flex-1 flex flex-col items-center justify-center p-6 w-full max-w-2xl mx-auto my-auto text-left space-y-6">
+          <div className="flex items-center gap-4 bg-red-500/10 border border-red-500/20 p-5 rounded-3xl w-full">
+            <div className="bg-red-500/20 p-3 rounded-2xl">
+              <ShieldAlert className="w-8 h-8 text-red-400" />
+            </div>
+            <div>
+              <h2 className="text-lg font-black text-white tracking-tight leading-none mb-1">
+                Fungsi Database Belum Terpasang
+              </h2>
+              <p className="text-xs text-red-300 font-medium leading-relaxed">
+                Supabase RPC <code>submit_free_vote</code> dibutuhkan agar dapat memproses Bilik Suara Mandiri.
+              </p>
+            </div>
+          </div>
+
+          <div className="bg-[#131620] border border-[#232a3f] rounded-3xl p-6 w-full space-y-4 shadow-xl">
+            <div className="space-y-1">
+              <h3 className="text-sm font-bold text-white uppercase tracking-wider">
+                Langkah Aktivasi di Supabase Dashboard:
+              </h3>
+              <ol className="list-decimal list-inside text-xs text-slate-300 space-y-1.5 leading-relaxed">
+                <li>Buka dashboard proyek Supabase Anda.</li>
+                <li>Pilih tab <strong>SQL Editor</strong> di menu navigasi kiri.</li>
+                <li>Klik <strong>New Query</strong> untuk membuat jendela kueri baru.</li>
+                <li>Salin script SQL di bawah ini dan tempelkan ke SQL Editor.</li>
+                <li>Klik tombol <strong>Run</strong> untuk memasang fungsi tersebut.</li>
+              </ol>
+            </div>
+
+            <div className="space-y-2">
+              <div className="flex items-center justify-between text-xs font-bold text-slate-400">
+                <span>SCRIPT SQL (submit_free_vote)</span>
+                <button
+                  onClick={() => {
+                    navigator.clipboard.writeText(`-- SQL SCRIPT FOR SUPABASE SQL EDITOR
+-- TO ENABLE ANONYMOUS FREE VOTING (Bypasses RLS using SECURITY DEFINER)
+
+CREATE OR REPLACE FUNCTION submit_free_vote(
+  p_full_name text,
+  p_class text,
+  p_category_votes jsonb -- array of {category_id, candidate_id}
+)
+RETURNS boolean
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+  v_voter_id uuid;
+  v_vote jsonb;
+  v_unique_card_id text;
+BEGIN
+  -- Generate a unique voter ID and random card ID
+  v_voter_id := gen_random_uuid();
+  v_unique_card_id := 'FV-' || floor(random() * 900000 + 100000)::text;
+
+  -- 1. Insert dummy profile for anonymous voter
+  INSERT INTO profiles (
+    id,
+    full_name,
+    email,
+    class,
+    card_id,
+    role,
+    account_status,
+    voting_status,
+    card_visibility
+  ) VALUES (
+    v_voter_id,
+    p_full_name,
+    'freevote-' || v_voter_id || '@ppu.co',
+    p_class,
+    v_unique_card_id,
+    'user',
+    'dikonfirmasi',
+    'sudah',
+    false
+  );
+
+  -- 2. Insert each vote in the category_votes array
+  FOR v_vote IN SELECT * FROM jsonb_array_elements(p_category_votes) LOOP
+    INSERT INTO votes (
+      voter_id,
+      category_id,
+      candidate_id,
+      created_at
+    ) VALUES (
+      v_voter_id,
+      (v_vote->>'category_id')::uuid,
+      (v_vote->>'candidate_id')::uuid,
+      now()
+    );
+  END LOOP;
+
+  RETURN true;
+END;
+$$;`);
+                    alert('Script SQL berhasil disalin ke papan klip!');
+                  }}
+                  className="px-3 py-1.5 bg-[#1a1f30] hover:bg-[#22283e] border border-[#2a3050] hover:border-indigo-500/50 rounded-lg text-white font-black uppercase text-[10px] tracking-wider transition-all flex items-center gap-1.5 cursor-pointer"
+                >
+                  <Check className="w-3.5 h-3.5 text-indigo-400" />
+                  <span>Salin Script SQL</span>
+                </button>
+              </div>
+
+              <div className="bg-[#0b0d13] p-4 rounded-2xl border border-[#1b2030] max-h-48 overflow-y-auto font-mono text-[10px] text-indigo-300 leading-relaxed whitespace-pre scrollbar-thin">
+{`CREATE OR REPLACE FUNCTION submit_free_vote(
+  p_full_name text,
+  p_class text,
+  p_category_votes jsonb
+)
+RETURNS boolean
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+  v_voter_id uuid;
+  v_vote jsonb;
+  v_unique_card_id text;
+BEGIN
+  v_voter_id := gen_random_uuid();
+  v_unique_card_id := 'FV-' || floor(random() * 900000 + 100000)::text;
+
+  INSERT INTO profiles (
+    id, full_name, email, class, card_id,
+    role, account_status, voting_status, card_visibility
+  ) VALUES (
+    v_voter_id, p_full_name,
+    'freevote-' || v_voter_id || '@ppu.co',
+    p_class, v_unique_card_id,
+    'user', 'dikonfirmasi', 'sudah', false
+  );
+
+  FOR v_vote IN SELECT * FROM jsonb_array_elements(p_category_votes) LOOP
+    INSERT INTO votes (
+      voter_id, category_id, candidate_id, created_at
+    ) VALUES (
+      v_voter_id,
+      (v_vote->>'category_id')::uuid,
+      (v_vote->>'candidate_id')::uuid,
+      now()
+    );
+  END LOOP;
+
+  RETURN true;
+END;
+$$;`}
+              </div>
+            </div>
+          </div>
+
+          <div className="flex flex-col sm:flex-row items-center gap-3 w-full pt-2">
+            <button
+              onClick={() => {
+                setScreen('categories');
+                setFreeVoteDbError(null);
+              }}
+              className="w-full sm:w-auto px-6 py-3 border border-[#2a3050] hover:border-slate-500 text-slate-300 hover:text-white font-extrabold uppercase tracking-wider text-xs rounded-2xl transition-all cursor-pointer text-center"
+            >
+              Kembali ke Pemilihan
+            </button>
+            <button
+              onClick={() => {
+                setScreen('categories');
+                setFreeVoteDbError(null);
+                handleFinalFinishFreeVote(votedCategories);
+              }}
+              className="w-full sm:flex-1 px-8 py-3.5 bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white font-extrabold uppercase tracking-wider text-xs rounded-2xl shadow-lg transition-all cursor-pointer text-center"
+            >
+              Coba Kirim Ulang
+            </button>
+          </div>
         </main>
       )}
 
