@@ -26,7 +26,7 @@ function generateRandomSessionCode(): string {
   return result;
 }
 
-export default function BilikPage({ isGtkMode = false }: { isGtkMode?: boolean }) {
+export default function BilikPage({ isGtkMode = false, isStudentMode = false }: { isGtkMode?: boolean; isStudentMode?: boolean }) {
   const navigate = useNavigate();
   const { profile, signOut } = useAuth();
   
@@ -172,7 +172,7 @@ export default function BilikPage({ isGtkMode = false }: { isGtkMode?: boolean }
     if (hasInitializedRef.current) return;
     hasInitializedRef.current = true;
 
-    if (isGtkMode) {
+    if (isGtkMode || isStudentMode) {
       setLoading(false);
     } else {
       restoreOrStartNewSession();
@@ -479,12 +479,13 @@ export default function BilikPage({ isGtkMode = false }: { isGtkMode?: boolean }
     );
   }
 
-  // Render full-screen VotingFlow experience if in GTK mode
-  if (isGtkMode) {
+  // Render full-screen VotingFlow experience if in GTK/Student mode
+  if (isGtkMode || isStudentMode) {
     return (
       <VotingFlow 
         voteMode="regular"
-        isGtkMode={true}
+        isGtkMode={isGtkMode}
+        isStudentMode={isStudentMode}
       />
     );
   }

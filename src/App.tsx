@@ -105,6 +105,14 @@ function AppContent() {
             </ProtectedRoute>
           }
         />
+        <Route
+          path="/bilik/pemilih-siswa"
+          element={
+            <ProtectedRoute allowedRoles={['vote', 'bilik']}>
+              <BilikPage isStudentMode={true} />
+            </ProtectedRoute>
+          }
+        />
 
         {/* User Routes */}
         <Route

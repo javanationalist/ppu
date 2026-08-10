@@ -35,7 +35,8 @@ import {
   finalizeVotingStatus, 
   getDapils, 
   getVotingCompletionStatus,
-  getGtkProfiles
+  getGtkProfiles,
+  searchProfilesByClassAndQuery
 } from '../../lib/votingService';
 import { Category, Candidate, Profile, Vote, Dapil } from '../../types';
 import { getUserAccessSettings, UserAccessSettings } from '../../lib/userAccessService';
@@ -50,10 +51,11 @@ export interface VotingFlowProps {
   onComplete?: () => void;
   onCancel?: () => void;
   isGtkMode?: boolean;
+  isStudentMode?: boolean;
 }
 
 
-export default function VotingFlow({ voteMode, initialVoterCardId, onComplete, onCancel, isGtkMode = false }: VotingFlowProps) {
+export default function VotingFlow({ voteMode, initialVoterCardId, onComplete, onCancel, isGtkMode = false, isStudentMode = false }: VotingFlowProps) {
   const navigate = useNavigate();
 
   const [accessSettings, setAccessSettings] = useState<UserAccessSettings | null>(null);
@@ -416,6 +418,18 @@ export default function VotingFlow({ voteMode, initialVoterCardId, onComplete, o
   const [selectedGtkId, setSelectedGtkId] = useState<string>('');
   const [gtkSearchQuery, setGtkSearchQuery] = useState<string>('');
 
+  // Student Mode States
+  const [studentProfiles, setStudentProfiles] = useState<Profile[]>([]);
+  const [selectedClass, setSelectedClass] = useState<string>('');
+  const [studentSearchQuery, setStudentSearchQuery] = useState<string>('');
+  const [selectedStudentId, setSelectedStudentId] = useState<string>('');
+
+  const STUDENT_CLASSES = [
+    ...Array.from({ length: 12 }, (_, i) => `X-${i + 1}`),
+    ...Array.from({ length: 12 }, (_, i) => `XI-${i + 1}`),
+    ...Array.from({ length: 12 }, (_, i) => `XII-${i + 1}`),
+  ];
+
   useEffect(() => {
     if (isGtkMode) {
       const loadGtk = async () => {
@@ -429,6 +443,80 @@ export default function VotingFlow({ voteMode, initialVoterCardId, onComplete, o
       loadGtk();
     }
   }, [isGtkMode]);
+
+  useEffect(() => {
+    const searchStudents = async () => {
+      if (!isStudentMode || !selectedClass || studentSearchQuery.length < 2) {
+        setStudentProfiles([]);
+        return;
+      }
+
+      setSearchLoading(true);
+      try {
+        const profiles = await searchProfilesByClassAndQuery(selectedClass, studentSearchQuery);
+        setStudentProfiles(profiles);
+      } catch (err) {
+        console.error('Failed to search student profiles:', err);
+      } finally {
+        setSearchLoading(false);
+      }
+    };
+
+    const debounceTimer = setTimeout(searchStudents, 400);
+    return () => clearTimeout(debounceTimer);
+  }, [isStudentMode, selectedClass, studentSearchQuery]);
+
+  const handleVerifyStudentVoter = async (voterId: string) => {
+    if (!voterId) return;
+
+    if (accessSettings && !accessSettings.voting_global_enabled) {
+      setScreen('forbidden');
+      return;
+    }
+
+    setSearchLoading(true);
+    setErrorMessage(null);
+
+    try {
+      const profile = studentProfiles.find(p => p.id === voterId);
+      if (!profile) {
+        setErrorMessage('Profil Siswa tidak ditemukan.');
+        setSearchLoading(false);
+        return;
+      }
+
+      const completionStatus = await getVotingCompletionStatus(profile.id);
+      const submittedVotes = await getVoterSubmittedVotes(profile.id);
+
+      const votedMap: Record<string, string> = {};
+      completionStatus.categories.forEach(cat => {
+        if (cat.completed) {
+          votedMap[cat.categoryId] = 'voted';
+        }
+      });
+      submittedVotes.forEach(vote => {
+        votedMap[vote.category_id] = vote.candidate_id;
+      });
+
+      setIsVoterAllCompleted(completionStatus.allCompleted);
+      setVotedCategories(votedMap);
+      setVoter(profile);
+
+      const isEnded = profile.voting_status === 'sudah' || completionStatus.allCompleted;
+      if (isEnded) {
+        setErrorMessage('Sesi voting untuk Siswa ini sudah diselesaikan. Setiap pemilih hanya dapat memberikan suara sekali.');
+        setSearchLoading(false);
+        return;
+      }
+
+      setScreen('profile');
+      setSearchLoading(false);
+    } catch (err: any) {
+      console.error('Error verifying Student voter:', err);
+      setErrorMessage(err.message || 'Terjadi kesalahan saat memvalidasi profil Siswa.');
+      setSearchLoading(false);
+    }
+  };
 
   const handleVerifyGtkVoter = async (voterId: string) => {
     if (!voterId) return;
@@ -803,6 +891,14 @@ export default function VotingFlow({ voteMode, initialVoterCardId, onComplete, o
     setCamError(null);
     stopScanner();
     setScreen('scan');
+    // Student mode resets
+    setSelectedClass('');
+    setStudentProfiles([]);
+    setStudentSearchQuery('');
+    setSelectedStudentId('');
+    // GTK mode resets
+    setSelectedGtkId('');
+    setGtkSearchQuery('');
   };
 
   const triggerBack = (targetScreen: 'scan' | 'categories') => {
@@ -864,15 +960,17 @@ export default function VotingFlow({ voteMode, initialVoterCardId, onComplete, o
           </div>
 
           <h1 className="text-2xl font-extrabold text-white tracking-tight text-center self-start mb-1 font-sans">
-            {isGtkMode ? 'Bilik Guru & Tenaga Kependidikan' : 'Verifikasi'}
+            {isGtkMode ? 'Bilik Guru & Tenaga Kependidikan' : isStudentMode ? 'Bilik Pemilih Siswa' : 'Verifikasi'}
           </h1>
           <p className="text-xs text-slate-400 self-start mb-6">
             {isGtkMode 
               ? 'Silakan cari nama Anda pada daftar Guru dan Tenaga Kependidikan di bawah untuk memvalidasi identitas Anda.' 
-              : 'Silakan masukkan Card ID secara manual atau scan QR Code yang ada di Voters Card'}
+              : isStudentMode
+                ? 'Masukkan nama atau Card ID, kemudian pilih kelas untuk melakukan validasi.'
+                : 'Silakan masukkan Card ID secara manual atau scan QR Code yang ada di Voters Card'}
           </p>
 
-          {!isGtkMode ? (
+          {!isGtkMode && !isStudentMode ? (
             <div className="w-full mb-4">
               <label className="block text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-2">
                 Card ID
@@ -894,7 +992,7 @@ export default function VotingFlow({ voteMode, initialVoterCardId, onComplete, o
                 ))}
               </div>
             </div>
-          ) : (
+          ) : isGtkMode ? (
             <div className="w-full space-y-4 mb-4">
               <div className="relative">
                 <label className="block text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-2">
@@ -982,9 +1080,109 @@ export default function VotingFlow({ voteMode, initialVoterCardId, onComplete, o
                 )}
               </div>
             </div>
+          ) : (
+            <div className="w-full space-y-4 mb-4">
+              <div className="space-y-3">
+                <div className="relative">
+                  <label className="block text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-2">
+                    Kelas
+                  </label>
+                  <select
+                    value={selectedClass}
+                    onChange={(e) => {
+                      setSelectedClass(e.target.value);
+                      setSelectedStudentId('');
+                      setStudentSearchQuery('');
+                      setStudentProfiles([]);
+                    }}
+                    className="w-full px-4 py-3 bg-[#1c2030] border-2 border-[#2a3050] focus:border-indigo-500 rounded-xl outline-none text-white text-sm transition-all font-semibold appearance-none cursor-pointer"
+                  >
+                    <option value="" disabled>Pilih Kelas</option>
+                    {STUDENT_CLASSES.map(cls => (
+                      <option key={cls} value={cls}>{cls}</option>
+                    ))}
+                  </select>
+                  <div className="absolute right-4 top-[38px] pointer-events-none">
+                    <ChevronRight className="w-4 h-4 text-slate-400 rotate-90" />
+                  </div>
+                </div>
+
+                <div className="relative">
+                  <label className="block text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-2">
+                    Nama / Card ID
+                  </label>
+                  <input
+                    type="text"
+                    placeholder={selectedClass ? "Ketik minimal 2 karakter..." : "Pilih kelas terlebih dahulu"}
+                    value={studentSearchQuery}
+                    disabled={!selectedClass}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setStudentSearchQuery(val);
+                      setSelectedStudentId('');
+                    }}
+                    className="w-full px-4 py-3 bg-[#1c2030] border-2 border-[#2a3050] focus:border-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed rounded-xl outline-none text-white text-sm transition-all placeholder:text-slate-500 font-semibold"
+                  />
+                </div>
+              </div>
+
+              {/* List of matched Student profiles in the selected class */}
+              {selectedClass && studentSearchQuery.length >= 2 && (
+                <div className="bg-[#151821]/90 border border-[#2a3050] rounded-2xl p-2 max-h-[200px] overflow-y-auto space-y-1.5 custom-scrollbar">
+                  {studentProfiles.length === 0 ? (
+                    <div className="text-center py-8 text-xs text-slate-500 font-medium">
+                      {searchLoading ? 'Memuat data siswa...' : 'Tidak ada siswa ditemukan yang cocok.'}
+                    </div>
+                  ) : (
+                    studentProfiles.map(p => {
+                      const isVoted = p.voting_status === 'sudah';
+                      const isSelected = selectedStudentId === p.id;
+                      return (
+                        <button
+                          key={p.id}
+                          type="button"
+                          disabled={isVoted}
+                          onClick={() => {
+                            setSelectedStudentId(p.id);
+                            setStudentSearchQuery(p.full_name);
+                          }}
+                          className={`w-full p-3 rounded-xl flex items-center justify-between text-left transition-all ${
+                            isSelected 
+                              ? 'bg-indigo-600/20 border-2 border-indigo-500 text-white' 
+                              : isVoted 
+                                ? 'opacity-40 cursor-not-allowed bg-black/10 text-slate-500 border border-transparent' 
+                                : 'bg-transparent border border-transparent hover:bg-[#1c2030] text-slate-300'
+                          }`}
+                        >
+                          <div className="min-w-0 pr-2">
+                            <p className="text-xs font-bold truncate text-white">{p.full_name}</p>
+                            <p className="text-[10px] text-slate-500 font-semibold mt-0.5">Siswa • Kelas {p.class}</p>
+                          </div>
+                          <div>
+                            {isVoted ? (
+                              <span className="text-[9px] bg-rose-500/10 text-rose-400 border border-rose-500/20 px-2.5 py-0.5 rounded-full font-black uppercase tracking-wider">
+                                Sudah Memilih
+                              </span>
+                            ) : isSelected ? (
+                              <span className="text-[9px] bg-indigo-500 text-white px-2.5 py-0.5 rounded-full font-black uppercase tracking-wider shadow-md shadow-indigo-600/20">
+                                Terpilih
+                              </span>
+                            ) : (
+                              <span className="text-[9px] bg-[#1c2030] hover:bg-[#252b42] text-slate-400 border border-[#2a3050] px-2.5 py-0.5 rounded-full font-black uppercase tracking-wider transition-all">
+                                Pilih
+                              </span>
+                            )}
+                          </div>
+                        </button>
+                      );
+                    })
+                  )}
+                </div>
+              )}
+            </div>
           )}
 
-          {!isGtkMode && (
+          {!isGtkMode && !isStudentMode && (
             <>
               <div className="w-full flex items-center gap-4 my-3 text-slate-500 text-xs font-bold uppercase tracking-wider">
                 <span className="h-px bg-[#2a3050] flex-1"></span>
@@ -1047,8 +1245,8 @@ export default function VotingFlow({ voteMode, initialVoterCardId, onComplete, o
           )}
 
           <button 
-            onClick={() => isGtkMode ? handleVerifyGtkVoter(selectedGtkId) : handleVerifyCardId(cardIdInput)}
-            disabled={searchLoading || (isGtkMode ? !selectedGtkId : !cardIdInput.trim())}
+            onClick={() => isGtkMode ? handleVerifyGtkVoter(selectedGtkId) : isStudentMode ? handleVerifyStudentVoter(selectedStudentId) : handleVerifyCardId(cardIdInput)}
+            disabled={searchLoading || (isGtkMode ? !selectedGtkId : isStudentMode ? !selectedStudentId : !cardIdInput.trim())}
             className="w-full py-3.5 bg-indigo-600 hover:bg-indigo-700 disabled:bg-[#2a3050] disabled:opacity-50 text-white rounded-xl text-sm font-bold shadow-xl shadow-indigo-600/10 flex items-center justify-center gap-2 transition-all cursor-pointer"
           >
             {searchLoading ? (
@@ -1057,7 +1255,7 @@ export default function VotingFlow({ voteMode, initialVoterCardId, onComplete, o
               </>
             ) : (
               <>
-                {isGtkMode ? 'Validasi Identitas GTK' : 'Lanjutkan Verifikasi'} <ArrowRight className="w-4 h-4" />
+                {isGtkMode ? 'Validasi Identitas GTK' : isStudentMode ? 'Validasi Identitas Siswa' : 'Lanjutkan Verifikasi'} <ArrowRight className="w-4 h-4" />
               </>
             )}
           </button>

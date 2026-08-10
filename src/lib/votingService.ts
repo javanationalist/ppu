@@ -611,6 +611,70 @@ export const verifyVoterByCardId = async (cardId: string): Promise<Profile | nul
   }
 };
 
+// Search profiles by class and query (name or card_id) - useful for Student Booth privacy
+export const searchProfilesByClassAndQuery = async (className: string, query: string): Promise<Profile[]> => {
+  if (!className || query.length < 2) return [];
+
+  if (!isSupabaseConfigured) {
+    try {
+      const localProfilesStr = localStorage.getItem('mock_profiles') || '[]';
+      const profiles: Profile[] = JSON.parse(localProfilesStr);
+      return profiles.filter(p => 
+        p.class === className && 
+        p.role === 'user' && 
+        !p.is_deleted && 
+        (p.full_name.toLowerCase().includes(query.toLowerCase()) || p.card_id === query)
+      );
+    } catch (err) {
+      console.error('Error searching mock profiles:', err);
+      return [];
+    }
+  }
+
+  try {
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('class', className)
+      .eq('role', 'user')
+      .or(`full_name.ilike.%${query}%,card_id.eq.${query}`);
+
+    if (error) throw error;
+    return ((data || []) as Profile[]).filter(p => !p.is_deleted);
+  } catch (err) {
+    console.error('Error searching profiles by class and query:', err);
+    return [];
+  }
+};
+
+// Get profiles by specific classes (useful for Student Booth)
+export const getProfilesByClasses = async (classes: string[]): Promise<Profile[]> => {
+  if (!isSupabaseConfigured) {
+    try {
+      const localProfilesStr = localStorage.getItem('mock_profiles') || '[]';
+      const profiles: Profile[] = JSON.parse(localProfilesStr);
+      return profiles.filter(p => classes.includes(p.class || '') && p.role === 'user' && !p.is_deleted);
+    } catch (err) {
+      console.error('Error getting mock profiles by classes:', err);
+      return [];
+    }
+  }
+
+  try {
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('*')
+      .in('class', classes)
+      .eq('role', 'user');
+
+    if (error) throw error;
+    return ((data || []) as Profile[]).filter(p => !p.is_deleted);
+  } catch (err) {
+    console.error('Error getting profiles by classes:', err);
+    return [];
+  }
+};
+
 // Get all GTK profiles (Guru & Tenaga Kependidikan)
 export const getGtkProfiles = async (): Promise<Profile[]> => {
   if (!isSupabaseConfigured) {
