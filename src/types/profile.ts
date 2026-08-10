@@ -12,6 +12,7 @@ export interface Profile {
   class: string;
   card_id: string;
   created_at: string;
+  confirmed_at?: string;
   is_deleted?: boolean;
   deleted_at?: string | null;
   card_visibility?: boolean;

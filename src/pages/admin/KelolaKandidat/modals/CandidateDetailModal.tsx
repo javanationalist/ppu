@@ -32,7 +32,7 @@ export function CandidateDetailModal({ isOpen, onClose, candidate }: CandidateDe
 
         <div className="p-6 space-y-4 max-h-[75vh] overflow-y-auto">
           <div className="flex items-center gap-4">
-            <div className="w-20 h-24 rounded-xl overflow-hidden bg-slate-100 dark:bg-[#202020] border border-slate-200 dark:border-slate-800 shrink-0 flex items-center justify-center">
+            <div className="w-28 aspect-[4/3] rounded-xl overflow-hidden bg-slate-100 dark:bg-[#202020] border border-slate-200 dark:border-slate-800 shrink-0 flex items-center justify-center">
               {candidate.photo_url ? (
                 <img src={candidate.photo_url} alt={candidate.chairman} className="w-full h-full object-cover" />
               ) : (

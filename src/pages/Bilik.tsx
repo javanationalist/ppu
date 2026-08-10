@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { QRCodeCanvas } from 'qrcode.react';
-import { Monitor, RefreshCw, AlertCircle, Clock, CheckCircle2, Terminal } from 'lucide-react';
+import { Monitor, RefreshCw, AlertCircle, Clock, CheckCircle2, Terminal, QrCode, LogOut, Radio, ShieldCheck, Sparkles } from 'lucide-react';
 import { 
   createBoothSession, 
   getBoothSession, 
@@ -36,6 +36,9 @@ export default function BilikPage() {
   const [error, setError] = useState<string | null>(null);
   const [isConnected, setIsConnected] = useState(false);
   const [sessionConflict, setSessionConflict] = useState<{ deviceName: string; boothCode: string } | null>(null);
+  const [forceLogoutLoading, setForceLogoutLoading] = useState(false);
+  const [forceLogoutError, setForceLogoutError] = useState<string | null>(null);
+  const [showForceConfirmModal, setShowForceConfirmModal] = useState(false);
   
   const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const profileRef = useRef(profile);
@@ -297,17 +300,46 @@ export default function BilikPage() {
     );
   }
 
+  const handleConfirmForceLogout = async () => {
+    setShowForceConfirmModal(false);
+    setForceLogoutLoading(true);
+    setForceLogoutError(null);
+    try {
+      const { forceRegisterSession } = await import('../lib/sessionService');
+      const curProf = profileRef.current;
+      if (!curProf) {
+        setForceLogoutError('Profil pengguna tidak ditemukan.');
+        setForceLogoutLoading(false);
+        return;
+      }
+      const res = await forceRegisterSession(curProf.id, curProf.role || 'bilik');
+      if (res.success) {
+        setSessionConflict(null);
+        await restoreOrStartNewSession();
+      } else {
+        setForceLogoutError(res.error || 'Gagal memutus sesi pada perangkat lama.');
+      }
+    } catch (err: any) {
+      console.error(err);
+      setForceLogoutError('Terjadi kesalahan sistem saat memutus sesi.');
+    } finally {
+      setForceLogoutLoading(false);
+    }
+  };
+
   if (sessionConflict) {
+    const deviceLabel = sessionConflict.deviceName || 'Perangkat Lain';
+
     return (
-      <div className="min-h-screen bg-[#0d0f14] flex flex-col items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-md w-full bg-[#161b22] border-2 border-rose-900/40 p-8 rounded-2xl shadow-2xl text-center space-y-6">
+      <div className="min-h-screen bg-[#0d0f14] flex flex-col items-center justify-center py-12 px-4 sm:px-6 lg:px-8 relative font-mono">
+        <div className="max-w-md w-full bg-[#161b22] border-2 border-rose-900/40 p-8 rounded-2xl shadow-2xl text-center space-y-6 relative">
           <div className="flex flex-col items-center">
             <div className="w-16 h-16 bg-rose-500/10 text-rose-500 rounded-full flex items-center justify-center mb-4 ring-8 ring-rose-500/5">
               <AlertCircle className="w-10 h-10 animate-pulse" />
             </div>
             
             <span className="text-[11px] font-black tracking-widest text-rose-500 uppercase">Error</span>
-            <h1 className="text-2xl font-black text-white tracking-tight mt-1 font-mono">
+            <h1 className="text-2xl font-black text-white tracking-tight mt-1">
               QR Gagal.
             </h1>
             <p className="text-sm font-semibold text-slate-400 mt-2">
@@ -315,10 +347,10 @@ export default function BilikPage() {
             </p>
           </div>
 
-          <div className="bg-[#0d0f14]/80 border border-[#21262d] rounded-xl p-4 text-left space-y-2 font-mono">
+          <div className="bg-[#0d0f14]/80 border border-[#21262d] rounded-xl p-4 text-left space-y-2">
             <div className="flex flex-col text-xs space-y-1">
               <span className="font-bold text-[#8b949e] uppercase tracking-wider">Nama Perangkat :</span>
-              <span className="font-extrabold text-[#f0f6fc]">{sessionConflict.deviceName}</span>
+              <span className="font-extrabold text-[#f0f6fc]">{deviceLabel}</span>
             </div>
             <div className="flex flex-col text-xs space-y-1 pt-2">
               <span className="font-bold text-[#8b949e] uppercase tracking-wider">Kode Akun :</span>
@@ -327,13 +359,37 @@ export default function BilikPage() {
           </div>
 
           <p className="text-xs font-semibold text-[#8b949e] leading-relaxed text-center px-2">
-            Silakan logout dari perangkat sebelumnya atau tunggu hingga perangkat tersebut offline.
+            Silakan logout dari perangkat sebelumnya atau klik tombol di bawah untuk mengeluarkan akun secara langsung.
           </p>
 
-          <div className="pt-4">
+          {forceLogoutError && (
+            <div className="bg-rose-500/10 border border-rose-500/30 text-rose-400 p-3 rounded-xl text-xs font-semibold text-center">
+              {forceLogoutError}
+            </div>
+          )}
+
+          <div className="pt-2 space-y-3">
             <button
+              type="button"
+              onClick={() => setShowForceConfirmModal(true)}
+              disabled={loading || forceLogoutLoading}
+              className="w-full py-3 bg-red-600 hover:bg-red-700 disabled:opacity-55 active:scale-[0.98] transition-all text-white rounded-xl font-bold text-xs uppercase tracking-wider cursor-pointer flex items-center justify-center gap-2 shadow-lg shadow-red-600/20"
+            >
+              {forceLogoutLoading ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  Memutus Sesi Perangkat...
+                </>
+              ) : (
+                `LOG OUT AKUN DARI ${deviceLabel.toUpperCase()}`
+              )}
+            </button>
+
+            <button
+              type="button"
               onClick={async () => {
                 setLoading(true);
+                setForceLogoutError(null);
                 try {
                   const { checkSessionActive, registerSession } = await import('../lib/sessionService');
                   const localToken = localStorage.getItem('current_session_token');
@@ -344,11 +400,10 @@ export default function BilikPage() {
                       boothCode: profile?.booth_code || '01',
                     });
                   } else {
-                    // Try registering session
-                    const regResult = await registerSession(profile?.id || '', 'vote');
+                    const regResult = await registerSession(profile?.id || '', profile?.role || 'bilik');
                     if (regResult.success) {
                       setSessionConflict(null);
-                      window.location.reload(); // Refresh to start a new session properly
+                      await restoreOrStartNewSession();
                     } else {
                       setSessionConflict({
                         deviceName: regResult.existingProfile?.device_name || 'Perangkat Lain',
@@ -362,8 +417,8 @@ export default function BilikPage() {
                   setLoading(false);
                 }
               }}
-              disabled={loading}
-              className="w-full py-3 bg-rose-650 hover:bg-rose-700 disabled:opacity-55 active:scale-[0.98] transition-all text-white rounded-xl font-bold text-xs uppercase tracking-wider cursor-pointer font-mono flex items-center justify-center gap-2"
+              disabled={loading || forceLogoutLoading}
+              className="w-full py-3 bg-[#21262d] hover:bg-[#30363d] disabled:opacity-55 active:scale-[0.98] transition-all text-slate-200 rounded-xl font-bold text-xs uppercase tracking-wider cursor-pointer flex items-center justify-center gap-2 border border-slate-700/60"
             >
               {loading ? (
                 <>
@@ -376,6 +431,46 @@ export default function BilikPage() {
             </button>
           </div>
         </div>
+
+        {/* Modal Confirmation Overlay */}
+        {showForceConfirmModal && (
+          <div className="fixed inset-0 bg-black/80 backdrop-blur-xs z-[9999] flex items-center justify-center p-4">
+            <div className="bg-[#161b22] border border-[#30363d] w-full max-w-sm rounded-2xl p-6 shadow-2xl text-center space-y-5">
+              <div className="w-12 h-12 bg-amber-500/10 text-amber-500 rounded-xl flex items-center justify-center border border-amber-500/20 mx-auto">
+                <AlertCircle className="w-6 h-6" />
+              </div>
+              
+              <div className="space-y-2">
+                <h3 className="text-base font-bold text-white tracking-tight">
+                  Konfirmasi Log Out Perangkat
+                </h3>
+                <p className="text-xs text-slate-300 leading-relaxed">
+                  Apakah Anda yakin ingin mengeluarkan akun bilik ini dari <span className="font-bold text-amber-400">{deviceLabel}</span>?
+                </p>
+                <p className="text-[11px] text-slate-400 leading-normal">
+                  Sesi pada perangkat lama akan terputus dan perangkat ini akan langsung terhubung ke bilik suara.
+                </p>
+              </div>
+
+              <div className="flex gap-2.5 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowForceConfirmModal(false)}
+                  className="flex-1 py-2.5 bg-[#21262d] hover:bg-[#30363d] text-slate-300 rounded-xl text-xs font-bold transition-colors cursor-pointer"
+                >
+                  Batal
+                </button>
+                <button
+                  type="button"
+                  onClick={handleConfirmForceLogout}
+                  className="flex-1 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-bold transition-all shadow-md cursor-pointer"
+                >
+                  Ya, Log Out
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     );
   }
@@ -404,31 +499,34 @@ export default function BilikPage() {
     );
   }
 
-  return (
-    <div className="min-h-screen bg-[#0d0f14] text-white font-mono flex flex-col justify-between overflow-x-hidden relative">
-      {/* Visual background terminal grid overlay */}
-      <div className="absolute inset-0 opacity-[0.03] pointer-events-none select-none">
-        <svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
-          <defs>
-            <pattern id="bilik-grid" width="40" height="40" patternUnits="userSpaceOnUse">
-              <path d="M 40 0 L 0 0 0 40" fill="none" stroke="white" strokeWidth="1"/>
-            </pattern>
-          </defs>
-          <rect width="100%" height="100%" fill="url(#bilik-grid)" />
-        </svg>
-      </div>
+  const boothCodeStr = profile ? getBoothCode(profile) : '01';
+  const boothNameStr = profile?.full_name ? profile.full_name : `Bilik Suara ${boothCodeStr}`;
 
-      {/* Terminal Top Bar */}
-      <header className="border-b border-[#21262d] bg-[#161b22] px-6 py-4 flex justify-between items-center z-10">
+  return (
+    <div className="min-h-screen bg-slate-50 text-slate-800 font-sans flex flex-col justify-between relative overflow-x-hidden selection:bg-blue-600 selection:text-white">
+      {/* Background radial highlight */}
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-blue-100/60 via-slate-50 to-slate-100 pointer-events-none select-none" />
+
+      {/* Top Header Bar */}
+      <header className="border-b border-slate-200/80 bg-white/90 backdrop-blur-md px-4 sm:px-8 py-3.5 flex justify-between items-center z-10 shadow-xs">
         <div className="flex items-center gap-3">
-          <Terminal className="w-5 h-5 text-white" />
-          <span className="font-extrabold text-sm tracking-widest text-white">BILIK SUARA ({profile ? getBoothCode(profile) : 'CC'})</span>
+          <div className="w-8 h-8 rounded-xl bg-blue-600 text-white flex items-center justify-center font-black text-xs shadow-md shadow-blue-600/20">
+            PPU
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="font-black text-slate-900 text-sm tracking-tight">BILIK SUARA</span>
+            <span className="bg-blue-50 text-blue-700 text-xs font-bold px-2.5 py-0.5 rounded-full border border-blue-200/80">
+              BILIK {boothCodeStr}
+            </span>
+          </div>
         </div>
-        <div className="flex items-center gap-4">
-          <span className="flex items-center gap-1.5 text-xs text-white">
-            <span className="w-2 h-2 rounded-full bg-amber-500" />
+
+        <div className="flex items-center gap-3">
+          <span className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-50 text-amber-700 text-xs font-semibold border border-amber-200/80 shadow-2xs">
+            <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
             MENUNGGU PEMILIH
           </span>
+
           <button
             onClick={async () => {
               if (profile) {
@@ -437,90 +535,111 @@ export default function BilikPage() {
               await signOut();
               navigate('/login');
             }}
-            className="text-xs text-rose-400 hover:text-rose-300 border border-rose-900/30 hover:border-rose-700/50 px-3 py-1.5 rounded-lg transition-colors cursor-pointer"
+            className="text-xs font-semibold text-slate-500 hover:text-rose-600 hover:bg-rose-50 border border-slate-200/80 hover:border-rose-200 px-3 py-1.5 rounded-xl transition-all cursor-pointer flex items-center gap-1.5"
           >
-            Keluar Terminal
+            <LogOut className="w-3.5 h-3.5" />
+            <span>Keluar</span>
           </button>
         </div>
       </header>
 
-      {/* Main Terminal Screen Content */}
-      <main className="flex-1 flex items-center justify-center p-6 z-10">
+      {/* Main Container */}
+      <main className="flex-1 flex items-center justify-center p-4 sm:p-6 md:p-8 z-10 my-auto">
         {loading ? (
-          <div className="flex flex-col items-center gap-3">
-            <RefreshCw className="w-8 h-8 text-white" />
-            <p className="text-xs text-white">Menginisialisasi gerbang sesi...</p>
+          <div className="flex flex-col items-center justify-center gap-3 py-12">
+            <RefreshCw className="w-8 h-8 text-blue-600 animate-spin" />
+            <p className="text-xs font-bold text-slate-600">Menginisialisasi gerbang bilik suara...</p>
           </div>
         ) : (
-          <div className="max-w-2xl w-full bg-[#161b22] border border-[#30363d] rounded-2xl p-6 sm:p-8 space-y-8 shadow-2xl relative overflow-hidden">
+          <div className="max-w-2xl w-full bg-white border border-slate-200/80 rounded-3xl p-6 sm:p-8 md:p-10 shadow-xl shadow-slate-200/50 relative overflow-hidden text-center space-y-6 sm:space-y-8 my-auto flex flex-col items-center">
             
-            {/* Terminal Window Accent */}
-            <div className="absolute top-0 left-0 right-0 h-[3px] bg-gradient-to-r from-emerald-500 to-indigo-600" />
+            {/* Top Accent Gradient Line */}
+            <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-blue-600 via-sky-500 to-indigo-600" />
 
-            {/* STEP 1: MENUNGGU PEMILIH (Waiting) */}
-            <div className="flex flex-col md:flex-row gap-8 items-center justify-between">
-              <div className="flex-1 space-y-4">
-                <div className="space-y-1">
-                  <span className="text-[10px] uppercase font-bold tracking-widest text-white font-mono">STATUS KONEKSI</span>
-                  <h2 className="text-xl font-extrabold text-white tracking-tight">PINDAI KODE QR</h2>
-                </div>
-                <p className="text-xs text-white leading-relaxed">
-                  Silakan buka tab <strong className="text-white font-bold">Scan QR</strong> di halaman akun, lalu arahkan kamera untuk memindai Kode QR token sesi di samping.
-                </p>
-                <div className="p-3.5 bg-[#0d0f14] border border-[#21262d] rounded-xl space-y-2">
-                  <div className="flex justify-between text-[11px]">
-                    <span className="text-white">ID Sesi Terminal:</span>
-                    <span className="font-mono font-bold text-white uppercase">{session?.id}</span>
-                  </div>
-                  <div className="flex justify-between text-[11px]">
-                    <span className="text-white">Metode Sinkronisasi:</span>
-                    <span className="font-mono text-white">PPU-Realtime-Polling</span>
-                  </div>
-                </div>
-                <button
-                  onClick={startNewSession}
-                  className="flex items-center gap-2 text-xs font-bold text-white hover:text-white transition-colors focus:outline-none cursor-pointer"
-                >
-                  <RefreshCw className="w-3.5 h-3.5 text-white" />
-                  <span>Perbarui Token</span>
-                </button>
+            {/* Header / Title */}
+            <div className="space-y-2 max-w-md mx-auto">
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-blue-50 text-blue-700 rounded-full text-[11px] font-bold tracking-wider uppercase border border-blue-100">
+                <QrCode className="w-3.5 h-3.5 text-blue-600" />
+                <span>DISPLAY RESMI BILIK SUARA</span>
               </div>
 
-              {/* QR Code Container */}
-              <div className="shrink-0 flex flex-col items-center gap-3">
-                <div className="p-4 bg-white rounded-2xl shadow-xl flex items-center justify-center shrink-0 border border-slate-200">
-                  <QRCodeCanvas
-                    value={session?.id || ''}
-                    size={200}
-                    level="H"
-                    includeMargin={false}
-                    style={{ width: '100%', height: '100%' }}
-                  />
+              <h1 className="text-2xl sm:text-3xl md:text-4xl font-black text-slate-900 tracking-tight">
+                QR BILIK SUARA
+              </h1>
+
+              <p className="text-xs sm:text-sm text-slate-500 leading-relaxed font-normal">
+                Pindai kode ini menggunakan kamera HP pemilih untuk menghubungkan perangkat dengan bilik suara.
+              </p>
+            </div>
+
+            {/* QR Card Container */}
+            <div className="p-5 sm:p-6 bg-gradient-to-b from-slate-50 via-blue-50/20 to-slate-50 rounded-2xl border border-slate-200/80 w-full max-w-xs sm:max-w-sm flex flex-col items-center justify-center gap-4 shadow-xs relative">
+              
+              {/* Responsive 1:1 QR Box */}
+              <div className="bg-white p-4 sm:p-5 rounded-2xl shadow-md border border-slate-200/90 flex items-center justify-center w-48 h-48 sm:w-60 sm:h-60 md:w-64 md:h-64 max-w-full aspect-square relative shrink-0">
+                <QRCodeCanvas
+                  value={session?.id || ''}
+                  size={300}
+                  level="H"
+                  includeMargin={false}
+                  style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+                />
+              </div>
+
+              {/* Code Info Badge */}
+              <div className="w-full flex flex-col items-center gap-1">
+                <span className="text-[10px] font-bold tracking-widest text-slate-400 uppercase">KODE SESI BILIK</span>
+                
+                <div className="inline-flex items-center gap-1.5 bg-slate-900 text-white font-mono font-black text-lg sm:text-xl px-4 py-1.5 rounded-xl shadow-xs tracking-wider">
+                  <span className="text-blue-400">{session?.id ? session.id.split('-')[1] : '--'}</span>
+                  <span className="text-slate-600">-</span>
+                  <span className="text-emerald-400">{session?.id ? session.id.split('-')[2] : '----'}</span>
                 </div>
-                <div className="text-center w-full space-y-1">
-                  <span className="text-[10px] text-slate-400 font-mono tracking-widest block">KODE QR</span>
-                  <span className="text-xl font-black text-white font-mono tracking-wider block">
-                    {(() => {
-                      if (!session?.id) return '------';
-                      const parts = session.id.split('-');
-                      return parts.length === 3 ? `${parts[1]}${parts[2]}` : session.id;
-                    })()}
-                  </span>
-                  <div className="text-[9px] text-slate-400 font-mono leading-tight space-y-0.5 text-left bg-[#0d0f14]/80 p-2.5 rounded-xl border border-[#21262d] mt-1.5">
-                    <div><span className="text-indigo-400 font-bold">{session?.id?.split('-')[1] || '--'}</span> = Kode Akun Bilik (CC)</div>
-                    <div><span className="text-emerald-400 font-bold">{session?.id?.split('-')[2] || '----'}</span> = Kode Sesi (XXXX)</div>
-                  </div>
-                </div>
+
+                <p className="text-[11px] text-slate-500 font-medium pt-0.5">
+                  Bilik: <strong className="text-slate-700">{session?.id?.split('-')[1] || '--'}</strong> • Token Sesi: <strong className="text-slate-700">{session?.id?.split('-')[2] || '----'}</strong>
+                </p>
+              </div>
+
+            </div>
+
+            {/* Compact Information Cards */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 w-full text-left pt-2 border-t border-slate-100">
+              <div className="bg-slate-50/80 p-3 rounded-xl border border-slate-200/60 flex flex-col gap-0.5">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">NAMA BILIK</span>
+                <span className="text-xs font-extrabold text-slate-800 truncate">{boothNameStr}</span>
+              </div>
+
+              <div className="bg-slate-50/80 p-3 rounded-xl border border-slate-200/60 flex flex-col gap-0.5">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">STATUS SINKRONISASI</span>
+                <span className="text-xs font-extrabold text-emerald-600 flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                  Standby / Menunggu
+                </span>
+              </div>
+
+              <div className="bg-slate-50/80 p-3 rounded-xl border border-slate-200/60 flex flex-col gap-0.5">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">ID FULL SESI</span>
+                <span className="text-xs font-mono font-bold text-slate-700 truncate">{session?.id || '---'}</span>
               </div>
             </div>
+
+            {/* Refresh Token Button */}
+            <button
+              onClick={startNewSession}
+              className="inline-flex items-center gap-2 text-xs font-bold text-blue-600 hover:text-blue-700 bg-blue-50 hover:bg-blue-100/80 border border-blue-200/80 px-4 py-2 rounded-xl transition-all cursor-pointer shadow-2xs active:scale-[0.98]"
+            >
+              <RefreshCw className="w-3.5 h-3.5" />
+              <span>Perbarui Token QR</span>
+            </button>
 
           </div>
         )}
       </main>
 
-      {/* Terminal Footer */}
-      <footer className="border-t border-[#21262d] bg-[#0d0f14] px-6 py-4 text-center text-xs text-white z-10">
-        <p className="font-mono">PPU SMAN 1 BANGSAL © 2026-PRESENT. KESISWAAN DAN PANITIA PEMILU RAYA DIGITAL.</p>
+      {/* Footer */}
+      <footer className="border-t border-slate-200/80 bg-white/70 backdrop-blur-xs py-3.5 px-4 text-center text-[11px] text-slate-500 z-10 font-medium">
+        <p>PPU SMAN 1 BANGSAL © 2026 • PANITIA PEMILU RAYA DIGITAL</p>
       </footer>
     </div>
   );

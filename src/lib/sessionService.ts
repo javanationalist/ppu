@@ -56,7 +56,7 @@ export async function checkSessionActive(
 
   const role = profile.role;
 
-  if (role === 'vote') {
+  if (role === 'vote' || role === 'bilik') {
     const dbToken = profile.session_token;
     // Active if voting_status is NOT 'offline'
     if (profile.voting_status && profile.voting_status !== 'offline') {
@@ -94,8 +94,8 @@ export async function registerSession(
   userId: string,
   role: string
 ): Promise<{ success: boolean; token: string; existingProfile?: any }> {
-  // If role is not vote, skip session locks
-  if (role !== 'vote') {
+  // If role is not vote or bilik, skip session locks
+  if (role !== 'vote' && role !== 'bilik') {
     const defaultToken = 'sess_unlocked';
     localStorage.setItem('current_session_token', defaultToken);
     return { success: true, token: defaultToken };
@@ -167,6 +167,71 @@ export async function registerSession(
 }
 
 /**
+ * Forces session registration for a user, overriding any active session on another device.
+ * Generates a new unique session token for this device, updates DB/mock profile with new token,
+ * device name, and last_seen, and saves new token in localStorage.
+ */
+export async function forceRegisterSession(
+  userId: string,
+  role: string
+): Promise<{ success: boolean; token: string; error?: string }> {
+  if (role !== 'vote' && role !== 'bilik') {
+    const defaultToken = 'sess_unlocked';
+    localStorage.setItem('current_session_token', defaultToken);
+    return { success: true, token: defaultToken };
+  }
+
+  const newToken = 'sess_' + Math.random().toString(36).substring(2, 15) + '_' + Date.now().toString(36);
+  const deviceName = getOSName();
+  const nowStr = new Date().toISOString();
+
+  if (!isSupabaseConfigured) {
+    const localProfilesStr = localStorage.getItem('mock_profiles') || '[]';
+    const profiles = JSON.parse(localProfilesStr);
+    const updated = profiles.map((p: any) => {
+      if (p.id === userId) {
+        return {
+          ...p,
+          session_token: newToken,
+          last_seen: nowStr,
+          device_name: deviceName,
+          voting_status: 'waiting',
+        };
+      }
+      return p;
+    });
+    localStorage.setItem('mock_profiles', JSON.stringify(updated));
+  } else {
+    try {
+      const updatePayload: any = {
+        session_token: newToken,
+        last_seen: nowStr,
+        device_name: deviceName,
+        voting_status: 'waiting',
+      };
+
+      const { error } = await supabase
+        .from('profiles')
+        .update(updatePayload)
+        .eq('id', userId);
+
+      if (error) {
+        console.error('Error in forceRegisterSession in Supabase:', error);
+        return { success: false, token: '', error: error.message || 'Gagal memutus sesi lama.' };
+      }
+    } catch (err: any) {
+      console.error('Exception during forceRegisterSession:', err);
+      return { success: false, token: '', error: err?.message || 'Terjadi kesalahan sistem saat memutus sesi.' };
+    }
+  }
+
+  // Store in local storage of this browser
+  localStorage.setItem('current_session_token', newToken);
+
+  return { success: true, token: newToken };
+}
+
+/**
  * Periodically updates the last_seen timestamp in the DB for active 'vote' role sessions.
  */
 export async function updateLastSeen(userId: string, token: string): Promise<void> {
@@ -200,7 +265,7 @@ export async function updateLastSeen(userId: string, token: string): Promise<voi
  * Clears the session on logout or session deactivation.
  */
 export async function clearSessionInDb(userId: string, token: string, role: string): Promise<void> {
-  if (role !== 'vote') {
+  if (role !== 'vote' && role !== 'bilik') {
     localStorage.removeItem('current_session_token');
     return;
   }

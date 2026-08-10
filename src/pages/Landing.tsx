@@ -448,7 +448,7 @@ export default function Landing() {
           {/* Bagian paling bawah */}
           <div id="footer-bottom-info" className="w-full flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 text-[11px] sm:text-xs text-slate-400 dark:text-slate-500 transition-colors">
             <span id="footer-copyright">
-              © 2026 SUARAKU v1.3.4 Genesis. All rights reserved.
+              © 2026 SUARAKU v1.6.2 Genesis. All rights reserved.
             </span>
             <span id="footer-attribution">
               Illustration by{' '}

@@ -10,6 +10,7 @@ import {
 } from '../../lib/adminService';
 import { Profile } from '../../types';
 import { Card } from '../../components/ui/Card';
+import { TablePagination } from '../../components/ui/TablePagination';
 import { 
   Users, 
   Search, 
@@ -52,6 +53,15 @@ export default function KelolaPemilih() {
   // Sorting
   const [sortField, setSortField] = useState<keyof Profile>('created_at');
   const [sortAscending, setSortAscending] = useState(false);
+
+  // Pagination State
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+
+  // Reset page to 1 when filters or sorting change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, activeFilter, sortField, sortAscending]);
 
   const loadVoters = async () => {
     setLoading(true);
@@ -275,6 +285,9 @@ export default function KelolaPemilih() {
     return 0;
   });
 
+  // Paginated Profiles
+  const paginatedProfiles = sortedProfiles.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+
   // Count active stats
   const totalRegistered = profiles.filter(p => !p.is_deleted).length;
   const totalConfirmed = profiles.filter(p => !p.is_deleted && p.account_status === 'dikonfirmasi').length;
@@ -435,7 +448,8 @@ export default function KelolaPemilih() {
             <p className="text-xs text-slate-400 mt-1">Coba gunakan kata sandi atau filter pencarian lainnya.</p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
+          <>
+            <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="bg-slate-50 border-b border-slate-200 text-slate-500 text-[10px] uppercase font-bold tracking-wider">
@@ -483,7 +497,7 @@ export default function KelolaPemilih() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 text-xs text-slate-700 font-medium">
-                {sortedProfiles.map((voter) => (
+                {paginatedProfiles.map((voter) => (
                   <tr key={voter.id} className="hover:bg-slate-50/55 transition-colors">
                     {/* Card ID */}
                     <td className="py-3.5 px-5 select-all">
@@ -594,8 +608,20 @@ export default function KelolaPemilih() {
               </tbody>
             </table>
           </div>
-        )}
-      </Card>
+
+          {/* Pagination Controls */}
+          {sortedProfiles.length > 0 && (
+            <TablePagination
+              currentPage={currentPage}
+              pageSize={pageSize}
+              totalItems={sortedProfiles.length}
+              onPageChange={setCurrentPage}
+              onPageSizeChange={setPageSize}
+            />
+          )}
+        </>
+      )}
+    </Card>
 
       {/* Dynamic Action Dialog / Modal Manager */}
       {modalOpen && selectedVoter && modalType && (

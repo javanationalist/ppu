@@ -53,6 +53,9 @@ export const ProtectedRoute = ({
     if (profile.role === 'admin' || profile.role === 'creator') {
       return <Navigate to="/admin" replace />;
     }
+    if (profile.role === 'bilik' || profile.role === 'vote') {
+      return <Navigate to="/bilik" replace />;
+    }
     return <Navigate to="/dashboard" replace />;
   }
 

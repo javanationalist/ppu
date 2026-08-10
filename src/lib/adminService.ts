@@ -90,6 +90,7 @@ export const confirmVoterAccount = async (
   voterName: string,
   cardId: string
 ): Promise<boolean> => {
+  const nowIso = new Date().toISOString();
   if (!isSupabaseConfigured) {
     const localProfilesStr = localStorage.getItem('mock_profiles');
     if (localProfilesStr) {
@@ -97,6 +98,7 @@ export const confirmVoterAccount = async (
       const idx = profiles.findIndex(p => p.id === voterId);
       if (idx >= 0) {
         profiles[idx].account_status = 'dikonfirmasi';
+        profiles[idx].confirmed_at = nowIso;
         localStorage.setItem('mock_profiles', JSON.stringify(profiles));
         await logAdminAction(adminEmail, 'Admin confirmed voter (Mock)', `${voterName} (Card ID: ${cardId})`);
         return true;
@@ -105,10 +107,20 @@ export const confirmVoterAccount = async (
     return false;
   }
 
-  const { error } = await supabase
+  // Attempt to set account_status and confirmed_at
+  let { error } = await supabase
     .from('profiles')
-    .update({ account_status: 'dikonfirmasi' })
+    .update({ account_status: 'dikonfirmasi', confirmed_at: nowIso })
     .eq('id', voterId);
+
+  // Fallback if confirmed_at column does not exist in schema
+  if (error) {
+    const fallbackRes = await supabase
+      .from('profiles')
+      .update({ account_status: 'dikonfirmasi' })
+      .eq('id', voterId);
+    error = fallbackRes.error;
+  }
 
   if (error) {
     if (import.meta.env.DEV) console.error('[DB] UPDATE profiles confirm ERROR:', error);
@@ -125,21 +137,40 @@ export const getConfirmedVoters = async (): Promise<Profile[]> => {
   if (!isSupabaseConfigured) {
     const localProfilesStr = localStorage.getItem('mock_profiles') || '[]';
     const profiles: Profile[] = JSON.parse(localProfilesStr);
-    return profiles.filter(p => p.account_status === 'dikonfirmasi');
+    return profiles.filter(p => p.role === 'user' && p.account_status === 'dikonfirmasi' && !p.is_deleted);
   }
 
-  const { data, error } = await supabase
+  let { data, error } = await supabase
     .from('profiles')
     .select('*')
-    .eq('account_status', 'dikonfirmasi')
-    .order('updated_at', { ascending: false });
+    .eq('role', 'user')
+    .eq('account_status', 'dikonfirmasi');
 
   if (error) {
-    console.error('Error fetching confirmed voters:', error);
+    console.warn('Query by role and account_status failed, attempting fallback fetch all profiles:', error);
+    try {
+      const allRes = await supabase.from('profiles').select('*');
+      if (allRes.data) {
+        data = allRes.data.filter((p: any) => p.role === 'user' && p.account_status === 'dikonfirmasi' && !p.is_deleted);
+        error = null;
+      }
+    } catch (e) {
+      console.error('Fallback fetch confirmed voters failed:', e);
+    }
+  }
+
+  if (error || !data) {
     return [];
   }
 
-  return (data as Profile[]) || [];
+  const list = (data as Profile[]).filter(p => !p.is_deleted);
+  list.sort((a: any, b: any) => {
+    const timeA = new Date(a.confirmed_at || a.updated_at || a.created_at || 0).getTime();
+    const timeB = new Date(b.confirmed_at || b.updated_at || b.created_at || 0).getTime();
+    return timeB - timeA;
+  });
+
+  return list;
 };
 
 // Reset confirmation status

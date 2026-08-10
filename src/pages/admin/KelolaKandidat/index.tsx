@@ -878,7 +878,7 @@ export default function KelolaPemilihan() {
                       </div>
 
                       <div className="flex items-center gap-3 mb-3">
-                        <div className="w-14 h-16 rounded-xl overflow-hidden bg-slate-100 border border-slate-200 shrink-0 flex items-center justify-center">
+                        <div className="w-20 aspect-[4/3] rounded-xl overflow-hidden bg-slate-100 border border-slate-200 shrink-0 flex items-center justify-center">
                           {cand.photo_url ? (
                             <img src={cand.photo_url} alt={cand.chairman} className="w-full h-full object-cover" />
                           ) : (

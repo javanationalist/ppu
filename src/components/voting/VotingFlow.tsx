@@ -41,7 +41,6 @@ import { getUserAccessSettings, UserAccessSettings } from '../../lib/userAccessS
 import { getGelombangConfigActive, getGelombangSesiList, GelombangSesi } from '../../lib/gelombangService';
 import { motion, AnimatePresence } from 'motion/react';
 import { getCategoryDetails } from './VotingFlow/getCategoryDetails';
-import { CandidateDetailModal } from './VotingFlow/CandidateDetailModal';
 import { OtpInputGroup } from './VotingFlow/OtpInputGroup';
 
 export interface VotingFlowProps {
@@ -57,8 +56,8 @@ export default function VotingFlow({ voteMode, initialVoterCardId, onComplete, o
 
   const [accessSettings, setAccessSettings] = useState<UserAccessSettings | null>(null);
 
-  // Screen state: 'scan' | 'profile' | 'categories' | 'candidates' | 'success' | 'thankyou' | 'forbidden' | 'gelombang_aktif' | 'gelombang_blokir'
-  const [screen, setScreen] = useState<'scan' | 'profile' | 'categories' | 'candidates' | 'success' | 'thankyou' | 'forbidden' | 'gelombang_aktif' | 'gelombang_blokir'>(
+  // Screen state: 'scan' | 'profile' | 'categories' | 'candidates' | 'success' | 'thankyou' | 'forbidden' | 'gelombang_aktif' | 'gelombang_blokir' | 'auto_finalize'
+  const [screen, setScreen] = useState<'scan' | 'profile' | 'categories' | 'candidates' | 'success' | 'thankyou' | 'forbidden' | 'gelombang_aktif' | 'gelombang_blokir' | 'auto_finalize'>(
     voteMode === 'booth' ? 'profile' : 'scan'
   );
 
@@ -78,6 +77,11 @@ export default function VotingFlow({ voteMode, initialVoterCardId, onComplete, o
   const [candidates, setCandidates] = useState<Candidate[]>([]);
   const [votedCategories, setVotedCategories] = useState<Record<string, string>>({}); // { catId: candidateId }
   const [dapils, setDapils] = useState<Dapil[]>([]);
+  
+  const totalCategories = categories.length;
+  const completedCategories = Object.keys(votedCategories).length;
+  const percentComplete = totalCategories > 0 ? Math.round((completedCategories / totalCategories) * 100) : 0;
+  const allCompleted = totalCategories > 0 && completedCategories === totalCategories;
   
   // Navigation for active voting category
   const [selectedCatId, setSelectedCatId] = useState<string | null>(null);
@@ -101,9 +105,8 @@ export default function VotingFlow({ voteMode, initialVoterCardId, onComplete, o
   // Modals
   const [showModal1, setShowModal1] = useState(false);
   const [showModal2, setShowModal2] = useState(false);
-  const [expandedCandidate, setExpandedCandidate] = useState<Candidate | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  useScrollLock(showModal1 || showModal2 || !!expandedCandidate);
+  useScrollLock(showModal1 || showModal2);
 
   // OTP-style separate inputs for Card ID
   const otpRef0 = useRef<HTMLInputElement>(null);
@@ -282,6 +285,28 @@ export default function VotingFlow({ voteMode, initialVoterCardId, onComplete, o
       window.removeEventListener('beforeunload', handleBeforeUnload);
     };
   }, [voter, screen]);
+
+  // Auto-trigger transition screen when all categories completed on categories screen
+  useEffect(() => {
+    if (screen === 'categories' && categories.length > 0 && allCompleted && !isSubmitting) {
+      setScreen('auto_finalize');
+      setCountdown(10);
+      clearCountdown();
+
+      let currentSecs = 10;
+      countdownIntervalRef.current = setInterval(() => {
+        currentSecs--;
+        setCountdown(currentSecs);
+        if (currentSecs <= 0) {
+          clearCountdown();
+          setSelectedCatId(null);
+          setSelectedCandidate(null);
+          setSelectedMpkVotes({});
+          handleFinalFinish();
+        }
+      }, 1000);
+    }
+  }, [screen, allCompleted, categories.length, isSubmitting]);
 
   useEffect(() => {
     if (!voter || !['profile', 'categories', 'candidates'].includes(screen)) {
@@ -537,27 +562,50 @@ export default function VotingFlow({ voteMode, initialVoterCardId, onComplete, o
         const success = await submitMultipleVotes(votesToSubmit);
 
         if (success) {
-          setVotedCategories(prev => ({
-            ...prev,
+          const updatedVoted = {
+            ...votedCategories,
             [selectedCatId]: 'voted'
-          }));
+          };
+          setVotedCategories(updatedVoted);
 
-          setScreen('success');
-          setCountdown(5);
-          clearCountdown();
+          const totalCats = categories.length;
+          const isAllCompleted = totalCats > 0 && Object.keys(updatedVoted).length >= totalCats;
 
-          let currentSecs = 5;
-          countdownIntervalRef.current = setInterval(() => {
-            currentSecs--;
-            setCountdown(currentSecs);
-            if (currentSecs <= 0) {
-              clearCountdown();
-              setSelectedCatId(null);
-              setSelectedCandidate(null);
-              setSelectedMpkVotes({});
-              setScreen('categories');
-            }
-          }, 1000);
+          if (isAllCompleted) {
+            setScreen('auto_finalize');
+            setCountdown(10);
+            clearCountdown();
+
+            let currentSecs = 10;
+            countdownIntervalRef.current = setInterval(() => {
+              currentSecs--;
+              setCountdown(currentSecs);
+              if (currentSecs <= 0) {
+                clearCountdown();
+                setSelectedCatId(null);
+                setSelectedCandidate(null);
+                setSelectedMpkVotes({});
+                handleFinalFinish();
+              }
+            }, 1000);
+          } else {
+            setScreen('success');
+            setCountdown(5);
+            clearCountdown();
+
+            let currentSecs = 5;
+            countdownIntervalRef.current = setInterval(() => {
+              currentSecs--;
+              setCountdown(currentSecs);
+              if (currentSecs <= 0) {
+                clearCountdown();
+                setSelectedCatId(null);
+                setSelectedCandidate(null);
+                setSelectedMpkVotes({});
+                setScreen('categories');
+              }
+            }, 1000);
+          }
         } else {
           alert('Gagal merekam data suara pemilihan MPK. Silakan coba kembali.');
         }
@@ -576,27 +624,50 @@ export default function VotingFlow({ voteMode, initialVoterCardId, onComplete, o
         const success = await submitVote(voteObj);
 
         if (success) {
-          setVotedCategories(prev => ({
-            ...prev,
+          const updatedVoted = {
+            ...votedCategories,
             [selectedCatId]: selectedCandidate.id
-          }));
+          };
+          setVotedCategories(updatedVoted);
 
-          setScreen('success');
-          setCountdown(5);
-          clearCountdown();
+          const totalCats = categories.length;
+          const isAllCompleted = totalCats > 0 && Object.keys(updatedVoted).length >= totalCats;
 
-          let currentSecs = 5;
-          countdownIntervalRef.current = setInterval(() => {
-            currentSecs--;
-            setCountdown(currentSecs);
-            if (currentSecs <= 0) {
-              clearCountdown();
-              setSelectedCatId(null);
-              setSelectedCandidate(null);
-              setSelectedMpkVotes({});
-              setScreen('categories');
-            }
-          }, 1000);
+          if (isAllCompleted) {
+            setScreen('auto_finalize');
+            setCountdown(10);
+            clearCountdown();
+
+            let currentSecs = 10;
+            countdownIntervalRef.current = setInterval(() => {
+              currentSecs--;
+              setCountdown(currentSecs);
+              if (currentSecs <= 0) {
+                clearCountdown();
+                setSelectedCatId(null);
+                setSelectedCandidate(null);
+                setSelectedMpkVotes({});
+                handleFinalFinish();
+              }
+            }, 1000);
+          } else {
+            setScreen('success');
+            setCountdown(5);
+            clearCountdown();
+
+            let currentSecs = 5;
+            countdownIntervalRef.current = setInterval(() => {
+              currentSecs--;
+              setCountdown(currentSecs);
+              if (currentSecs <= 0) {
+                clearCountdown();
+                setSelectedCatId(null);
+                setSelectedCandidate(null);
+                setSelectedMpkVotes({});
+                setScreen('categories');
+              }
+            }, 1000);
+          }
         } else {
           alert('Gagal merekam data suara pemilihan. Silakan coba kembali.');
         }
@@ -665,11 +736,6 @@ export default function VotingFlow({ voteMode, initialVoterCardId, onComplete, o
     clearCountdown();
     setScreen(targetScreen);
   };
-
-  const totalCategories = categories.length;
-  const completedCategories = Object.keys(votedCategories).length;
-  const percentComplete = totalCategories > 0 ? Math.round((completedCategories / totalCategories) * 100) : 0;
-  const allCompleted = totalCategories > 0 && completedCategories === totalCategories;
 
   return (
     <div className="min-h-screen bg-[#0d0f14] text-[#e8ecf5] flex flex-col font-sans select-none antialiased relative w-full">
@@ -1306,37 +1372,28 @@ export default function VotingFlow({ voteMode, initialVoterCardId, onComplete, o
             <div className="mt-auto pt-6 border-t border-slate-800/60 flex flex-col sm:flex-row gap-4">
               <button 
                 onClick={handleCancelVotingFlow}
-                disabled={isSubmitting}
-                className="py-4 px-6 bg-red-950/40 hover:bg-red-950/70 border border-red-500/20 text-red-400 hover:text-red-300 rounded-2xl text-sm font-bold flex items-center justify-center gap-2 transition-all shadow-lg shadow-black/20 cursor-pointer disabled:opacity-50"
+                disabled={isSubmitting || completedCategories > 0}
+                title={completedCategories > 0 ? 'Voting tidak dapat dibatalkan karena Anda telah memilih minimal 1 kategori' : undefined}
+                className="py-4 px-6 bg-red-950/40 hover:bg-red-950/70 border border-red-500/20 text-red-400 hover:text-red-300 rounded-2xl text-sm font-bold flex items-center justify-center gap-2 transition-all shadow-lg shadow-black/20 cursor-pointer disabled:bg-slate-900/40 disabled:border-slate-800/60 disabled:text-slate-600 disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none"
               >
                 <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <polyline points="3 6 5 6 21 6" />
                   <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
                 </svg>
-                Batalkan Voting
+                <span>Batalkan Voting</span>
               </button>
 
-              <button 
-                onClick={handleFinalFinish}
-                disabled={!allCompleted || isSubmitting}
-                className="flex-1 py-4.5 bg-emerald-950/60 hover:bg-emerald-900 border border-emerald-500/20 hover:border-emerald-400/30 text-emerald-400 font-black text-sm md:text-base rounded-2xl shadow-xl shadow-black/30 flex items-center justify-center gap-2.5 transition-all duration-300 cursor-pointer disabled:bg-[#0c1411] disabled:border-emerald-950/20 disabled:text-emerald-800/40 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {isSubmitting ? (
-                  <>
-                    <Loader2 className="w-5 h-5 animate-spin" />
-                    <span>Memproses Hak Suara...</span>
-                  </>
-                ) : (
-                  <>
-                    <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                      <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
-                      <path d="M7 11V7a5 5 0 0 1 10 0v4" />
-                    </svg>
-                    <span>Simpan & Kirim Hak Suara Akhir</span>
-                    <span className="text-emerald-400 text-base font-extrabold">✓</span>
-                  </>
-                )}
-              </button>
+              {allCompleted ? (
+                <div className="flex-1 py-4.5 bg-emerald-950/60 border border-emerald-500/30 text-emerald-400 font-extrabold text-sm rounded-2xl flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/10">
+                  <CheckCircle2 className="w-5 h-5 text-emerald-400 animate-pulse" />
+                  <span>Pemilihan Selesai — Memproses Finalisasi Otomatis...</span>
+                </div>
+              ) : (
+                <div className="flex-1 py-4.5 bg-[#0c1411] border border-slate-800/60 text-slate-400 font-semibold text-xs md:text-sm rounded-2xl flex items-center justify-center gap-2.5">
+                  <span className="w-2 h-2 rounded-full bg-indigo-500 animate-ping shrink-0" />
+                  <span>Silakan selesaikan seluruh kategori ({completedCategories}/{totalCategories}) untuk finalisasi</span>
+                </div>
+              )}
             </div>
 
             {/* Information Card at the very bottom */}
@@ -1731,18 +1788,6 @@ export default function VotingFlow({ voteMode, initialVoterCardId, onComplete, o
                                           </div>
                                         )}
                                       </div>
-
-                                      {/* Button trigger for "Lihat Selengkapnya" */}
-                                      <button
-                                        type="button"
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          setExpandedCandidate(cand);
-                                        }}
-                                        className="text-xs font-bold text-indigo-600 hover:text-indigo-800 transition-all flex items-center gap-1.5 mt-auto self-start bg-indigo-50 hover:bg-indigo-100 px-3.5 py-2 rounded-xl border border-indigo-100/50"
-                                      >
-                                        Detail Visi Misi
-                                      </button>
                                     </div>
                                   </motion.div>
                                 );
@@ -1917,17 +1962,6 @@ export default function VotingFlow({ voteMode, initialVoterCardId, onComplete, o
                                   )}
                                 </div>
 
-                                {/* Button trigger for "Lihat Selengkapnya" */}
-                                <button
-                                  type="button"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    setExpandedCandidate(cand);
-                                  }}
-                                  className="text-xs font-bold text-indigo-600 hover:text-indigo-800 transition-all flex items-center gap-1.5 mt-auto self-start bg-indigo-50 hover:bg-indigo-100 px-3.5 py-2 rounded-xl border border-indigo-100/50"
-                                >
-                                  Detail Visi Misi
-                                </button>
                               </div>
                             </motion.div>
                           );
@@ -2050,6 +2084,59 @@ export default function VotingFlow({ voteMode, initialVoterCardId, onComplete, o
         </main>
       )}
 
+      {/* SCREEN 7: AUTOMATIC FINALIZATION TRANSITION (10s COUNTDOWN) */}
+      {screen === 'auto_finalize' && (
+        <main className="flex-1 flex flex-col items-center justify-center p-6 w-full max-w-lg mx-auto text-center my-auto">
+          <div className="relative mb-6">
+            <div className="w-24 h-24 bg-emerald-500/10 border-2 border-emerald-500/30 rounded-3xl flex items-center justify-center text-4xl shadow-2xl shadow-emerald-500/20">
+              <CheckCircle2 className="w-12 h-12 text-emerald-400" />
+            </div>
+          </div>
+
+          <div className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[11px] font-black tracking-widest uppercase mb-3">
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+            PEMILIHAN SELESAI
+          </div>
+
+          <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight leading-tight mb-2">
+            PEMILIHAN SELESAI
+          </h1>
+
+          <p className="text-sm sm:text-base text-slate-200 font-semibold max-w-md leading-relaxed mb-1">
+            Seluruh kategori pemilihan telah berhasil Anda lakukan.
+          </p>
+          <p className="text-xs sm:text-sm text-slate-400 max-w-md leading-relaxed mb-8">
+            Anda akan diarahkan untuk menyelesaikan proses pemilihan...
+          </p>
+
+          {/* 10-Second Countdown Display */}
+          <div className="w-28 h-28 rounded-3xl border-2 border-indigo-500/80 bg-[#121620] flex flex-col items-center justify-center shadow-2xl shadow-indigo-500/20 mb-8 relative">
+            <span className="text-4xl font-black text-white font-mono">{countdown}</span>
+            <span className="text-[9px] text-slate-400 uppercase font-black tracking-widest mt-1">Detik</span>
+          </div>
+
+          <button
+            onClick={() => {
+              clearCountdown();
+              handleFinalFinish();
+            }}
+            disabled={isSubmitting}
+            className="w-full sm:w-auto px-8 py-3.5 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white text-xs font-black rounded-2xl shadow-xl transition-all cursor-pointer flex items-center justify-center gap-2"
+          >
+            {isSubmitting ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" /> Memproses Finalisasi...
+              </>
+            ) : (
+              <>
+                <span>Selesaikan Sekarang</span>
+                <ArrowRight className="w-4 h-4" />
+              </>
+            )}
+          </button>
+        </main>
+      )}
+
       {/* MODAL 1: CANDIDATE CHOICE RE-CONFIRMATION */}
       {showModal1 && (() => {
         const activeCat = categories.find(c => c.id === selectedCatId);
@@ -2123,106 +2210,6 @@ export default function VotingFlow({ voteMode, initialVoterCardId, onComplete, o
           </div>
         );
       })()}
-
-      {/* MODAL: CANDIDATE DETAIL (VISI & MISI FULLVIEW) */}
-      <AnimatePresence>
-        {expandedCandidate && (
-          <div 
-            className="fixed inset-0 bg-[#090b11]/80 backdrop-blur-md z-[100] flex items-center justify-center p-4 sm:p-6 overflow-y-auto"
-            onClick={() => setExpandedCandidate(null)}
-          >
-            <motion.div 
-              initial={{ scale: 0.95, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.95, opacity: 0 }}
-              transition={{ type: 'spring', damping: 25, stiffness: 350 }}
-              onClick={(e) => e.stopPropagation()}
-              className="bg-white max-w-2xl w-full rounded-3xl overflow-hidden shadow-2xl relative border border-slate-105 flex flex-col md:flex-row max-h-[90vh] md:max-h-[80vh] items-stretch text-left"
-            >
-              {/* Image side */}
-              <div className="relative w-full md:w-2/5 aspect-[4/3] md:aspect-auto bg-gradient-to-br from-indigo-50 to-slate-100 flex items-center justify-center shrink-0 border-b md:border-b-0 md:border-r border-slate-100">
-                {expandedCandidate.photo_url ? (
-                  <img 
-                    src={expandedCandidate.photo_url} 
-                    alt={expandedCandidate.chairman} 
-                    className="w-full h-full object-cover"
-                    referrerPolicy="no-referrer"
-                  />
-                ) : (
-                  <div className="absolute inset-0 flex flex-col items-center justify-center p-4">
-                    <span className="text-6xl filter saturate-70 drop-shadow mb-3">🧑‍💼</span>
-                    <span className="text-xs text-slate-400 font-extrabold uppercase tracking-widest">Pasfoto Kandidat</span>
-                  </div>
-                )}
-                
-                {/* Number badge */}
-                <div className="absolute left-4 top-4 px-3.5 py-2 bg-indigo-600 text-white font-black text-xs rounded-xl shadow-lg">
-                  KANDIDAT {String(expandedCandidate.number).padStart(2, '0')}
-                </div>
-              </div>
-
-              {/* Text / details side */}
-              <div className="p-6 sm:p-8 flex-1 flex flex-col justify-between overflow-y-auto max-h-[50vh] md:max-h-none">
-                <div className="space-y-6">
-                  {/* Candidate Identity */}
-                  <div className="border-b border-slate-100 pb-4">
-                    <span className="text-[10px] font-black text-indigo-500 uppercase tracking-widest font-mono">Profil Kandidat</span>
-                    <h3 className="text-2xl font-black text-slate-800 tracking-tight leading-tight mt-1">
-                      {expandedCandidate.chairman}
-                    </h3>
-                    {expandedCandidate.vice && (
-                      <div className="mt-2 pl-3 border-l-2 border-indigo-200">
-                        <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider block">Wakil Ketua</span>
-                        <p className="font-extrabold text-slate-600 text-sm leading-tight">
-                          {expandedCandidate.vice}
-                        </p>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Visi */}
-                  {expandedCandidate.visi && (
-                    <div className="bg-slate-50 border border-slate-100 p-5 rounded-2xl relative overflow-hidden">
-                      <span className="text-[9px] uppercase font-black tracking-widest text-indigo-500 font-mono">Visi Utama</span>
-                      <p className="text-slate-700 text-sm font-semibold leading-relaxed mt-2 text-justify italic">
-                        "{expandedCandidate.visi}"
-                      </p>
-                    </div>
-                  )}
-
-                  {/* Misi */}
-                  {expandedCandidate.misi && expandedCandidate.misi.length > 0 && (
-                    <div className="space-y-2">
-                      <span className="text-[9px] uppercase font-black tracking-widest text-indigo-500 font-mono">Misi & Rencana Kerja</span>
-                      <ul className="space-y-3 pt-1">
-                        {expandedCandidate.misi.map((m, mIdx) => (
-                          <li key={mIdx} className="text-slate-600 text-sm font-semibold leading-relaxed flex gap-3 items-start text-justify">
-                            <div className="w-5 h-5 rounded-full bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600 font-black text-xs shrink-0 mt-0.5 font-mono">
-                              {mIdx + 1}
-                            </div>
-                            <span>{m}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-                </div>
-
-                {/* Close Button */}
-                <div className="mt-8 pt-4 border-t border-slate-100 flex justify-end">
-                  <button
-                    type="button"
-                    onClick={() => setExpandedCandidate(null)}
-                    className="px-6 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-black text-xs uppercase tracking-wider rounded-xl cursor-pointer transition-all active:scale-95 duration-100"
-                  >
-                    Tutup Detail
-                  </button>
-                </div>
-              </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
 
       {/* MODAL 2: ABSOLUTE COMMIT WARNING */}
       {showModal2 && (

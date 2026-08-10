@@ -80,8 +80,9 @@ function AppContent() {
           <Route path="/" element={<Landing />} />
           <Route path="/informasi" element={<Informasi />} />
           <Route path="/informasi/system-update" element={<SystemUpdateUser />} />
-          <Route path="/tentang" element={<Tentang />} />
-          <Route path="/cara-menggunakan" element={<CaraMenggunakan />} />
+          {/* Temporarily disabled, serving 404 page */}
+          <Route path="/tentang" element={<NotFound />} />
+          <Route path="/cara-menggunakan" element={<NotFound />} />
         </Route>
         
         <Route path="/login" element={<Login />} />
@@ -91,7 +92,7 @@ function AppContent() {
         <Route
           path="/bilik"
           element={
-            <ProtectedRoute allowedRoles={['vote']}>
+            <ProtectedRoute allowedRoles={['vote', 'bilik']}>
               <BilikPage />
             </ProtectedRoute>
           }

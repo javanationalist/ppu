@@ -56,4 +56,83 @@
   animation: scan-line 2.5s ease-in-out infinite;
 }
 
+/* Custom clear styling for html5-qrcode video preview without white frame / shaded region */
+#qr-terminal-reader,
+#ppu-qr-reader {
+  border: none !important;
+  background: transparent !important;
+  width: 100% !important;
+}
+
+#qr-terminal-reader video,
+#ppu-qr-reader video {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover !important;
+  border-radius: 0.75rem !important;
+}
+
+#qr-shaded-region {
+  display: none !important;
+}
+
+#qr-terminal-reader__scan_region,
+#ppu-qr-reader__scan_region {
+  border: none !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+#qr-terminal-reader canvas {
+  display: none !important;
+}
+
+#qr-terminal-reader img {
+  display: none !important;
+}
+
+#qr-terminal-reader__scan_region > *,
+#ppu-qr-reader__scan_region > * {
+  border: none !important;
+  box-shadow: none !important;
+}
+
+#ppu-qr-reader img[alt="Info icon"],
+#ppu-qr-reader img[alt="Camera menu icon"] {
+  display: none !important;
+}
+
+#ppu-qr-reader button {
+  background-color: #2563eb !important;
+  color: #ffffff !important;
+  border: none !important;
+  border-radius: 0.75rem !important;
+  padding: 0.5rem 1rem !important;
+  font-size: 0.75rem !important;
+  font-weight: 700 !important;
+  cursor: pointer !important;
+  transition: all 0.2s ease !important;
+  margin: 0.25rem !important;
+}
+
+#ppu-qr-reader button:hover {
+  background-color: #1d4ed8 !important;
+}
+
+#ppu-qr-reader a {
+  color: #2563eb !important;
+  font-size: 0.75rem !important;
+  font-weight: 600 !important;
+}
+
+#ppu-qr-reader select {
+  padding: 0.4rem 0.75rem !important;
+  border-radius: 0.5rem !important;
+  border: 1px solid #cbd5e1 !important;
+  font-size: 0.75rem !important;
+  background-color: #ffffff !important;
+  color: #1e293b !important;
+  margin: 0.25rem !important;
+}
+
 

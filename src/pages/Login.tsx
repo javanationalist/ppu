@@ -13,6 +13,10 @@ export default function Login() {
   const [showSuccess, setShowSuccess] = useState(false);
   const [targetPath, setTargetPath] = useState<string | null>(null);
   const [bilikSessionConflict, setBilikSessionConflict] = useState<{ deviceName: string; boothCode: string } | null>(null);
+  const [checkingBilikSession, setCheckingBilikSession] = useState(false);
+  const [forceLogoutLoading, setForceLogoutLoading] = useState(false);
+  const [forceLogoutError, setForceLogoutError] = useState<string | null>(null);
+  const [showForceConfirmModal, setShowForceConfirmModal] = useState(false);
   const [num1, setNum1] = useState(0);
   const [num2, setNum2] = useState(0);
   const [captchaInput, setCaptchaInput] = useState('');
@@ -57,40 +61,51 @@ export default function Login() {
     }
 
     if (user && profile && isValidSession) {
-      if (profile.role === 'scan' || profile.class === 'Petugas Scanner' || (profile as any).status === 'scan') {
+      const isScannerAccount = profile.role === 'scan' || profile.class === 'Petugas Scanner' || (profile as any).status === 'scan';
+      const isBilikAccount = profile.role === 'bilik' || profile.role === 'vote';
+
+      if (isScannerAccount) {
         navigate('/scanner', { replace: true });
       } else if (profile.role === 'admin' || profile.role === 'creator') {
         navigate('/admin', { replace: true });
-      } else if (profile.role === 'vote') {
+      } else if (isBilikAccount) {
+        setCheckingBilikSession(true);
         const checkVoteRoleSession = async () => {
-          const { getVoteMode } = await import('../lib/voteModeService');
-          const mode = await getVoteMode();
-          if (mode === 'regular') {
-            await signOut();
-            navigate('/login', { replace: true });
-          } else {
-            const localToken = localStorage.getItem('current_session_token');
-            const checkResult = await checkSessionActive(profile.id, localToken);
-            if (!checkResult.allowed && checkResult.reason === 'active_on_other_device') {
-              setBilikSessionConflict({
-                deviceName: checkResult.profile?.device_name || 'Perangkat Lain',
-                boothCode: profile.booth_code || '01',
-              });
+          try {
+            const { getVoteMode } = await import('../lib/voteModeService');
+            const mode = await getVoteMode();
+            if (mode === 'regular') {
+              await signOut();
+              navigate('/login', { replace: true });
             } else {
-              // Register if not already registered with this token
-              if (!localToken || checkResult.profile?.session_token !== localToken) {
-                const regResult = await registerSession(profile.id, 'vote');
-                if (!regResult.success) {
-                  setBilikSessionConflict({
-                    deviceName: regResult.existingProfile?.device_name || 'Perangkat Lain',
-                    boothCode: profile.booth_code || '01',
-                  });
-                  return;
+              const localToken = localStorage.getItem('current_session_token');
+              const checkResult = await checkSessionActive(profile.id, localToken);
+              if (!checkResult.allowed && checkResult.reason === 'active_on_other_device') {
+                setBilikSessionConflict({
+                  deviceName: checkResult.profile?.device_name || 'Perangkat Lain',
+                  boothCode: profile.booth_code || '01',
+                });
+              } else {
+                // Register if not already registered with this token
+                if (!localToken || checkResult.profile?.session_token !== localToken) {
+                  const regResult = await registerSession(profile.id, profile.role || 'bilik');
+                  if (!regResult.success) {
+                    setBilikSessionConflict({
+                      deviceName: regResult.existingProfile?.device_name || 'Perangkat Lain',
+                      boothCode: profile.booth_code || '01',
+                    });
+                    return;
+                  }
                 }
+                setBilikSessionConflict(null);
+                navigate('/bilik', { replace: true });
               }
-              setBilikSessionConflict(null);
-              navigate('/bilik', { replace: true });
             }
+          } catch (err) {
+            console.error('Error checking bilik session:', err);
+            navigate('/bilik', { replace: true });
+          } finally {
+            setCheckingBilikSession(false);
           }
         };
         checkVoteRoleSession();
@@ -98,44 +113,49 @@ export default function Login() {
         navigate('/dashboard', { replace: true });
       }
     }
-  }, [user, profile, navigate, showSuccess]);
+  }, [user, profile, navigate, showSuccess, signOut]);
 
   const handleRetryCheck = async () => {
     setLoading(true);
     setError(null);
     try {
       if (user && profile) {
-        const { getVoteMode } = await import('../lib/voteModeService');
-        const mode = await getVoteMode();
-        if (mode === 'regular') {
-          await signOut();
-          setBilikSessionConflict(null);
-          setLoading(false);
-          return;
-        }
-
-        const localToken = localStorage.getItem('current_session_token');
-        const checkResult = await checkSessionActive(profile.id, localToken);
-        if (!checkResult.allowed && checkResult.reason === 'active_on_other_device') {
-          setBilikSessionConflict({
-            deviceName: checkResult.profile?.device_name || 'Perangkat Lain',
-            boothCode: profile.booth_code || '01',
-          });
-        } else {
-          // Register if not already registered with this token
-          if (!localToken || checkResult.profile?.session_token !== localToken) {
-            const regResult = await registerSession(profile.id, 'vote');
-            if (!regResult.success) {
-              setBilikSessionConflict({
-                deviceName: regResult.existingProfile?.device_name || 'Perangkat Lain',
-                boothCode: profile.booth_code || '01',
-              });
-              setLoading(false);
-              return;
-            }
+        const isBilikAccount = profile.role === 'bilik' || profile.role === 'vote';
+        if (isBilikAccount) {
+          const { getVoteMode } = await import('../lib/voteModeService');
+          const mode = await getVoteMode();
+          if (mode === 'regular') {
+            await signOut();
+            setBilikSessionConflict(null);
+            setLoading(false);
+            return;
           }
+
+          const localToken = localStorage.getItem('current_session_token');
+          const checkResult = await checkSessionActive(profile.id, localToken);
+          if (!checkResult.allowed && checkResult.reason === 'active_on_other_device') {
+            setBilikSessionConflict({
+              deviceName: checkResult.profile?.device_name || 'Perangkat Lain',
+              boothCode: profile.booth_code || '01',
+            });
+          } else {
+            // Register if not already registered with this token
+            if (!localToken || checkResult.profile?.session_token !== localToken) {
+              const regResult = await registerSession(profile.id, profile.role || 'bilik');
+              if (!regResult.success) {
+                setBilikSessionConflict({
+                  deviceName: regResult.existingProfile?.device_name || 'Perangkat Lain',
+                  boothCode: profile.booth_code || '01',
+                });
+                setLoading(false);
+                return;
+              }
+            }
+            setBilikSessionConflict(null);
+            navigate('/bilik', { replace: true });
+          }
+        } else {
           setBilikSessionConflict(null);
-          navigate('/bilik', { replace: true });
         }
       } else {
         setBilikSessionConflict(null);
@@ -185,6 +205,7 @@ export default function Login() {
         if (profileError) throw profileError;
 
         const isScannerAccount = profileData?.role === 'scan' || profileData?.class === 'Petugas Scanner' || (profileData as any)?.status === 'scan';
+        const isBilikAccount = profileData?.role === 'bilik' || profileData?.role === 'vote';
 
         if (profileData?.is_deleted) {
           await supabase.auth.signOut();
@@ -194,7 +215,7 @@ export default function Login() {
           throw new Error('Akun Anda dinonaktifkan atau dihapus oleh administrator.');
         }
 
-        if (profileData?.role === 'vote') {
+        if (isBilikAccount) {
           const { getVoteMode } = await import('../lib/voteModeService');
           const mode = await getVoteMode();
           if (mode === 'regular') {
@@ -208,16 +229,16 @@ export default function Login() {
         localStorage.setItem('lastActivity', Date.now().toString());
 
         // Try registering the session (Single Active Session check)
-        const regResult = await registerSession(data.user.id, profileData.role || 'user');
+        const regResult = await registerSession(data.user.id, profileData?.role || 'user');
         if (!regResult.success) {
-          if (profileData.role === 'vote') {
+          if (isBilikAccount) {
             setBilikSessionConflict({
               deviceName: regResult.existingProfile?.device_name || 'Perangkat Lain',
-              boothCode: profileData.booth_code || '01',
+              boothCode: profileData?.booth_code || '01',
             });
             setLoading(false);
             return;
-          } else if (profileData.role === 'user') {
+          } else if (profileData?.role === 'user') {
             // Keep local token rejected so that they are intercepted by User Dashboard checking
             localStorage.setItem('current_session_token', 'sess_rejected');
           }
@@ -228,7 +249,7 @@ export default function Login() {
           nextPath = '/scanner';
         } else if (profileData?.role === 'admin' || profileData?.role === 'creator') {
           nextPath = '/admin';
-        } else if (profileData?.role === 'vote') {
+        } else if (isBilikAccount) {
           nextPath = '/bilik';
         }
         setTargetPath(nextPath);
@@ -250,18 +271,54 @@ export default function Login() {
     }
   };
 
-  if (authLoading) {
+  const handleConfirmForceLogout = async () => {
+    setShowForceConfirmModal(false);
+    setForceLogoutLoading(true);
+    setForceLogoutError(null);
+
+    try {
+      const { forceRegisterSession } = await import('../lib/sessionService');
+      const targetUserId = user?.id || profile?.id;
+      const userRole = profile?.role || 'bilik';
+
+      if (!targetUserId) {
+        setForceLogoutError('Sesi pengguna tidak ditemukan. Silakan login ulang.');
+        setForceLogoutLoading(false);
+        return;
+      }
+
+      const res = await forceRegisterSession(targetUserId, userRole);
+      if (res.success) {
+        setBilikSessionConflict(null);
+        navigate('/bilik', { replace: true });
+      } else {
+        setForceLogoutError(res.error || 'Gagal memutus sesi pada perangkat lama. Silakan coba lagi.');
+      }
+    } catch (err: any) {
+      console.error('Force logout error:', err);
+      setForceLogoutError('Terjadi kesalahan saat memutus sesi perangkat.');
+    } finally {
+      setForceLogoutLoading(false);
+    }
+  };
+
+  if (authLoading || checkingBilikSession || (user && profile && !showSuccess && !bilikSessionConflict)) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-ppu-surface">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-ppu-blue"></div>
+      <div className="min-h-screen flex flex-col items-center justify-center bg-slate-50 dark:bg-[#1a1a1a] gap-3">
+        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600 dark:border-sky-400"></div>
+        <p className="text-xs font-semibold text-slate-600 dark:text-slate-300">
+          Memeriksa profil dan mengarahkan...
+        </p>
       </div>
     );
   }
 
   if (bilikSessionConflict) {
+    const deviceLabel = bilikSessionConflict.deviceName || 'Perangkat Lain';
+
     return (
-      <div className="min-h-screen bg-[#0d0f14] flex flex-col items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-md w-full bg-[#161b22] border-2 border-rose-900/40 p-8 rounded-2xl shadow-2xl text-center space-y-6">
+      <div className="min-h-screen bg-[#0d0f14] flex flex-col items-center justify-center py-12 px-4 sm:px-6 lg:px-8 relative">
+        <div className="max-w-md w-full bg-[#161b22] border-2 border-rose-900/40 p-8 rounded-2xl shadow-2xl text-center space-y-6 relative">
           <div className="flex flex-col items-center">
             <div className="w-16 h-16 bg-rose-500/10 text-rose-500 rounded-full flex items-center justify-center mb-4 ring-8 ring-rose-500/5">
               <AlertCircle className="w-10 h-10 animate-pulse" />
@@ -279,7 +336,7 @@ export default function Login() {
           <div className="bg-[#0d0f14]/80 border border-[#21262d] rounded-xl p-4 text-left space-y-2 font-mono">
             <div className="flex flex-col text-xs space-y-1">
               <span className="font-bold text-[#8b949e] uppercase tracking-wider">Nama Perangkat :</span>
-              <span className="font-extrabold text-[#f0f6fc]">{bilikSessionConflict.deviceName}</span>
+              <span className="font-extrabold text-[#f0f6fc]">{deviceLabel}</span>
             </div>
             <div className="flex flex-col text-xs space-y-1 pt-2">
               <span className="font-bold text-[#8b949e] uppercase tracking-wider">Kode Akun :</span>
@@ -288,14 +345,37 @@ export default function Login() {
           </div>
 
           <p className="text-xs font-semibold text-[#8b949e] leading-relaxed text-center px-2">
-            Silakan logout dari perangkat sebelumnya atau tunggu hingga perangkat tersebut offline.
+            Silakan logout dari perangkat sebelumnya atau klik tombol di bawah untuk mengeluarkan akun secara langsung.
           </p>
 
-          <div className="pt-4">
+          {forceLogoutError && (
+            <div className="bg-rose-500/10 border border-rose-500/30 text-rose-400 p-3 rounded-xl text-xs font-semibold text-center font-mono">
+              {forceLogoutError}
+            </div>
+          )}
+
+          <div className="pt-2 space-y-3 font-mono">
             <button
+              type="button"
+              onClick={() => setShowForceConfirmModal(true)}
+              disabled={loading || forceLogoutLoading}
+              className="w-full py-3 bg-red-600 hover:bg-red-700 disabled:opacity-55 active:scale-[0.98] transition-all text-white rounded-xl font-bold text-xs uppercase tracking-wider cursor-pointer flex items-center justify-center gap-2 shadow-lg shadow-red-600/20"
+            >
+              {forceLogoutLoading ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  Memutus Sesi Perangkat...
+                </>
+              ) : (
+                `LOG OUT AKUN DARI ${deviceLabel.toUpperCase()}`
+              )}
+            </button>
+
+            <button
+              type="button"
               onClick={handleRetryCheck}
-              disabled={loading}
-              className="w-full py-3 bg-rose-650 hover:bg-rose-700 disabled:opacity-55 active:scale-[0.98] transition-all text-white rounded-xl font-bold text-xs uppercase tracking-wider cursor-pointer font-mono flex items-center justify-center gap-2"
+              disabled={loading || forceLogoutLoading}
+              className="w-full py-3 bg-[#21262d] hover:bg-[#30363d] disabled:opacity-55 active:scale-[0.98] transition-all text-slate-200 rounded-xl font-bold text-xs uppercase tracking-wider cursor-pointer flex items-center justify-center gap-2 border border-slate-700/60"
             >
               {loading ? (
                 <>
@@ -308,6 +388,46 @@ export default function Login() {
             </button>
           </div>
         </div>
+
+        {/* Modal Confirmation Overlay */}
+        {showForceConfirmModal && (
+          <div className="fixed inset-0 bg-black/80 backdrop-blur-xs z-[9999] flex items-center justify-center p-4">
+            <div className="bg-[#161b22] border border-[#30363d] w-full max-w-sm rounded-2xl p-6 shadow-2xl text-center space-y-5 font-mono">
+              <div className="w-12 h-12 bg-amber-500/10 text-amber-500 rounded-xl flex items-center justify-center border border-amber-500/20 mx-auto">
+                <AlertCircle className="w-6 h-6" />
+              </div>
+              
+              <div className="space-y-2">
+                <h3 className="text-base font-bold text-white tracking-tight">
+                  Konfirmasi Log Out Perangkat
+                </h3>
+                <p className="text-xs text-slate-300 leading-relaxed">
+                  Apakah Anda yakin ingin mengeluarkan akun bilik ini dari <span className="font-bold text-amber-400">{deviceLabel}</span>?
+                </p>
+                <p className="text-[11px] text-slate-400 leading-normal">
+                  Sesi pada perangkat lama akan terputus dan perangkat ini akan langsung terhubung ke bilik suara.
+                </p>
+              </div>
+
+              <div className="flex gap-2.5 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowForceConfirmModal(false)}
+                  className="flex-1 py-2.5 bg-[#21262d] hover:bg-[#30363d] text-slate-300 rounded-xl text-xs font-bold transition-colors cursor-pointer"
+                >
+                  Batal
+                </button>
+                <button
+                  type="button"
+                  onClick={handleConfirmForceLogout}
+                  className="flex-1 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-bold transition-all shadow-md cursor-pointer"
+                >
+                  Ya, Log Out
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     );
   }
