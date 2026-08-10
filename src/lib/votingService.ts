@@ -611,6 +611,34 @@ export const verifyVoterByCardId = async (cardId: string): Promise<Profile | nul
   }
 };
 
+// Get all GTK profiles (Guru & Tenaga Kependidikan)
+export const getGtkProfiles = async (): Promise<Profile[]> => {
+  if (!isSupabaseConfigured) {
+    try {
+      const localProfilesStr = localStorage.getItem('mock_profiles') || '[]';
+      const profiles: Profile[] = JSON.parse(localProfilesStr);
+      return profiles.filter(p => p.class === 'GTK' && p.role === 'user' && !p.is_deleted);
+    } catch (err) {
+      console.error('Error getting mock GTK profiles:', err);
+      return [];
+    }
+  }
+
+  try {
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('class', 'GTK')
+      .eq('role', 'user');
+
+    if (error) throw error;
+    return ((data || []) as Profile[]).filter(p => !p.is_deleted);
+  } catch (err) {
+    console.error('Error getting GTK profiles:', err);
+    return [];
+  }
+};
+
 // Get all votes submitted by a specific voter
 export const getVoterSubmittedVotes = async (voterId: string): Promise<Vote[]> => {
   if (!isSupabaseConfigured) {
@@ -1134,3 +1162,67 @@ export const getElectionStatistics = async (): Promise<ElectionStatistics> => {
     classContribution,
   };
 };
+
+// Submit a complete set of anonymous votes
+export const submitFreeVote = async (
+  fullName: string,
+  className: string,
+  votes: { category_id: string; candidate_id: string }[]
+): Promise<boolean> => {
+  if (!isSupabaseConfigured) {
+    // 1. Local storage mock mode
+    try {
+      const voterId = crypto.randomUUID();
+      const uniqueCardId = 'FV-' + Math.floor(100000 + Math.random() * 900000);
+      
+      // Insert dummy profile
+      const { error: profileErr } = await supabase.from('profiles').insert({
+        id: voterId,
+        full_name: fullName,
+        email: `freevote-${voterId}@ppu.co`,
+        class: className,
+        card_id: uniqueCardId,
+        role: 'user',
+        account_status: 'dikonfirmasi',
+        voting_status: 'sudah',
+        card_visibility: false
+      });
+      
+      if (profileErr) throw profileErr;
+
+      // Insert votes
+      const votesPayload = votes.map(v => ({
+        voter_id: voterId,
+        category_id: v.category_id,
+        candidate_id: v.candidate_id
+      }));
+
+      const { error: votesErr } = await supabase.from('votes').insert(votesPayload);
+      if (votesErr) throw votesErr;
+
+      return true;
+    } catch (err) {
+      console.error('Failed to submit mock free vote:', err);
+      throw err;
+    }
+  } else {
+    // 2. Real Supabase mode
+    try {
+      const { data, error } = await supabase.rpc('submit_free_vote', {
+        p_full_name: fullName,
+        p_class: className,
+        p_category_votes: votes
+      });
+
+      if (error) {
+        throw new Error(error.message || 'Gagal menyimpan suara free vote ke database.');
+      }
+
+      return !!data;
+    } catch (err: any) {
+      console.error('Error submitting free vote via RPC:', err);
+      throw err;
+    }
+  }
+};
+

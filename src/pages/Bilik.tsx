@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { QRCodeCanvas } from 'qrcode.react';
-import { Monitor, RefreshCw, AlertCircle, Clock, CheckCircle2, Terminal, QrCode, LogOut, Radio, ShieldCheck, Sparkles } from 'lucide-react';
+import { Monitor, RefreshCw, AlertCircle, Clock, CheckCircle2, Terminal, QrCode, LogOut, Radio, ShieldCheck, Sparkles, Vote } from 'lucide-react';
 import { 
   createBoothSession, 
   getBoothSession, 
@@ -26,7 +26,7 @@ function generateRandomSessionCode(): string {
   return result;
 }
 
-export default function BilikPage() {
+export default function BilikPage({ isGtkMode = false }: { isGtkMode?: boolean }) {
   const navigate = useNavigate();
   const { profile, signOut } = useAuth();
   
@@ -172,7 +172,11 @@ export default function BilikPage() {
     if (hasInitializedRef.current) return;
     hasInitializedRef.current = true;
 
-    restoreOrStartNewSession();
+    if (isGtkMode) {
+      setLoading(false);
+    } else {
+      restoreOrStartNewSession();
+    }
 
     // Send initial heartbeat
     const initialToken = localStorage.getItem('current_session_token');
@@ -475,6 +479,16 @@ export default function BilikPage() {
     );
   }
 
+  // Render full-screen VotingFlow experience if in GTK mode
+  if (isGtkMode) {
+    return (
+      <VotingFlow 
+        voteMode="regular"
+        isGtkMode={true}
+      />
+    );
+  }
+
   // Render full-screen VotingFlow experience if connected
   if (isConnected && session) {
     return (
@@ -624,14 +638,24 @@ export default function BilikPage() {
               </div>
             </div>
 
-            {/* Refresh Token Button */}
-            <button
-              onClick={startNewSession}
-              className="inline-flex items-center gap-2 text-xs font-bold text-blue-600 hover:text-blue-700 bg-blue-50 hover:bg-blue-100/80 border border-blue-200/80 px-4 py-2 rounded-xl transition-all cursor-pointer shadow-2xs active:scale-[0.98]"
-            >
-              <RefreshCw className="w-3.5 h-3.5" />
-              <span>Perbarui Token QR</span>
-            </button>
+            {/* Action Buttons */}
+            <div className="flex flex-wrap items-center justify-center gap-3">
+              <button
+                onClick={startNewSession}
+                className="inline-flex items-center gap-2 text-xs font-bold text-blue-600 hover:text-blue-700 bg-blue-50 hover:bg-blue-100/80 border border-blue-200/80 px-4 py-2 rounded-xl transition-all cursor-pointer shadow-2xs active:scale-[0.98]"
+              >
+                <RefreshCw className="w-3.5 h-3.5" />
+                <span>Perbarui Token QR</span>
+              </button>
+
+              <button
+                onClick={() => navigate('/bilik/freeVote')}
+                className="inline-flex items-center gap-2 text-xs font-bold text-indigo-600 hover:text-indigo-700 bg-indigo-50 hover:bg-indigo-100/80 border border-indigo-200/80 px-4 py-2 rounded-xl transition-all cursor-pointer shadow-2xs active:scale-[0.98]"
+              >
+                <Vote className="w-3.5 h-3.5" />
+                <span>Bilik Suara Mandiri</span>
+              </button>
+            </div>
 
           </div>
         )}

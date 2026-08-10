@@ -40,6 +40,7 @@ import KelolaBilik from './pages/admin/KelolaBilik';
 import KelolaAdmin from './pages/admin/KelolaAdmin';
 import KelolaScanner from './pages/admin/KelolaScanner';
 import BilikPage from './pages/Bilik';
+import FreeVotePage from './pages/FreeVote';
 import ScannerPage from './pages/Scanner';
 import HasilAdmin from './pages/admin/HasilAdmin';
 import ExportData from './pages/admin/ExportData';
@@ -94,6 +95,22 @@ function AppContent() {
           element={
             <ProtectedRoute allowedRoles={['vote', 'bilik']}>
               <BilikPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/bilik/pemilih-gtk"
+          element={
+            <ProtectedRoute allowedRoles={['vote', 'bilik']}>
+              <BilikPage isGtkMode={true} />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/bilik/freeVote"
+          element={
+            <ProtectedRoute allowedRoles={['vote', 'bilik']}>
+              <FreeVotePage />
             </ProtectedRoute>
           }
         />

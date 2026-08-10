@@ -34,7 +34,9 @@ import {
   getVoterSubmittedVotes, 
   finalizeVotingStatus, 
   getDapils, 
-  getVotingCompletionStatus 
+  getVotingCompletionStatus,
+  getGtkProfiles,
+  submitFreeVote
 } from '../../lib/votingService';
 import { Category, Candidate, Profile, Vote, Dapil } from '../../types';
 import { getUserAccessSettings, UserAccessSettings } from '../../lib/userAccessService';
@@ -48,17 +50,19 @@ export interface VotingFlowProps {
   initialVoterCardId?: string | null;
   onComplete?: () => void;
   onCancel?: () => void;
+  isGtkMode?: boolean;
+  isFreeVote?: boolean;
 }
 
 
-export default function VotingFlow({ voteMode, initialVoterCardId, onComplete, onCancel }: VotingFlowProps) {
+export default function VotingFlow({ voteMode, initialVoterCardId, onComplete, onCancel, isGtkMode = false, isFreeVote = false }: VotingFlowProps) {
   const navigate = useNavigate();
 
   const [accessSettings, setAccessSettings] = useState<UserAccessSettings | null>(null);
 
   // Screen state: 'scan' | 'profile' | 'categories' | 'candidates' | 'success' | 'thankyou' | 'forbidden' | 'gelombang_aktif' | 'gelombang_blokir' | 'auto_finalize'
   const [screen, setScreen] = useState<'scan' | 'profile' | 'categories' | 'candidates' | 'success' | 'thankyou' | 'forbidden' | 'gelombang_aktif' | 'gelombang_blokir' | 'auto_finalize'>(
-    voteMode === 'booth' ? 'profile' : 'scan'
+    isFreeVote ? 'categories' : (voteMode === 'booth' ? 'profile' : 'scan')
   );
 
   // Input states
@@ -71,11 +75,24 @@ export default function VotingFlow({ voteMode, initialVoterCardId, onComplete, o
   const [detectedClassSchedule, setDetectedClassSchedule] = useState<GelombangSesi | null>(null);
 
   // Current Voter & Vote details
-  const [voter, setVoter] = useState<Profile | null>(null);
+  const [voter, setVoter] = useState<Profile | null>(
+    isFreeVote ? {
+      id: 'freevote-dummy-voter-id',
+      email: 'freevote@ppu.co',
+      full_name: 'Pemilih Mandiri',
+      role: 'user',
+      class: 'FREE_VOTE',
+      card_id: 'FREE_VOTE',
+      account_status: 'dikonfirmasi',
+      voting_status: 'belum',
+      card_visibility: false
+    } as any : null
+  );
   const [isVoterAllCompleted, setIsVoterAllCompleted] = useState(false);
   const [categories, setCategories] = useState<Category[]>([]);
   const [candidates, setCandidates] = useState<Candidate[]>([]);
   const [votedCategories, setVotedCategories] = useState<Record<string, string>>({}); // { catId: candidateId }
+  const [accumulatedMpkVotes, setAccumulatedMpkVotes] = useState<Record<string, string>>({});
   const [dapils, setDapils] = useState<Dapil[]>([]);
   
   const totalCategories = categories.length;
@@ -409,6 +426,77 @@ export default function VotingFlow({ voteMode, initialVoterCardId, onComplete, o
     setIsScanning(false);
   }
 
+  // GTK Mode States
+  const [gtkProfiles, setGtkProfilesList] = useState<Profile[]>([]);
+  const [selectedGtkId, setSelectedGtkId] = useState<string>('');
+  const [gtkSearchQuery, setGtkSearchQuery] = useState<string>('');
+
+  useEffect(() => {
+    if (isGtkMode) {
+      const loadGtk = async () => {
+        try {
+          const profiles = await getGtkProfiles();
+          setGtkProfilesList(profiles);
+        } catch (err) {
+          console.error('Failed to load GTK profiles:', err);
+        }
+      };
+      loadGtk();
+    }
+  }, [isGtkMode]);
+
+  const handleVerifyGtkVoter = async (voterId: string) => {
+    if (!voterId) return;
+
+    if (accessSettings && !accessSettings.voting_global_enabled) {
+      setScreen('forbidden');
+      return;
+    }
+
+    setSearchLoading(true);
+    setErrorMessage(null);
+
+    try {
+      const profile = gtkProfiles.find(p => p.id === voterId);
+      if (!profile) {
+        setErrorMessage('Profil Guru / Tenaga Kependidikan tidak ditemukan.');
+        setSearchLoading(false);
+        return;
+      }
+
+      const completionStatus = await getVotingCompletionStatus(profile.id);
+      const submittedVotes = await getVoterSubmittedVotes(profile.id);
+
+      const votedMap: Record<string, string> = {};
+      completionStatus.categories.forEach(cat => {
+        if (cat.completed) {
+          votedMap[cat.categoryId] = 'voted';
+        }
+      });
+      submittedVotes.forEach(vote => {
+        votedMap[vote.category_id] = vote.candidate_id;
+      });
+
+      setIsVoterAllCompleted(completionStatus.allCompleted);
+      setVotedCategories(votedMap);
+      setVoter(profile);
+
+      const isEnded = profile.voting_status === 'sudah' || completionStatus.allCompleted;
+      if (isEnded) {
+        setErrorMessage('Sesi voting untuk Guru & Tenaga Kependidikan ini sudah diselesaikan. Setiap pemilih hanya dapat memberikan suara sekali.');
+        setSearchLoading(false);
+        return;
+      }
+
+      setScreen('profile');
+      setSearchLoading(false);
+    } catch (err: any) {
+      console.error('Error verifying GTK voter:', err);
+      setErrorMessage(err.message || 'Terjadi kesalahan saat memvalidasi profil GTK.');
+      setSearchLoading(false);
+    }
+  };
+
   // Voter identification logic
   const handleVerifyCardId = async (enteredId: string) => {
     if (!enteredId || enteredId.trim() === '') return;
@@ -513,8 +601,10 @@ export default function VotingFlow({ voteMode, initialVoterCardId, onComplete, o
       if (cat.type === 'mpk_smaba') {
         const voterClass = voter?.class || '';
         const voterDapil = dapils.find(d => d.eligible_classes.includes(voterClass));
-        if (voterDapil) {
+        if (voterDapil && !isFreeVote) {
           cands = cands.filter(cand => cand.dapil_id === voterDapil.id);
+        } else if (isFreeVote) {
+          // No filtering by Dapil in Free Vote mode
         } else {
           cands = [];
         }
@@ -552,6 +642,61 @@ export default function VotingFlow({ voteMode, initialVoterCardId, onComplete, o
     const isSelectedCatMpk = activeCat?.type === 'mpk_smaba';
 
     try {
+      if (isFreeVote) {
+        const updatedVoted = {
+          ...votedCategories,
+          [selectedCatId]: isSelectedCatMpk ? 'voted' : selectedCandidate!.id
+        };
+        setVotedCategories(updatedVoted);
+
+        if (isSelectedCatMpk) {
+          setAccumulatedMpkVotes(prev => ({
+            ...prev,
+            ...selectedMpkVotes
+          }));
+        }
+
+        const totalCats = categories.length;
+        const isAllCompleted = totalCats > 0 && Object.keys(updatedVoted).length >= totalCats;
+
+        if (isAllCompleted) {
+          setScreen('auto_finalize');
+          setCountdown(10);
+          clearCountdown();
+
+          let currentSecs = 10;
+          countdownIntervalRef.current = setInterval(() => {
+            currentSecs--;
+            setCountdown(currentSecs);
+            if (currentSecs <= 0) {
+              clearCountdown();
+              setSelectedCatId(null);
+              setSelectedCandidate(null);
+              setSelectedMpkVotes({});
+              handleFinalFinishFreeVote(updatedVoted);
+            }
+          }, 1000);
+        } else {
+          setScreen('success');
+          setCountdown(5);
+          clearCountdown();
+
+          let currentSecs = 5;
+          countdownIntervalRef.current = setInterval(() => {
+            currentSecs--;
+            setCountdown(currentSecs);
+            if (currentSecs <= 0) {
+              clearCountdown();
+              setSelectedCatId(null);
+              setSelectedCandidate(null);
+              setSelectedMpkVotes({});
+              setScreen('categories');
+            }
+          }, 1000);
+        }
+        return;
+      }
+
       if (isSelectedCatMpk) {
         const votesToSubmit: Vote[] = Object.entries(selectedMpkVotes).map(([clsName, candId]) => ({
           voter_id: voter.id,
@@ -710,6 +855,54 @@ export default function VotingFlow({ voteMode, initialVoterCardId, onComplete, o
     }
   };
 
+  const handleFinalFinishFreeVote = async (latestVotedCats: Record<string, string>) => {
+    if (isSubmitting) return;
+    setIsSubmitting(true);
+
+    try {
+      const votesToSubmit: { category_id: string; candidate_id: string }[] = [];
+      
+      for (const [catId, val] of Object.entries(latestVotedCats)) {
+        const cat = categories.find(c => c.id === catId);
+        if (cat?.type === 'mpk_smaba') {
+          Object.values(accumulatedMpkVotes).forEach(candId => {
+            if (candId) {
+              votesToSubmit.push({
+                category_id: catId,
+                candidate_id: candId as string
+              });
+            }
+          });
+        } else if (val && val !== 'voted') {
+          votesToSubmit.push({
+            category_id: catId,
+            candidate_id: val
+          });
+        }
+      }
+
+      await submitFreeVote('Siswa Mandiri (Free Vote)', 'FREE_VOTE', votesToSubmit);
+
+      setScreen('thankyou');
+      setThankyouCountdown(10);
+      clearCountdown();
+
+      let currentSecs = 10;
+      countdownIntervalRef.current = setInterval(() => {
+        currentSecs--;
+        setThankyouCountdown(currentSecs);
+        if (currentSecs <= 0) {
+          clearCountdown();
+          if (onComplete) onComplete();
+        }
+      }, 1000);
+    } catch (err: any) {
+      alert(err.message || 'Gagal menyimpan pilihan suara akhir. Silakan coba kembali.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   const handleCancelVotingFlow = () => {
     if (voteMode === 'booth') {
       if (onCancel) onCancel();
@@ -790,78 +983,174 @@ export default function VotingFlow({ voteMode, initialVoterCardId, onComplete, o
             />
           </div>
 
-          <h1 className="text-2xl font-extrabold text-white tracking-tight text-center self-start mb-1">
-            Verifikasi
+          <h1 className="text-2xl font-extrabold text-white tracking-tight text-center self-start mb-1 font-sans">
+            {isGtkMode ? 'Bilik Guru & Tenaga Kependidikan' : 'Verifikasi'}
           </h1>
           <p className="text-xs text-slate-400 self-start mb-6">
-            Silakan masukkan Card ID secara manual atau scan QR Code yang ada di Voters Card
+            {isGtkMode 
+              ? 'Silakan cari nama Anda pada daftar Guru dan Tenaga Kependidikan di bawah untuk memvalidasi identitas Anda.' 
+              : 'Silakan masukkan Card ID secara manual atau scan QR Code yang ada di Voters Card'}
           </p>
 
-          <div className="w-full mb-4">
-            <label className="block text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-2">
-              Card ID
-            </label>
-            <div className="flex gap-2.5 justify-center py-1">
-              {[0, 1, 2, 3].map((index) => (
-                <input
-                  key={index}
-                  ref={otpRefs[index]}
-                  type="tel"
-                  inputMode="numeric"
-                  maxLength={1}
-                  value={cardIdInput[index] || ''}
-                  onChange={(e) => handleOtpChange(index, e.target.value)}
-                  onKeyDown={(e) => handleOtpKeyDown(index, e)}
-                  autoComplete="off"
-                  className="w-14 h-14 sm:w-16 sm:h-16 bg-[#1c2030] border-2 border-[#2a3050] focus:border-indigo-500 rounded-xl outline-none text-white font-mono font-bold text-center text-2xl transition-all shadow-md focus:ring-4 focus:ring-indigo-500/15"
-                />
-              ))}
+          {!isGtkMode ? (
+            <div className="w-full mb-4">
+              <label className="block text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-2">
+                Card ID
+              </label>
+              <div className="flex gap-2.5 justify-center py-1">
+                {[0, 1, 2, 3].map((index) => (
+                  <input
+                    key={index}
+                    ref={otpRefs[index]}
+                    type="tel"
+                    inputMode="numeric"
+                    maxLength={1}
+                    value={cardIdInput[index] || ''}
+                    onChange={(e) => handleOtpChange(index, e.target.value)}
+                    onKeyDown={(e) => handleOtpKeyDown(index, e)}
+                    autoComplete="off"
+                    className="w-14 h-14 sm:w-16 sm:h-16 bg-[#1c2030] border-2 border-[#2a3050] focus:border-indigo-500 rounded-xl outline-none text-white font-mono font-bold text-center text-2xl transition-all shadow-md focus:ring-4 focus:ring-indigo-500/15"
+                  />
+                ))}
+              </div>
             </div>
-          </div>
-
-          <div className="w-full flex items-center gap-4 my-3 text-slate-500 text-xs font-bold uppercase tracking-wider">
-            <span className="h-px bg-[#2a3050] flex-1"></span>
-            atau scan qr code
-            <span className="h-px bg-[#2a3050] flex-1"></span>
-          </div>
-
-          <div className="w-full bg-[#151821] border border-[#2a3050] rounded-2xl overflow-hidden shadow-2xl relative mb-4">
-            <div id="qr-reader-container" className="w-full h-[180px] sm:h-[200px] relative bg-black/40 flex flex-col items-center justify-center overflow-hidden">
-              {!isScanning && (
-                <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 cursor-default bg-black/80 p-4 text-center">
-                  <Camera className="w-12 h-12 mb-2 text-slate-500" />
-                  <span className="text-sm font-bold text-slate-400 uppercase tracking-wider">
-                    Kamera tidak tersedia
-                  </span>
+          ) : (
+            <div className="w-full space-y-4 mb-4">
+              <div className="relative">
+                <label className="block text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-2">
+                  Cari Nama Anda
+                </label>
+                <div className="relative">
+                  <input
+                    type="text"
+                    placeholder="Ketik nama Anda di sini..."
+                    value={gtkSearchQuery}
+                    onChange={(e) => {
+                      setGtkSearchQuery(e.target.value);
+                      setSelectedGtkId(''); // Reset selection on change
+                    }}
+                    className="w-full px-4 py-3 bg-[#1c2030] border-2 border-[#2a3050] focus:border-indigo-500 rounded-xl outline-none text-white text-sm transition-all placeholder:text-slate-500 font-semibold"
+                  />
+                  {gtkSearchQuery && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setGtkSearchQuery('');
+                        setSelectedGtkId('');
+                      }}
+                      className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white text-xs font-bold bg-[#1c2030]/80 px-2 py-1 rounded"
+                    >
+                      Batal
+                    </button>
+                  )}
                 </div>
-              )}
+              </div>
 
-              {isScanning && (
-                <div className="absolute inset-x-0 top-0 bottom-0 pointer-events-none flex flex-col justify-between p-4 z-10">
-                  <div className="flex justify-between">
-                    <div className="w-6 h-6 border-t-2 border-l-2 border-indigo-400 rounded-tl"></div>
-                    <div className="w-6 h-6 border-t-2 border-r-2 border-indigo-400 rounded-tr"></div>
+              {/* List of matched GTK profiles */}
+              <div className="bg-[#151821]/90 border border-[#2a3050] rounded-2xl p-2 max-h-[220px] overflow-y-auto space-y-1.5 custom-scrollbar">
+                {gtkProfiles.filter(p => 
+                  !gtkSearchQuery || p.full_name.toLowerCase().includes(gtkSearchQuery.toLowerCase())
+                ).length === 0 ? (
+                  <div className="text-center py-8 text-xs text-slate-500 font-medium">
+                    Tidak ada nama yang cocok dengan pencarian Anda.
                   </div>
-                  <div className="text-[10px] bg-black/70 px-3 py-1 rounded-full text-indigo-300 font-semibold uppercase tracking-widest text-center self-center shadow-lg">
-                    🟢 Memindai Kode QR...
-                  </div>
-                  <div className="flex justify-between">
-                    <div className="w-6 h-6 border-b-2 border-l-2 border-indigo-400 rounded-bl"></div>
-                    <div className="w-6 h-6 border-b-2 border-r-2 border-indigo-400 rounded-br"></div>
-                  </div>
+                ) : (
+                  gtkProfiles.filter(p => 
+                    !gtkSearchQuery || p.full_name.toLowerCase().includes(gtkSearchQuery.toLowerCase())
+                  ).map(p => {
+                    const isVoted = p.voting_status === 'sudah';
+                    const isSelected = selectedGtkId === p.id;
+                    return (
+                      <button
+                        key={p.id}
+                        type="button"
+                        disabled={isVoted}
+                        onClick={() => {
+                          setSelectedGtkId(p.id);
+                          setGtkSearchQuery(p.full_name);
+                        }}
+                        className={`w-full p-3 rounded-xl flex items-center justify-between text-left transition-all ${
+                          isSelected 
+                            ? 'bg-indigo-600/20 border-2 border-indigo-500 text-white' 
+                            : isVoted 
+                              ? 'opacity-40 cursor-not-allowed bg-black/10 text-slate-500 border border-transparent' 
+                              : 'bg-transparent border border-transparent hover:bg-[#1c2030] text-slate-300'
+                        }`}
+                      >
+                        <div className="min-w-0 pr-2">
+                          <p className="text-xs font-bold truncate text-white">{p.full_name}</p>
+                          <p className="text-[10px] text-slate-500 font-semibold mt-0.5">Sektor Guru & Tenaga Kependidikan</p>
+                        </div>
+                        <div>
+                          {isVoted ? (
+                            <span className="text-[9px] bg-rose-500/10 text-rose-400 border border-rose-500/20 px-2.5 py-0.5 rounded-full font-black uppercase tracking-wider">
+                              Sudah Memilih
+                            </span>
+                          ) : isSelected ? (
+                            <span className="text-[9px] bg-indigo-500 text-white px-2.5 py-0.5 rounded-full font-black uppercase tracking-wider shadow-md shadow-indigo-600/20">
+                              Terpilih
+                            </span>
+                          ) : (
+                            <span className="text-[9px] bg-[#1c2030] hover:bg-[#252b42] text-slate-400 border border-[#2a3050] px-2.5 py-0.5 rounded-full font-black uppercase tracking-wider transition-all">
+                              Pilih
+                            </span>
+                          )}
+                        </div>
+                      </button>
+                    );
+                  })
+                )}
+              </div>
+            </div>
+          )}
+
+          {!isGtkMode && (
+            <>
+              <div className="w-full flex items-center gap-4 my-3 text-slate-500 text-xs font-bold uppercase tracking-wider">
+                <span className="h-px bg-[#2a3050] flex-1"></span>
+                atau scan qr code
+                <span className="h-px bg-[#2a3050] flex-1"></span>
+              </div>
+
+              <div className="w-full bg-[#151821] border border-[#2a3050] rounded-2xl overflow-hidden shadow-2xl relative mb-4">
+                <div id="qr-reader-container" className="w-full h-[180px] sm:h-[200px] relative bg-black/40 flex flex-col items-center justify-center overflow-hidden">
+                  {!isScanning && (
+                    <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 cursor-default bg-black/80 p-4 text-center">
+                      <Camera className="w-12 h-12 mb-2 text-slate-500" />
+                      <span className="text-sm font-bold text-slate-400 uppercase tracking-wider">
+                        Kamera tidak tersedia
+                      </span>
+                    </div>
+                  )}
+
+                  {isScanning && (
+                    <div className="absolute inset-x-0 top-0 bottom-0 pointer-events-none flex flex-col justify-between p-4 z-10">
+                      <div className="flex justify-between">
+                        <div className="w-6 h-6 border-t-2 border-l-2 border-indigo-400 rounded-tl"></div>
+                        <div className="w-6 h-6 border-t-2 border-r-2 border-indigo-400 rounded-tr"></div>
+                      </div>
+                      <div className="text-[10px] bg-black/70 px-3 py-1 rounded-full text-indigo-300 font-semibold uppercase tracking-widest text-center self-center shadow-lg">
+                        🟢 Memindai Kode QR...
+                      </div>
+                      <div className="flex justify-between">
+                        <div className="w-6 h-6 border-b-2 border-l-2 border-indigo-400 rounded-bl"></div>
+                        <div className="w-6 h-6 border-b-2 border-r-2 border-indigo-400 rounded-br"></div>
+                      </div>
+                    </div>
+                  )}
                 </div>
-              )}
-            </div>
 
-            <div className="flex gap-2 p-3 bg-[#1c2030] border-t border-[#2a3050] justify-center items-center">
-              <button 
-                disabled={true}
-                className="w-full py-2 bg-[#2a3050] text-slate-500 rounded-xl text-xs font-bold flex items-center justify-center gap-2"
-              >
-                <Camera className="w-3.5 h-3.5" /> Kamera Nonaktif
-              </button>
-            </div>
-          </div>
+                <div className="flex gap-2 p-3 bg-[#1c2030] border-t border-[#2a3050] justify-center items-center">
+                  <button 
+                    disabled={true}
+                    className="w-full py-2 bg-[#2a3050] text-slate-500 rounded-xl text-xs font-bold flex items-center justify-center gap-2"
+                  >
+                    <Camera className="w-3.5 h-3.5" /> Kamera Nonaktif
+                  </button>
+                </div>
+              </div>
+            </>
+          )}
 
           {camError && (
             <div className="w-full mb-4 bg-red-500/15 border border-red-500/30 p-3 rounded-xl text-xs flex gap-2.5 text-red-300 leading-relaxed items-start">
@@ -878,9 +1167,9 @@ export default function VotingFlow({ voteMode, initialVoterCardId, onComplete, o
           )}
 
           <button 
-            onClick={() => handleVerifyCardId(cardIdInput)}
-            disabled={searchLoading || !cardIdInput.trim()}
-            className="w-full py-3.5 bg-indigo-600 hover:bg-indigo-700 disabled:bg-[#2a3050] disabled:opacity-50 text-white rounded-xl text-sm font-bold shadow-xl shadow-indigo-600/10 flex items-center justify-center gap-2"
+            onClick={() => isGtkMode ? handleVerifyGtkVoter(selectedGtkId) : handleVerifyCardId(cardIdInput)}
+            disabled={searchLoading || (isGtkMode ? !selectedGtkId : !cardIdInput.trim())}
+            className="w-full py-3.5 bg-indigo-600 hover:bg-indigo-700 disabled:bg-[#2a3050] disabled:opacity-50 text-white rounded-xl text-sm font-bold shadow-xl shadow-indigo-600/10 flex items-center justify-center gap-2 transition-all cursor-pointer"
           >
             {searchLoading ? (
               <>
@@ -888,7 +1177,7 @@ export default function VotingFlow({ voteMode, initialVoterCardId, onComplete, o
               </>
             ) : (
               <>
-                Lanjutkan Verifikasi <ArrowRight className="w-4 h-4" />
+                {isGtkMode ? 'Validasi Identitas GTK' : 'Lanjutkan Verifikasi'} <ArrowRight className="w-4 h-4" />
               </>
             )}
           </button>
@@ -1014,7 +1303,9 @@ export default function VotingFlow({ voteMode, initialVoterCardId, onComplete, o
                 Validasi Profil
               </h1>
               <p className="text-xs text-slate-400 self-start mb-6">
-                Berikut ini adalah data siswa sesuai dengan identitas asli Anda.
+                {isGtkMode 
+                  ? 'Berikut ini adalah data Guru dan Tenaga Kependidikan sesuai dengan identitas asli Anda.' 
+                  : 'Berikut ini adalah data siswa sesuai dengan identitas asli Anda.'}
               </p>
 
               <div className="w-full bg-[#151821] border border-[#2a3050] rounded-2xl p-6 shadow-2xl relative mb-6 overflow-hidden">
@@ -1026,7 +1317,9 @@ export default function VotingFlow({ voteMode, initialVoterCardId, onComplete, o
                   </div>
                   <div className="min-w-0">
                     <h3 className="font-extrabold text-white text-lg truncate leading-tight">{voter.full_name}</h3>
-                    <span className="text-xs text-slate-500 font-mono tracking-wide">{voter.card_id}</span>
+                    {!isGtkMode && (
+                      <span className="text-xs text-slate-500 font-mono tracking-wide">{voter.card_id}</span>
+                    )}
                   </div>
                 </div>
 
@@ -1161,7 +1454,7 @@ export default function VotingFlow({ voteMode, initialVoterCardId, onComplete, o
                     </div>
                     <div className="text-left">
                       <div className="text-[9px] uppercase font-bold text-slate-400 tracking-wider">Pemilih Aktif</div>
-                      <div className="text-white font-extrabold text-sm truncate max-w-[150px]">{voter.full_name}</div>
+                      <div className="text-white font-extrabold text-sm truncate max-w-[150px]">{isGtkMode ? 'Pemilih Anonymous' : voter.full_name}</div>
                     </div>
                   </div>
                 </div>
@@ -1438,7 +1731,7 @@ export default function VotingFlow({ voteMode, initialVoterCardId, onComplete, o
                 </div>
                 <div className="text-left">
                   <div className="text-[9px] uppercase font-bold text-slate-400 tracking-wider">Pemilih Aktif</div>
-                  <div className="text-white font-extrabold text-sm truncate max-w-[150px]">{voter.full_name}</div>
+                  <div className="text-white font-extrabold text-sm truncate max-w-[150px]">{isGtkMode ? 'Pemilih Anonymous' : voter.full_name}</div>
                 </div>
               </div>
             </div>
@@ -1540,7 +1833,7 @@ export default function VotingFlow({ voteMode, initialVoterCardId, onComplete, o
               </div>
             </div>
 
-            {isSelectedCatMpk && !voterDapil ? (
+            {isSelectedCatMpk && !voterDapil && !isFreeVote ? (
               <div className="bg-[#151821] border border-dashed border-[#2a3050] rounded-3xl p-12 text-center max-w-lg mx-auto space-y-4 my-auto">
                 <span className="text-4xl filter drop-shadow">⚠️</span>
                 <div>
@@ -1555,7 +1848,7 @@ export default function VotingFlow({ voteMode, initialVoterCardId, onComplete, o
               </div>
             ) : (
               <div className="flex-1 flex flex-col">
-                {isSelectedCatMpk && voterDapil && (
+                {isSelectedCatMpk && voterDapil && !isFreeVote && (
                   <div className="w-full bg-[#151821] border border-indigo-500/30 p-6 rounded-3xl text-sm flex gap-4 text-indigo-300 leading-relaxed mb-8 items-start shadow-2xl shadow-indigo-500/5 transition-all">
                     <div className="bg-indigo-500/20 p-3 rounded-2xl flex items-center justify-center">
                       <CheckCircle2 className="w-6 h-6 shrink-0 text-indigo-400" />
@@ -1564,6 +1857,23 @@ export default function VotingFlow({ voteMode, initialVoterCardId, onComplete, o
                       <p className="font-black text-white text-base tracking-tight">Daerah Pemilihan MPK</p>
                       <p className="text-white/80 font-medium text-xs sm:text-sm">
                         Kelas Anda (<strong className="text-indigo-400 font-black">{voter.class}</strong>) masuk dalam Daerah Pemilihan: <strong className="text-indigo-300 font-bold">{voterDapil.name}</strong>
+                      </p>
+                      <p className="text-indigo-400/70 text-xs sm:text-sm font-medium">
+                        Silakan pilih 1 perwakilan pada setiap kelas di bawah ini dengan menekan gambar salah satu kandidat.
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {isSelectedCatMpk && isFreeVote && (
+                  <div className="w-full bg-[#151821] border border-indigo-500/30 p-6 rounded-3xl text-sm flex gap-4 text-indigo-300 leading-relaxed mb-8 items-start shadow-2xl shadow-indigo-500/5 transition-all">
+                    <div className="bg-indigo-500/20 p-3 rounded-2xl flex items-center justify-center">
+                      <CheckCircle2 className="w-6 h-6 shrink-0 text-indigo-400" />
+                    </div>
+                    <div className="space-y-2">
+                      <p className="font-black text-white text-base tracking-tight">Daerah Pemilihan MPK (Mandiri)</p>
+                      <p className="text-white/80 font-medium text-xs sm:text-sm">
+                        Anda sedang berada dalam mode Bilik Suara Mandiri. Seluruh pilihan perwakilan kelas MPK ditampilkan secara lengkap.
                       </p>
                       <p className="text-indigo-400/70 text-xs sm:text-sm font-medium">
                         Silakan pilih 1 perwakilan pada setiap kelas di bawah ini dengan menekan gambar salah satu kandidat.
@@ -2118,7 +2428,11 @@ export default function VotingFlow({ voteMode, initialVoterCardId, onComplete, o
           <button
             onClick={() => {
               clearCountdown();
-              handleFinalFinish();
+              if (isFreeVote) {
+                handleFinalFinishFreeVote(votedCategories);
+              } else {
+                handleFinalFinish();
+              }
             }}
             disabled={isSubmitting}
             className="w-full sm:w-auto px-8 py-3.5 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white text-xs font-black rounded-2xl shadow-xl transition-all cursor-pointer flex items-center justify-center gap-2"

@@ -2,12 +2,19 @@ import { createClient } from '@supabase/supabase-js';
 import dotenv from 'dotenv';
 dotenv.config();
 
-const supabase = createClient(process.env.VITE_SUPABASE_URL, process.env.VITE_SUPABASE_ANON_KEY);
+const url = process.env.VITE_SUPABASE_URL;
+const key = process.env.VITE_SUPABASE_ANON_KEY;
 
-async function checkProfiles() {
-  const { data, error } = await supabase.from('profiles').select('*');
-  console.log("Profiles list:", data);
-  console.log("Error if any:", error);
+const supabase = createClient(url, key);
+
+async function run() {
+  console.log("Fetching profiles limit 1...");
+  const { data, error } = await supabase.from('profiles').select('*').limit(1);
+  if (error) {
+    console.log("Error fetching profiles:", error);
+  } else {
+    console.log("Profile sample:", data);
+  }
 }
 
-checkProfiles();
+run();

@@ -5,6 +5,8 @@ import BackToHomeButton from '../components/BackToHomeButton';
 import { getUserAccessSettings } from '../lib/userAccessService';
 import { ALL_CLASSES } from '../lib/classConstants';
 import { Skeleton } from '../components/Skeleton';
+import { motion, AnimatePresence } from 'motion/react';
+import { Clock, RefreshCw, CheckCircle2, AlertTriangle, LogIn, ArrowRight } from 'lucide-react';
 
 // Helper to generate random number
 const getRandomInt = (min: number, max: number) => {
@@ -26,6 +28,13 @@ export default function Signup() {
   const [error, setError] = useState<string | null>(null);
   const [signupEnabled, setSignupEnabled] = useState(true);
   const [checkingAccess, setCheckingAccess] = useState(true);
+  
+  // Signup Queue States
+  const [queueId, setQueueId] = useState<string | null>(() => localStorage.getItem('ppu_signup_queue_id'));
+  const [queueStatus, setQueueStatus] = useState<'waiting' | 'processing' | 'success' | 'failed' | null>(null);
+  const [queuePosition, setQueuePosition] = useState<number>(-1);
+  const [peopleAhead, setPeopleAhead] = useState<number>(-1);
+  const [queueError, setQueueError] = useState<string | null>(null);
   
   const [num1, setNum1] = useState(0);
   const [num2, setNum2] = useState(0);
@@ -60,6 +69,85 @@ export default function Signup() {
     checkSignupAccess();
   }, []);
 
+  // Polling Server-Side Queue Status
+  useEffect(() => {
+    if (!queueId) return;
+
+    let active = true;
+    let timerId: any = null;
+
+    const checkStatus = async () => {
+      try {
+        const response = await fetch(`/api/signup/status?queueId=${queueId}`);
+        if (!response.ok) {
+          if (response.status === 404) {
+            localStorage.removeItem('ppu_signup_queue_id');
+            setQueueId(null);
+            setQueueStatus(null);
+            setError('Sesi antrean pendaftaran Anda telah kedaluwarsa atau tidak ditemukan. Silakan coba mendaftar kembali.');
+          }
+          return;
+        }
+
+        const data = await response.json();
+        if (!active) return;
+
+        setQueueStatus(data.status);
+        setQueuePosition(data.position);
+        setPeopleAhead(data.peopleAhead);
+
+        if (data.status === 'success') {
+          localStorage.removeItem('ppu_signup_queue_id');
+          
+          if (data.result && data.result.session) {
+            const { error: sessionError } = await supabase.auth.setSession({
+              access_token: data.result.session.access_token,
+              refresh_token: data.result.session.refresh_token
+            });
+            if (sessionError) {
+              console.error('Failed to set session client-side:', sessionError);
+              setQueueError('Gagal mengaktifkan sesi login di browser Anda: ' + sessionError.message);
+              setQueueStatus('failed');
+              return;
+            }
+          }
+
+          localStorage.setItem('session_expires_at', (Date.now() + 60 * 60 * 1000).toString());
+          localStorage.setItem('lastActivity', Date.now().toString());
+
+          setTimeout(() => {
+            if (active) {
+              setQueueId(null);
+              setQueueStatus(null);
+              navigate('/dashboard');
+            }
+          }, 3000);
+        } else if (data.status === 'failed') {
+          localStorage.removeItem('ppu_signup_queue_id');
+          if (data.error === 'EMAIL_EXISTS') {
+            setQueueError('EMAIL_EXISTS');
+          } else {
+            setQueueError(data.error || 'Terjadi kesalahan saat pendaftaran.');
+          }
+        } else {
+          timerId = setTimeout(checkStatus, 2000);
+        }
+      } catch (err: any) {
+        console.error('Failed to poll queue status:', err);
+        if (active) {
+          timerId = setTimeout(checkStatus, 3000);
+        }
+      }
+    };
+
+    checkStatus();
+
+    return () => {
+      active = false;
+      if (timerId) clearTimeout(timerId);
+    };
+  }, [queueId, navigate]);
+
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -87,89 +175,34 @@ export default function Signup() {
     }
 
     try {
-      // Find a unique 4-digit card_id
-      let uniqueCardId = '';
-      let isUnique = false;
-      
-      while (!isUnique) {
-        uniqueCardId = generateCardId();
-        const { data } = await supabase
-          .from('profiles')
-          .select('card_id')
-          .eq('card_id', uniqueCardId);
-          
-        if (!data || data.length === 0) {
-          isUnique = true;
-        }
-      }
-
-      const { data, error: authError } = await supabase.auth.signUp({
-        email,
-        password,
+      const response = await fetch('/api/signup/enqueue', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          email,
+          password,
+          fullName,
+          classField
+        })
       });
 
-      if (authError) throw authError;
-
-      if (data.user) {
-        const { error: profileError } = await supabase
-          .from('profiles')
-          .upsert([
-            {
-              id: data.user.id,
-              full_name: fullName,
-              email: email,
-              class: classField,
-              card_id: uniqueCardId,
-              role: 'user',
-              account_status: 'belum_dikonfirmasi',
-              voting_status: 'belum',
-              card_visibility: true,
-            },
-          ]);
-
-        if (profileError) throw profileError;
-        
-        // After signup, initialize active session duration
-        localStorage.setItem('session_expires_at', (Date.now() + 60 * 60 * 1000).toString());
-        localStorage.setItem('lastActivity', Date.now().toString());
-
-        // After signup, redirect to dashboard or login
-        navigate('/dashboard');
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Terjadi kesalahan saat menghubungi server pendaftaran.');
       }
+
+      const data = await response.json();
+      localStorage.setItem('ppu_signup_queue_id', data.queueId);
+      setQueueId(data.queueId);
+      setQueueStatus(data.status);
+      setQueuePosition(data.position);
+      setPeopleAhead(data.peopleAhead);
+      setQueueError(null);
     } catch (err: any) {
-      console.error('Signup error detail:', err);
-      let errorMsg = 'Terjadi kesalahan saat mendaftar.';
-      
-      if (err) {
-        if (typeof err === 'string') {
-          errorMsg = err;
-        } else if (err.message) {
-          errorMsg = err.message;
-        } else if (err.error_description) {
-          errorMsg = err.error_description;
-        } else {
-          try {
-            const keys = Object.keys(err);
-            if (keys.length > 0) {
-              errorMsg = keys.map(k => `${k}: ${JSON.stringify(err[k])}`).join(', ');
-            } else {
-              errorMsg = String(err);
-            }
-          } catch (e) {
-            errorMsg = String(err);
-          }
-        }
-      }
-
-      // If the error message is empty or is stringified as JSON empty object
-      if (errorMsg === '{}' || errorMsg === '[object Object]' || !errorMsg) {
-        errorMsg = 'Gagal menyimpan profil ke database Supabase. Ini biasanya terjadi karena RLS Policy (Row Level Security) atau Trigger Database yang bentrok/mengalami infinite recursion. Silakan periksa tab SQL Editor di Supabase Anda.';
-      }
-
-      if (errorMsg.includes('already registered') || errorMsg.includes('already exists') || errorMsg.toLowerCase().includes('user already registered')) {
-        errorMsg = 'Email ini sudah terdaftar. Silakan gunakan email lain atau langsung masuk (login) ke akun Anda.';
-      }
-      
+      console.error('Signup queue error:', err);
+      let errorMsg = err.message || 'Terjadi kesalahan saat mendaftar.';
       setError(errorMsg);
     } finally {
       setLoading(false);
@@ -472,6 +505,187 @@ export default function Signup() {
           </span>
         </div>
       </div>
+
+      {/* Signup Queue Overlay */}
+      <AnimatePresence>
+        {queueId && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4 z-50"
+          >
+            <motion.div
+              initial={{ scale: 0.95, y: 20 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.95, y: 20 }}
+              className="max-w-md w-full bg-slate-900 border border-slate-800 p-8 rounded-3xl shadow-2xl text-center text-white relative overflow-hidden"
+            >
+              {/* Glowing Top Accent */}
+              <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-indigo-500 to-purple-600"></div>
+
+              {queueStatus === 'waiting' && (
+                <div className="space-y-6">
+                  <div className="w-16 h-16 bg-indigo-500/10 border border-indigo-500/30 rounded-2xl flex items-center justify-center mx-auto text-indigo-400">
+                    <Clock className="w-8 h-8 animate-pulse" />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <h3 className="text-xl font-extrabold tracking-tight">Pendaftaran Sedang Ramai</h3>
+                    <p className="text-slate-400 text-sm leading-relaxed">
+                      Banyak siswa sedang membuat akun PPU. Anda sedang berada dalam antrean pendaftaran akun.
+                    </p>
+                  </div>
+
+                  {/* Queue Number Box */}
+                  <div className="bg-slate-950 border border-slate-800 rounded-2xl p-5 space-y-1 shadow-inner">
+                    <span className="text-[10px] uppercase font-bold tracking-widest text-slate-500">Nomor Antrean Anda</span>
+                    <div className="text-2xl font-mono font-black text-indigo-400">{queueId}</div>
+                  </div>
+
+                  {/* People Ahead */}
+                  <div className="text-sm font-semibold text-slate-300">
+                    {peopleAhead > 0 ? (
+                      <>
+                        <span className="text-indigo-400 text-lg font-black font-mono">{peopleAhead}</span> pendaftar di depan Anda.
+                      </>
+                    ) : (
+                      <>Anda berada di urutan berikutnya!</>
+                    )}
+                  </div>
+
+                  {/* Status Badge */}
+                  <div className="inline-flex items-center gap-2 bg-amber-500/10 border border-amber-500/20 text-amber-400 px-4 py-1.5 rounded-full text-xs font-bold tracking-wide uppercase">
+                    <span className="w-2 h-2 rounded-full bg-amber-400 animate-ping"></span>
+                    Menunggu Giliran
+                  </div>
+
+                  <p className="text-xs text-slate-500 font-medium">
+                    Mohon jangan menutup halaman ini agar antrean tidak hilang.
+                  </p>
+                </div>
+              )}
+
+              {queueStatus === 'processing' && (
+                <div className="space-y-6">
+                  <div className="w-16 h-16 bg-indigo-500/10 border border-indigo-500/30 rounded-2xl flex items-center justify-center mx-auto text-indigo-400">
+                    <RefreshCw className="w-8 h-8 animate-spin" />
+                  </div>
+
+                  <div className="space-y-2">
+                    <h3 className="text-xl font-extrabold tracking-tight text-indigo-400">Giliran Anda</h3>
+                    <p className="text-slate-300 text-sm leading-relaxed">
+                      Pendaftaran akun sedang diproses... Mohon tunggu.
+                    </p>
+                  </div>
+
+                  <div className="bg-slate-950 border border-slate-800 rounded-2xl p-5 shadow-inner">
+                    <span className="text-xs text-slate-400 font-bold block mb-1">Status</span>
+                    <div className="inline-flex items-center gap-1.5 text-indigo-400 text-sm font-bold">
+                      <span className="w-2 h-2 rounded-full bg-indigo-500 animate-ping"></span>
+                      Memproses Pendaftaran...
+                    </div>
+                  </div>
+
+                  <div className="bg-slate-950/40 p-4 rounded-xl border border-slate-800/80 text-left">
+                    <p className="text-xs text-slate-400 leading-relaxed">
+                      <strong className="text-slate-300 block mb-0.5">Pendaftaran masih diproses:</strong>
+                      Server sedang sangat sibuk. Sistem akan mencoba kembali secara otomatis jika terjadi limitasi.
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {queueStatus === 'success' && (
+                <div className="space-y-6">
+                  <div className="w-16 h-16 bg-emerald-500/10 border border-emerald-500/30 rounded-2xl flex items-center justify-center mx-auto text-emerald-400">
+                    <CheckCircle2 className="w-8 h-8" />
+                  </div>
+
+                  <div className="space-y-2">
+                    <h3 className="text-xl font-extrabold tracking-tight text-emerald-400">✓ Akun Berhasil Dibuat</h3>
+                    <p className="text-slate-300 text-sm leading-relaxed">
+                      Akun Anda berhasil dibuat. Silakan lanjutkan ke proses berikutnya.
+                    </p>
+                  </div>
+
+                  <div className="bg-slate-950 border border-slate-800 rounded-2xl p-4 font-semibold text-slate-400 text-xs">
+                    Mempersiapkan dasbor Anda...
+                  </div>
+                </div>
+              )}
+
+              {queueStatus === 'failed' && (
+                <div className="space-y-6">
+                  {queueError === 'EMAIL_EXISTS' ? (
+                    <>
+                      <div className="w-16 h-16 bg-rose-500/10 border border-rose-500/30 rounded-2xl flex items-center justify-center mx-auto text-rose-400">
+                        <AlertTriangle className="w-8 h-8" />
+                      </div>
+
+                      <div className="space-y-2">
+                        <h3 className="text-xl font-extrabold tracking-tight text-rose-400">Email Sudah Terdaftar</h3>
+                        <p className="text-slate-300 text-sm leading-relaxed">
+                          Email tersebut sudah memiliki akun PPU. Silakan gunakan halaman Login.
+                        </p>
+                      </div>
+
+                      <div className="pt-4 space-y-3">
+                        <Link
+                          to="/login"
+                          onClick={() => {
+                            setQueueId(null);
+                            setQueueStatus(null);
+                          }}
+                          className="w-full inline-flex items-center justify-center py-3 px-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-bold shadow-lg transition-all"
+                        >
+                          Langsung Login <LogIn className="w-4 h-4 ml-2" />
+                        </Link>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setQueueId(null);
+                            setQueueStatus(null);
+                          }}
+                          className="w-full py-2.5 bg-transparent hover:bg-slate-800 border border-slate-700 text-slate-300 rounded-xl text-xs font-semibold transition-all cursor-pointer"
+                        >
+                          Kembali ke Pendaftaran
+                        </button>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div className="w-16 h-16 bg-rose-500/10 border border-rose-500/30 rounded-2xl flex items-center justify-center mx-auto text-rose-400">
+                        <AlertTriangle className="w-8 h-8" />
+                      </div>
+
+                      <div className="space-y-2">
+                        <h3 className="text-xl font-extrabold tracking-tight text-rose-400">Pendaftaran Gagal</h3>
+                        <p className="text-slate-300 text-sm leading-relaxed">
+                          {queueError || 'Terjadi kesalahan tidak terduga pada server.'}
+                        </p>
+                      </div>
+
+                      <div className="pt-4">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setQueueId(null);
+                            setQueueStatus(null);
+                          }}
+                          className="w-full py-3 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-sm font-bold shadow-lg transition-all cursor-pointer"
+                        >
+                          Coba Lagi
+                        </button>
+                      </div>
+                    </>
+                  )}
+                </div>
+              )}
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
