@@ -12,6 +12,7 @@ import {
   ArrowRight, 
   ChevronRight, 
   ChevronLeft, 
+  ChevronDown,
   User, 
   RefreshCw, 
   Play, 
@@ -93,6 +94,28 @@ export default function VotingFlow({ voteMode, initialVoterCardId, onComplete, o
   const [selectedMpkVotes, setSelectedMpkVotes] = useState<Record<string, string>>({}); // { class: candidateId }
   const [activeMpkClassIndex, setActiveMpkClassIndex] = useState<number>(0);
   const [slideDirection, setSlideDirection] = useState<'left' | 'right'>('right');
+
+  // Pin / Coblos Animation state
+  const [animatingCandId, setAnimatingCandId] = useState<string | null>(null);
+  const animTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  const triggerCoblosAnimation = (candId: string) => {
+    setAnimatingCandId(candId);
+    if (animTimeoutRef.current) {
+      clearTimeout(animTimeoutRef.current);
+    }
+    animTimeoutRef.current = setTimeout(() => {
+      setAnimatingCandId(null);
+    }, 1000);
+  };
+
+  useEffect(() => {
+    return () => {
+      if (animTimeoutRef.current) {
+        clearTimeout(animTimeoutRef.current);
+      }
+    };
+  }, []);
 
   // Scanner States
   const [isScanning, setIsScanning] = useState(false);
@@ -423,12 +446,35 @@ export default function VotingFlow({ voteMode, initialVoterCardId, onComplete, o
   const [selectedClass, setSelectedClass] = useState<string>('');
   const [studentSearchQuery, setStudentSearchQuery] = useState<string>('');
   const [selectedStudentId, setSelectedStudentId] = useState<string>('');
+  const [dapilClasses, setDapilClasses] = useState<string[]>([]);
+  const [classDropdownOpen, setClassDropdownOpen] = useState<boolean>(false);
 
   const STUDENT_CLASSES = [
     ...Array.from({ length: 12 }, (_, i) => `X-${i + 1}`),
     ...Array.from({ length: 12 }, (_, i) => `XI-${i + 1}`),
     ...Array.from({ length: 12 }, (_, i) => `XII-${i + 1}`),
   ];
+
+  useEffect(() => {
+    if (isStudentMode) {
+      getDapils().then(dList => {
+        if (dList && dList.length > 0) {
+          const classesFromDapils = Array.from(
+            new Set(dList.flatMap(d => d.eligible_classes || []))
+          ).filter(c => c && !c.toUpperCase().includes('GTK') && !c.toUpperCase().includes('GURU'));
+          if (classesFromDapils.length > 0) {
+            setDapilClasses(classesFromDapils);
+          }
+        }
+      }).catch(err => console.error('Error loading dapil classes:', err));
+    }
+  }, [isStudentMode]);
+
+  const classOptions = dapilClasses.length > 0 ? dapilClasses : STUDENT_CLASSES;
+  const studentColX = classOptions.filter(c => c.startsWith('X-'));
+  const studentColXI = classOptions.filter(c => c.startsWith('XI-'));
+  const studentColXII = classOptions.filter(c => c.startsWith('XII-'));
+  const studentColOther = classOptions.filter(c => !c.startsWith('X-') && !c.startsWith('XI-') && !c.startsWith('XII-') && !c.toUpperCase().includes('GTK') && !c.toUpperCase().includes('GURU'));
 
   useEffect(() => {
     if (isGtkMode) {
@@ -951,7 +997,7 @@ export default function VotingFlow({ voteMode, initialVoterCardId, onComplete, o
       {/* SCREEN 1: SCAN OR INPUT CARD ID */}
       {screen === 'scan' && (
         <main className="flex-1 flex flex-col items-center justify-center p-6 w-full max-w-md mx-auto">
-          <div className="flex items-center gap-3 mb-8 self-start">
+          <div className="flex items-center gap-3 mb-6 self-center">
             <img
               src="https://bfuuuzmcrkfjblancewz.supabase.co/storage/v1/object/public/official%20logo/PPU%20WHITE.webp"
               alt="PPU Logo"
@@ -959,14 +1005,14 @@ export default function VotingFlow({ voteMode, initialVoterCardId, onComplete, o
             />
           </div>
 
-          <h1 className="text-2xl font-extrabold text-white tracking-tight text-center self-start mb-1 font-sans">
-            {isGtkMode ? 'Bilik Guru & Tenaga Kependidikan' : isStudentMode ? 'Bilik Pemilih Siswa' : 'Verifikasi'}
+          <h1 className="text-2xl font-extrabold text-white tracking-tight text-center mb-1">
+            {isGtkMode ? 'Bilik Guru & Tenaga Kependidikan' : isStudentMode ? 'Bilik Siswa' : 'Verifikasi'}
           </h1>
-          <p className="text-xs text-slate-400 self-start mb-6">
+          <p className="text-xs text-slate-400 text-center mb-6 leading-relaxed max-w-sm">
             {isGtkMode 
               ? 'Silakan cari nama Anda pada daftar Guru dan Tenaga Kependidikan di bawah untuk memvalidasi identitas Anda.' 
               : isStudentMode
-                ? 'Masukkan nama atau Card ID, kemudian pilih kelas untuk melakukan validasi.'
+                ? 'Pilih kelas kamu, masukkan nama lengkap, lalu pilih profil kamu yang tersedia untuk melanjutkan pemilihan.'
                 : 'Silakan masukkan Card ID secara manual atau scan QR Code yang ada di Voters Card'}
           </p>
 
@@ -1082,100 +1128,251 @@ export default function VotingFlow({ voteMode, initialVoterCardId, onComplete, o
             </div>
           ) : (
             <div className="w-full space-y-4 mb-4">
-              <div className="space-y-3">
+              <div className="space-y-4">
+                {/* DROPDOWN KELAS */}
                 <div className="relative">
-                  <label className="block text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-2">
-                    Kelas
+                  <label className="block text-[11px] text-slate-400 font-bold uppercase tracking-wider mb-2">
+                    KELAS
                   </label>
-                  <select
-                    value={selectedClass}
-                    onChange={(e) => {
-                      setSelectedClass(e.target.value);
-                      setSelectedStudentId('');
-                      setStudentSearchQuery('');
-                      setStudentProfiles([]);
-                    }}
-                    className="w-full px-4 py-3 bg-[#1c2030] border-2 border-[#2a3050] focus:border-indigo-500 rounded-xl outline-none text-white text-sm transition-all font-semibold appearance-none cursor-pointer"
+                  <button
+                    type="button"
+                    onClick={() => setClassDropdownOpen(!classDropdownOpen)}
+                    className="appearance-none rounded-xl relative block w-full px-4 py-3.5 border-2 border-[#2a3050] bg-[#1c2030] text-white focus:outline-none focus:border-indigo-500 text-left text-sm font-semibold cursor-pointer select-none transition-all flex items-center justify-between"
                   >
-                    <option value="" disabled>Pilih Kelas</option>
-                    {STUDENT_CLASSES.map(cls => (
-                      <option key={cls} value={cls}>{cls}</option>
-                    ))}
-                  </select>
-                  <div className="absolute right-4 top-[38px] pointer-events-none">
-                    <ChevronRight className="w-4 h-4 text-slate-400 rotate-90" />
-                  </div>
+                    <span className={selectedClass ? 'text-white' : 'text-slate-500'}>
+                      {selectedClass || 'Pilih Kelas'}
+                    </span>
+                    <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform duration-200 ${classDropdownOpen ? 'rotate-180' : ''}`} />
+                  </button>
+
+                  {/* Class Dropdown Panel */}
+                  {classDropdownOpen && (
+                    <>
+                      <div className="fixed inset-0 z-40" onClick={() => setClassDropdownOpen(false)} />
+                      <div className="absolute left-0 right-0 mt-2 bg-[#181c2b] border-2 border-[#2a3050] rounded-2xl shadow-2xl z-50 p-3 max-h-72 overflow-y-auto custom-scrollbar">
+                        {studentColOther.length > 0 && (
+                          <div className="mb-3 pb-2 border-b border-[#2a3050] grid grid-cols-2 gap-2">
+                            {studentColOther.map(cls => (
+                              <button
+                                key={cls}
+                                type="button"
+                                onClick={() => {
+                                  setSelectedClass(cls);
+                                  setSelectedStudentId('');
+                                  setStudentSearchQuery('');
+                                  setStudentProfiles([]);
+                                  setClassDropdownOpen(false);
+                                }}
+                                className={`w-full py-2 text-xs text-center rounded-lg font-bold transition-all border cursor-pointer ${
+                                  selectedClass === cls
+                                    ? 'bg-indigo-600 text-white border-indigo-500 shadow-sm'
+                                    : 'bg-[#1c2030] text-slate-300 border-[#2a3050] hover:bg-[#252b42]'
+                                }`}
+                              >
+                                {cls}
+                              </button>
+                            ))}
+                          </div>
+                        )}
+
+                        <div className="grid grid-cols-3 gap-2">
+                          {/* Kelas X */}
+                          <div className="space-y-1">
+                            <div className="text-[10px] uppercase font-mono font-bold text-slate-400 border-b border-[#2a3050] pb-1 mb-1.5 text-center">
+                              Kelas X
+                            </div>
+                            {studentColX.map(cls => (
+                              <button
+                                key={cls}
+                                type="button"
+                                onClick={() => {
+                                  setSelectedClass(cls);
+                                  setSelectedStudentId('');
+                                  setStudentSearchQuery('');
+                                  setStudentProfiles([]);
+                                  setClassDropdownOpen(false);
+                                }}
+                                className={`w-full py-2 text-xs text-center rounded-lg font-bold transition-all border cursor-pointer ${
+                                  selectedClass === cls
+                                    ? 'bg-indigo-600 text-white border-indigo-500 shadow-sm'
+                                    : 'bg-[#1c2030] text-slate-300 border-[#2a3050] hover:bg-[#252b42]'
+                                }`}
+                              >
+                                {cls}
+                              </button>
+                            ))}
+                          </div>
+
+                          {/* Kelas XI */}
+                          <div className="space-y-1">
+                            <div className="text-[10px] uppercase font-mono font-bold text-slate-400 border-b border-[#2a3050] pb-1 mb-1.5 text-center">
+                              Kelas XI
+                            </div>
+                            {studentColXI.map(cls => (
+                              <button
+                                key={cls}
+                                type="button"
+                                onClick={() => {
+                                  setSelectedClass(cls);
+                                  setSelectedStudentId('');
+                                  setStudentSearchQuery('');
+                                  setStudentProfiles([]);
+                                  setClassDropdownOpen(false);
+                                }}
+                                className={`w-full py-2 text-xs text-center rounded-lg font-bold transition-all border cursor-pointer ${
+                                  selectedClass === cls
+                                    ? 'bg-indigo-600 text-white border-indigo-500 shadow-sm'
+                                    : 'bg-[#1c2030] text-slate-300 border-[#2a3050] hover:bg-[#252b42]'
+                                }`}
+                              >
+                                {cls}
+                              </button>
+                            ))}
+                          </div>
+
+                          {/* Kelas XII */}
+                          <div className="space-y-1">
+                            <div className="text-[10px] uppercase font-mono font-bold text-slate-400 border-b border-[#2a3050] pb-1 mb-1.5 text-center">
+                              Kelas XII
+                            </div>
+                            {studentColXII.map(cls => (
+                              <button
+                                key={cls}
+                                type="button"
+                                onClick={() => {
+                                  setSelectedClass(cls);
+                                  setSelectedStudentId('');
+                                  setStudentSearchQuery('');
+                                  setStudentProfiles([]);
+                                  setClassDropdownOpen(false);
+                                }}
+                                className={`w-full py-2 text-xs text-center rounded-lg font-bold transition-all border cursor-pointer ${
+                                  selectedClass === cls
+                                    ? 'bg-indigo-600 text-white border-indigo-500 shadow-sm'
+                                    : 'bg-[#1c2030] text-slate-300 border-[#2a3050] hover:bg-[#252b42]'
+                                }`}
+                              >
+                                {cls}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    </>
+                  )}
                 </div>
 
+                {/* INPUT NAMA */}
                 <div className="relative">
-                  <label className="block text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-2">
-                    Nama / Card ID
+                  <label className="block text-[11px] text-slate-400 font-bold uppercase tracking-wider mb-2">
+                    NAMA
                   </label>
-                  <input
-                    type="text"
-                    placeholder={selectedClass ? "Ketik minimal 2 karakter..." : "Pilih kelas terlebih dahulu"}
-                    value={studentSearchQuery}
-                    disabled={!selectedClass}
-                    onChange={(e) => {
-                      const val = e.target.value;
-                      setStudentSearchQuery(val);
-                      setSelectedStudentId('');
-                    }}
-                    className="w-full px-4 py-3 bg-[#1c2030] border-2 border-[#2a3050] focus:border-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed rounded-xl outline-none text-white text-sm transition-all placeholder:text-slate-500 font-semibold"
-                  />
+                  <div className="relative">
+                    <input
+                      type="text"
+                      placeholder={selectedClass ? "Masukkan nama lengkap" : "Pilih kelas terlebih dahulu"}
+                      value={studentSearchQuery}
+                      disabled={!selectedClass}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setStudentSearchQuery(val);
+                        setSelectedStudentId('');
+                      }}
+                      className="w-full px-4 py-3.5 bg-[#1c2030] border-2 border-[#2a3050] focus:border-indigo-500 disabled:opacity-40 disabled:cursor-not-allowed rounded-xl outline-none text-white text-sm transition-all placeholder:text-slate-500 font-semibold"
+                    />
+                    {studentSearchQuery && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setStudentSearchQuery('');
+                          setSelectedStudentId('');
+                          setStudentProfiles([]);
+                        }}
+                        className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white text-xs font-bold bg-[#2a3050]/60 px-2.5 py-1 rounded-lg transition-all cursor-pointer"
+                      >
+                        Batal
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
 
-              {/* List of matched Student profiles in the selected class */}
+              {/* LIST HASIL PENCARIAN PROFIL SISWA */}
               {selectedClass && studentSearchQuery.length >= 2 && (
-                <div className="bg-[#151821]/90 border border-[#2a3050] rounded-2xl p-2 max-h-[200px] overflow-y-auto space-y-1.5 custom-scrollbar">
-                  {studentProfiles.length === 0 ? (
-                    <div className="text-center py-8 text-xs text-slate-500 font-medium">
-                      {searchLoading ? 'Memuat data siswa...' : 'Tidak ada siswa ditemukan yang cocok.'}
+                <div className="space-y-2 mt-3">
+                  {searchLoading ? (
+                    <div className="text-center py-6 text-xs text-slate-400 font-medium flex items-center justify-center gap-2">
+                      <Loader2 className="w-4 h-4 text-indigo-400 animate-spin" />
+                      <span>Mencari profil siswa...</span>
+                    </div>
+                  ) : studentProfiles.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center py-8 px-4 text-center bg-[#151821]/60 border border-[#2a3050] rounded-2xl">
+                      <User className="w-8 h-8 text-slate-500 mb-2 opacity-50" />
+                      <p className="text-xs font-semibold text-slate-300">Tidak ada profil yang ditemukan</p>
+                      <p className="text-[11px] text-slate-500 mt-0.5">Coba periksa ejaan nama yang kamu ketik.</p>
                     </div>
                   ) : (
-                    studentProfiles.map(p => {
-                      const isVoted = p.voting_status === 'sudah';
-                      const isSelected = selectedStudentId === p.id;
-                      return (
-                        <button
-                          key={p.id}
-                          type="button"
-                          disabled={isVoted}
-                          onClick={() => {
-                            setSelectedStudentId(p.id);
-                            setStudentSearchQuery(p.full_name);
-                          }}
-                          className={`w-full p-3 rounded-xl flex items-center justify-between text-left transition-all ${
-                            isSelected 
-                              ? 'bg-indigo-600/20 border-2 border-indigo-500 text-white' 
-                              : isVoted 
-                                ? 'opacity-40 cursor-not-allowed bg-black/10 text-slate-500 border border-transparent' 
-                                : 'bg-transparent border border-transparent hover:bg-[#1c2030] text-slate-300'
-                          }`}
-                        >
-                          <div className="min-w-0 pr-2">
-                            <p className="text-xs font-bold truncate text-white">{p.full_name}</p>
-                            <p className="text-[10px] text-slate-500 font-semibold mt-0.5">Siswa • Kelas {p.class}</p>
-                          </div>
-                          <div>
-                            {isVoted ? (
-                              <span className="text-[9px] bg-rose-500/10 text-rose-400 border border-rose-500/20 px-2.5 py-0.5 rounded-full font-black uppercase tracking-wider">
-                                Sudah Memilih
-                              </span>
-                            ) : isSelected ? (
-                              <span className="text-[9px] bg-indigo-500 text-white px-2.5 py-0.5 rounded-full font-black uppercase tracking-wider shadow-md shadow-indigo-600/20">
-                                Terpilih
-                              </span>
-                            ) : (
-                              <span className="text-[9px] bg-[#1c2030] hover:bg-[#252b42] text-slate-400 border border-[#2a3050] px-2.5 py-0.5 rounded-full font-black uppercase tracking-wider transition-all">
-                                Pilih
-                              </span>
-                            )}
-                          </div>
-                        </button>
-                      );
-                    })
+                    <div className="max-h-[240px] overflow-y-auto space-y-2 custom-scrollbar pr-1">
+                      {studentProfiles.map(p => {
+                        const isVoted = p.voting_status === 'sudah';
+                        const isSelected = selectedStudentId === p.id;
+                        return (
+                          <button
+                            key={p.id}
+                            type="button"
+                            disabled={isVoted}
+                            onClick={() => {
+                              setSelectedStudentId(p.id);
+                              setStudentSearchQuery(p.full_name);
+                            }}
+                            className={`w-full p-3.5 rounded-2xl border text-left transition-all cursor-pointer flex items-center justify-between group ${
+                              isSelected
+                                ? 'bg-indigo-600/20 border-indigo-500 text-white shadow-lg shadow-indigo-600/10'
+                                : isVoted
+                                  ? 'opacity-40 cursor-not-allowed bg-black/20 text-slate-500 border-[#2a3050]/40'
+                                  : 'bg-[#181c2b] border-[#2a3050] hover:border-indigo-500/60 hover:bg-[#202538] text-slate-200'
+                            }`}
+                          >
+                            <div className="flex items-center gap-3 min-w-0 pr-2">
+                              <div className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 font-extrabold text-xs ${
+                                isSelected 
+                                  ? 'bg-indigo-500 text-white' 
+                                  : isVoted
+                                    ? 'bg-slate-800 text-slate-600'
+                                    : 'bg-[#252b40] text-indigo-400 border border-[#303854]'
+                              }`}>
+                                {p.full_name ? p.full_name.charAt(0).toUpperCase() : <User className="w-4 h-4" />}
+                              </div>
+                              <div className="min-w-0">
+                                <p className="text-xs font-bold truncate text-white group-hover:text-indigo-300 transition-colors">
+                                  {p.full_name}
+                                </p>
+                                <p className="text-[11px] text-slate-400 font-medium mt-0.5">
+                                  {p.class || selectedClass}
+                                </p>
+                              </div>
+                            </div>
+
+                            <div className="shrink-0 flex items-center gap-2">
+                              {isVoted ? (
+                                <span className="text-[10px] bg-rose-500/15 text-rose-400 border border-rose-500/30 px-2.5 py-0.5 rounded-full font-bold uppercase tracking-wider">
+                                  Sudah Memilih
+                                </span>
+                              ) : isSelected ? (
+                                <div className="flex items-center gap-1 text-xs text-indigo-400 font-bold">
+                                  <span>Terpilih</span>
+                                  <Check className="w-4 h-4" />
+                                </div>
+                              ) : (
+                                <div className="w-7 h-7 rounded-full bg-[#252b40] group-hover:bg-indigo-600 group-hover:text-white text-slate-400 flex items-center justify-center transition-all">
+                                  <ChevronRight className="w-4 h-4" />
+                                </div>
+                              )}
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
                   )}
                 </div>
               )}
@@ -1369,68 +1566,78 @@ export default function VotingFlow({ voteMode, initialVoterCardId, onComplete, o
             </div>
           ) : voter ? (
             <>
-              <div className="flex items-center gap-3 mb-8 self-start">
+              {/* Logo PPU */}
+              <div className="flex items-center gap-3 mb-6 self-center">
                 <img
                   src="https://bfuuuzmcrkfjblancewz.supabase.co/storage/v1/object/public/official%20logo/PPU%20WHITE.webp"
                   alt="PPU Logo"
-                  className="w-16 h-16 object-contain"
+                  className="w-14 h-14 object-contain"
                 />
               </div>
 
-              <h1 className="text-2xl font-extrabold text-white tracking-tight text-center self-start mb-1">
-                Validasi Profil
+              {/* Header */}
+              <h1 className="text-2xl font-extrabold text-white tracking-tight text-center mb-1">
+                Periksa Profil Kamu
               </h1>
-              <p className="text-xs text-slate-400 self-start mb-6">
-                {isGtkMode 
-                  ? 'Berikut ini adalah data Guru dan Tenaga Kependidikan sesuai dengan identitas asli Anda.' 
-                  : 'Berikut ini adalah data siswa sesuai dengan identitas asli Anda.'}
+              <p className="text-xs text-slate-400 text-center mb-6 leading-relaxed max-w-xs">
+                Pastikan data berikut sudah sesuai sebelum melanjutkan.
               </p>
 
-              <div className="w-full bg-[#151821] border border-[#2a3050] rounded-2xl p-6 shadow-2xl relative mb-6 overflow-hidden">
-                <div className="absolute -right-10 -top-10 w-32 h-32 bg-indigo-600/10 rounded-full blur-2xl"></div>
-
-                <div className="flex items-center gap-4 mb-6 relative">
-                  <div className="w-14 h-14 rounded-full bg-indigo-600/20 border border-indigo-500/30 flex items-center justify-center text-indigo-400 shrink-0 shadow-lg shadow-indigo-500/5">
-                    <User className="w-7 h-7" />
-                  </div>
-                  <div className="min-w-0">
-                    <h3 className="font-extrabold text-white text-lg truncate leading-tight">{voter.full_name}</h3>
-                    {!isGtkMode && (
-                      <span className="text-xs text-slate-500 font-mono tracking-wide">{voter.card_id}</span>
-                    )}
-                  </div>
+              {/* Profile Confirmation Card */}
+              <div className="w-full bg-[#151821] border border-[#2a3050] rounded-3xl p-6 shadow-2xl relative mb-6 flex flex-col items-center text-center overflow-hidden">
+                {/* Avatar / Initials */}
+                <div className="w-20 h-20 rounded-full bg-indigo-500/15 border-2 border-indigo-500/30 flex items-center justify-center text-indigo-400 font-extrabold text-2xl mb-4 shadow-lg shadow-indigo-500/5">
+                  {voter.full_name ? voter.full_name.charAt(0).toUpperCase() : <User className="w-9 h-9" />}
                 </div>
 
-                <div className="space-y-3.5 pt-4 border-t border-[#2a3050]">
-                  <div className="flex justify-between items-start text-xs leading-tight">
-                    <span className="text-slate-500 font-bold uppercase tracking-wider">Email Terdaftar</span>
-                    <span className="font-semibold text-slate-300 truncate max-w-[200px] text-right">{voter.email}</span>
-                  </div>
-                  <div className="flex justify-between items-center text-xs leading-tight">
-                    <span className="text-slate-500 font-bold uppercase tracking-wider">Kelas / Rombel</span>
-                    <span className="font-semibold text-[#e8ecf5] bg-[#1c2030] px-2.5 py-1 rounded-md border border-[#2a3050]">{voter.class || 'N/A'}</span>
-                  </div>
-                  <div className="flex justify-between items-center text-xs leading-tight">
-                    <span className="text-slate-500 font-bold uppercase tracking-wider">Status Akun</span>
-                    {voter.account_status === 'dikonfirmasi' ? (
-                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[10px] font-black uppercase tracking-wider shadow-sm">
-                        ✓ Terverifikasi
+                {/* Nama Lengkap */}
+                <h3 className="font-extrabold text-white text-xl tracking-tight leading-snug mb-1 max-w-full truncate px-2">
+                  {voter.full_name}
+                </h3>
+
+                {/* Email */}
+                <p className="text-xs text-slate-400 font-medium mb-3 truncate max-w-full px-2">
+                  {voter.email || 'email@siswa.com'}
+                </p>
+
+                {/* Kelas */}
+                <div className="inline-flex items-center px-3.5 py-1 rounded-lg bg-[#1c2030] border border-[#2a3050] text-slate-200 text-xs font-bold font-mono mb-6">
+                  {voter.class || 'N/A'}
+                </div>
+
+                {/* Status Verifikasi (Green Circle Checkmark) */}
+                <div className="pt-5 border-t border-[#2a3050] w-full flex flex-col items-center justify-center">
+                  {voter.account_status === 'dikonfirmasi' ? (
+                    <div className="flex flex-col items-center gap-1.5">
+                      <div className="w-10 h-10 rounded-full bg-emerald-500 flex items-center justify-center text-slate-950 shadow-lg shadow-emerald-500/20">
+                        <Check className="w-6 h-6 stroke-[3]" />
+                      </div>
+                      <span className="text-xs font-bold text-emerald-400 tracking-wide">
+                        Terverifikasi
                       </span>
-                    ) : (
-                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20 text-[10px] font-black uppercase tracking-wider shadow-sm">
-                        ⚠️ Pending
+                    </div>
+                  ) : (
+                    <div className="flex flex-col items-center gap-1.5">
+                      <div className="w-10 h-10 rounded-full bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-amber-400">
+                        <AlertTriangle className="w-5 h-5" />
+                      </div>
+                      <span className="text-xs font-bold text-amber-400 tracking-wide">
+                        Menunggu Verifikasi
                       </span>
-                    )}
-                  </div>
+                    </div>
+                  )}
                 </div>
               </div>
 
+              {/* Warning messages if applicable */}
               {voter.account_status !== 'dikonfirmasi' ? (
-                <div className="w-full bg-amber-500/15 border border-amber-500/30 p-4 rounded-2xl text-xs flex gap-3 text-amber-300 leading-relaxed mb-6 items-start shadow-md shadow-amber-500/5">
+                <div className="w-full bg-amber-500/15 border border-amber-500/30 p-4 rounded-2xl text-xs flex gap-3 text-amber-300 leading-relaxed mb-6 items-start">
                   <AlertTriangle className="w-5 h-5 shrink-0 mt-0.5 text-amber-400" />
                   <div>
                     <p className="font-bold mb-1">Akses Voting</p>
-                    <p className="text-amber-400/80 font-medium">Akun ini belum dikonfirmasi oleh panitia. Silakan pergi ke Pusat Konfirmasi di dekat Bilik Suara untuk mengonfirmasi identitas sebelum melanjutkan sesi voting.</p>
+                    <p className="text-amber-400/80 font-medium">
+                      Akun ini belum dikonfirmasi oleh panitia. Silakan pergi ke Pusat Konfirmasi di dekat Bilik Suara untuk mengonfirmasi identitas sebelum melanjutkan sesi voting.
+                    </p>
                   </div>
                 </div>
               ) : (voter.voting_status === 'sudah' || isVoterAllCompleted) ? (
@@ -1438,25 +1645,28 @@ export default function VotingFlow({ voteMode, initialVoterCardId, onComplete, o
                   <AlertTriangle className="w-5 h-5 shrink-0 mt-0.5 text-red-400" />
                   <div>
                     <p className="font-bold mb-1">Sudah Memilih</p>
-                    <p className="text-red-400/80 font-medium">Seluruh hak pilih telah digunakan. Anda tidak dapat melakukan pemilihan ulang.</p>
+                    <p className="text-red-400/80 font-medium">
+                      Seluruh hak pilih telah digunakan. Anda tidak dapat melakukan pemilihan ulang.
+                    </p>
                   </div>
                 </div>
               ) : null}
 
+              {/* Buttons */}
               <div className="w-full space-y-3">
                 {voter.account_status === 'dikonfirmasi' && voter.voting_status !== 'sudah' && !isVoterAllCompleted && (
                   <button 
                     onClick={proceedToCategories}
-                    className="w-full py-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-bold shadow-xl shadow-indigo-600/10 flex items-center justify-center gap-2 group cursor-pointer"
+                    className="w-full py-3.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-bold shadow-xl shadow-indigo-600/10 flex items-center justify-center gap-2 cursor-pointer transition-all"
                   >
-                    Data Sudah Sesuai, Lanjutkan <ChevronRight className="w-4 h-4" />
+                    Lanjutkan Pemilihan <ArrowRight className="w-4 h-4" />
                   </button>
                 )}
 
                 {(voter.voting_status === 'sudah' || isVoterAllCompleted) && (
                   <button 
                     disabled={true}
-                    className="w-full py-4 bg-slate-800 border border-slate-750 text-slate-500 rounded-xl text-xs font-bold cursor-not-allowed flex items-center justify-center gap-2"
+                    className="w-full py-3.5 bg-slate-800 border border-slate-750 text-slate-500 rounded-xl text-xs font-bold cursor-not-allowed flex items-center justify-center gap-2"
                   >
                     Hak Pilih Sudah Digunakan (Terkunci)
                   </button>
@@ -1464,9 +1674,9 @@ export default function VotingFlow({ voteMode, initialVoterCardId, onComplete, o
 
                 <button 
                   onClick={handleCancelVotingFlow}
-                  className="w-full py-3.5 bg-[#1c2030] hover:bg-[#232840] text-slate-400 hover:text-white border border-[#2a3050] rounded-xl text-xs font-bold flex items-center justify-center gap-2 cursor-pointer"
+                  className="w-full py-3 bg-[#1c2030] hover:bg-[#232840] text-slate-400 hover:text-white border border-[#2a3050] rounded-xl text-xs font-bold flex items-center justify-center gap-2 cursor-pointer transition-colors"
                 >
-                  ← Batal & Keluar
+                  Kembali
                 </button>
               </div>
             </>
@@ -1513,228 +1723,107 @@ export default function VotingFlow({ voteMode, initialVoterCardId, onComplete, o
             </button>
           </main>
         ) : (
-          <main className="flex-1 w-full max-w-5xl mx-auto p-4 sm:p-6 md:p-8 flex flex-col justify-start">
-            {/* Header Section */}
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
-              <div className="flex-1 space-y-4">
-                <div className="flex justify-between items-start mb-4 gap-4">
-                  <div className="flex items-center gap-3">
-                    <img
-                      src="https://bfuuuzmcrkfjblancewz.supabase.co/storage/v1/object/public/official%20logo/PPU%20WHITE.webp"
-                      alt="PPU Logo"
-                      className="w-16 h-16 object-contain"
-                    />
-                  </div>
-
-                  <div className="bg-[#121620]/80 backdrop-blur-md border border-[#2a3050] px-4 py-2.5 rounded-2xl text-right shrink-0 shadow-lg shadow-black/20 flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-xl bg-indigo-500/10 flex items-center justify-center text-indigo-400 border border-indigo-500/20">
-                      <User className="w-5 h-5" />
-                    </div>
-                    <div className="text-left">
-                      <div className="text-[9px] uppercase font-bold text-slate-400 tracking-wider">Pemilih Aktif</div>
-                      <div className="text-white font-extrabold text-sm truncate max-w-[150px]">{isGtkMode ? 'Pemilih Anonymous' : voter.full_name}</div>
-                    </div>
-                  </div>
-                </div>
-
-                <h1 className="text-3xl md:text-4xl lg:text-5xl font-black text-white tracking-tight leading-tight">
-                  Pilih <span className="text-sky-400 bg-gradient-to-r from-sky-400 to-indigo-400 bg-clip-text text-transparent">Kategori</span> <span className="text-purple-400 bg-gradient-to-r from-indigo-400 to-purple-400 bg-clip-text text-transparent">Pemilu</span>
+          <main className="flex-1 w-full max-w-3xl mx-auto p-4 sm:p-6 flex flex-col justify-start">
+            {/* Top Section */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+              <div>
+                <h1 className="text-xl sm:text-2xl font-extrabold text-white tracking-tight">
+                  Kategori Pemilihan
                 </h1>
-                <p className="text-slate-300 text-xs sm:text-sm md:text-base leading-relaxed max-w-2xl font-medium">
-                  Anda harus menyelesaikan seluruh kategori pemungutan suara di bawah ini. Setelah seluruh kategori selesai dipilih, hasil akhir akan dikirim secara kolektif ke sistem.
+                <p className="text-xs text-slate-400 mt-0.5">
+                  Pilih kategori untuk melanjutkan.
                 </p>
               </div>
 
-              {/* ILLUSTRATION */}
-              <div className="hidden md:flex flex-1 justify-end items-center relative h-56 max-w-xs ml-auto">
-                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-indigo-500/10 blur-3xl rounded-full"></div>
-                <motion.div 
-                  animate={{ y: [0, -8, 0] }}
-                  transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
-                  className="relative z-10 w-56 h-52"
-                >
-                  <svg viewBox="0 0 200 200" className="w-full h-full filter drop-shadow-[0_10px_30px_rgba(99,102,241,0.25)]">
-                    {/* Orbital circles */}
-                    <circle cx="100" cy="100" r="85" fill="none" stroke="rgba(99,102,241,0.15)" strokeWidth="1.5" strokeDasharray="4 4" />
-                    <circle cx="100" cy="100" r="70" fill="none" stroke="rgba(168,85,247,0.1)" strokeWidth="1" />
-                    
-                    <defs>
-                      <linearGradient id="boxGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                        <stop offset="0%" stopColor="#6366f1" />
-                        <stop offset="50%" stopColor="#4f46e5" />
-                        <stop offset="100%" stopColor="#3730a3" />
-                      </linearGradient>
-                      <linearGradient id="lidGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                        <stop offset="0%" stopColor="#818cf8" />
-                        <stop offset="100%" stopColor="#4f46e5" />
-                      </linearGradient>
-                      <linearGradient id="checkGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                        <stop offset="0%" stopColor="#34d399" />
-                        <stop offset="100%" stopColor="#059669" />
-                      </linearGradient>
-                      <linearGradient id="starGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                        <stop offset="0%" stopColor="#fbbf24" />
-                        <stop offset="100%" stopColor="#f59e0b" />
-                      </linearGradient>
-                      <linearGradient id="paperGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                        <stop offset="0%" stopColor="#ffffff" />
-                        <stop offset="100%" stopColor="#e2e8f0" />
-                      </linearGradient>
-                    </defs>
-
-                    {/* Sparkles (Stars) */}
-                    <path d="M 35 45 L 37 40 L 42 38 L 37 36 L 35 31 L 33 36 L 28 38 L 33 40 Z" fill="url(#starGrad)" className="opacity-80" />
-                    <path d="M 165 145 L 166 141 L 170 140 L 166 139 L 165 135 L 164 139 L 160 140 L 164 141 Z" fill="url(#starGrad)" className="opacity-90" />
-                    <path d="M 170 45 L 172 40 L 177 38 L 172 36 L 170 31 L 168 36 L 163 38 L 168 40 Z" fill="#818cf8" className="opacity-75" />
-
-                    {/* 3D Ballot Box */}
-                    <path d="M 60 100 L 140 100 L 140 160 L 60 160 Z" fill="url(#boxGrad)" />
-                    <path d="M 60 100 L 100 100 L 100 160 L 60 160 Z" fill="black" fillOpacity="0.1" />
-                    
-                    {/* Top Lid */}
-                    <path d="M 50 100 L 150 100 L 150 90 L 50 90 Z" fill="url(#lidGrad)" rx="2" />
-                    
-                    {/* Slot on Lid */}
-                    <rect x="80" y="93" width="40" height="4" rx="2" fill="#1e1b4b" />
-
-                    {/* Ballot Paper entering slot */}
-                    <g transform="translate(0, -10)">
-                      <path d="M 85 55 L 115 55 L 115 93 L 85 93 Z" fill="url(#paperGrad)" rx="2" />
-                      <line x1="90" y1="65" x2="110" y2="65" stroke="#94a3b8" strokeWidth="2" strokeLinecap="round" />
-                      <line x1="90" y1="73" x2="105" y2="73" stroke="#cbd5e1" strokeWidth="2" strokeLinecap="round" />
-                      <circle cx="100" cy="80" r="6" fill="url(#checkGrad)" />
-                      <path d="M 97 80 L 99 82 L 103 78" fill="none" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                    </g>
-                    
-                    {/* Front Panel details */}
-                    <rect x="80" y="115" width="40" height="30" rx="4" fill="rgba(255,255,255,0.08)" stroke="rgba(255,255,255,0.15)" strokeWidth="1" />
-                    <line x1="88" y1="124" x2="112" y2="124" stroke="rgba(255,255,255,0.6)" strokeWidth="2" strokeLinecap="round" />
-                    <line x1="88" y1="131" x2="105" y2="131" stroke="rgba(255,255,255,0.4)" strokeWidth="2" strokeLinecap="round" />
-                    <line x1="88" y1="138" x2="110" y2="138" stroke="rgba(255,255,255,0.4)" strokeWidth="2" strokeLinecap="round" />
-                  </svg>
-                </motion.div>
+              {/* Active Voter Chip */}
+              <div className="bg-[#151821] border border-[#2a3050] px-3.5 py-1.5 rounded-xl flex items-center gap-2.5 self-start sm:self-auto">
+                <div className="w-6 h-6 rounded-full bg-indigo-500/20 text-indigo-400 flex items-center justify-center text-xs font-bold">
+                  <User className="w-3.5 h-3.5" />
+                </div>
+                <div className="text-left">
+                  <div className="text-[9px] uppercase font-bold text-slate-500 tracking-wider">Pemilih</div>
+                  <div className="text-white font-bold text-xs truncate max-w-[140px]">
+                    {isGtkMode ? 'Pemilih Anonymous' : voter.full_name}
+                  </div>
+                </div>
               </div>
             </div>
 
-            {/* Kemajuan Pemilihan Card */}
-            <div className="bg-[#121620]/60 backdrop-blur-md border border-slate-800/80 rounded-3xl p-6 mb-8 shadow-2xl shadow-black/40">
-              <div className="flex justify-between items-center mb-4">
-                <div className="flex items-center gap-2">
-                  <span className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse"></span>
-                  <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Kemajuan Pemilihan</span>
-                </div>
-                <span className="text-sm font-black text-indigo-400 font-mono tracking-wider">
-                  <span className="text-lg text-indigo-300">{completedCategories}</span> / {totalCategories} Selesai
+            {/* Progress Bar */}
+            <div className="bg-[#151821] border border-[#2a3050] rounded-2xl p-4 mb-6 shadow-lg">
+              <div className="flex justify-between items-center mb-2 text-xs">
+                <span className="font-bold text-slate-300">Pemilihan</span>
+                <span className="font-extrabold text-indigo-400">
+                  {completedCategories} dari {totalCategories} selesai
                 </span>
               </div>
-              
-              <div className="w-full h-3 bg-slate-950 rounded-full border border-slate-800 overflow-hidden p-[2px]">
-                <motion.div 
+
+              <div className="w-full h-2.5 bg-[#1c2030] rounded-full overflow-hidden border border-[#2a3050]">
+                <motion.div
                   initial={{ width: 0 }}
                   animate={{ width: `${percentComplete}%` }}
-                  transition={{ duration: 0.5, ease: "easeOut" }}
-                  className="h-full bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 rounded-full relative"
-                >
-                  <div className="absolute inset-y-0 right-0 w-8 h-full bg-white/20 blur-[1px] animate-pulse"></div>
-                </motion.div>
+                  transition={{ duration: 0.4, ease: "easeOut" }}
+                  className="h-full bg-indigo-500 rounded-full"
+                />
               </div>
             </div>
 
-            {/* Kategori Tersedia Section Title */}
-            <div className="mb-6 flex flex-col gap-1">
-              <div className="flex items-center gap-2">
-                <span className="w-[4px] h-5 bg-indigo-500 rounded-full"></span>
-                <h2 className="text-lg font-extrabold text-white">Kategori Tersedia</h2>
-              </div>
-              <p className="text-xs text-slate-400">Pilih kategori di bawah untuk memulai proses pemungutan suara.</p>
-            </div>
-
-            {/* Categories Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-              {categories.map((cat) => {
+            {/* Compact Category Cards Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-8">
+              {categories.map((cat, idx) => {
                 const voted = !!votedCategories[cat.id];
-                const { gradient, desc, icon } = getCategoryDetails(cat.id, cat.name, cat.type);
-                
+                const formattedNum = String(idx + 1).padStart(2, '0');
+
                 return (
-                  <motion.div 
+                  <button
                     key={cat.id}
-                    whileHover={{ y: -6, scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
+                    type="button"
                     onClick={() => openCategory(cat.id)}
-                    className={`flex flex-col bg-white rounded-3xl overflow-hidden shadow-xl shadow-indigo-950/10 border border-slate-100 transition-all cursor-pointer ${
-                      voted ? 'ring-2 ring-emerald-500/30 animate-pulse' : 'hover:shadow-2xl hover:shadow-indigo-500/10'
+                    className={`w-full p-4 rounded-2xl border text-left transition-all cursor-pointer flex items-center justify-between group ${
+                      voted
+                        ? 'bg-emerald-950/20 border-emerald-500/40 hover:bg-emerald-950/30'
+                        : 'bg-[#151821] border-[#2a3050] hover:border-indigo-500/60 hover:bg-[#1a1e2b]'
                     }`}
                   >
-                    {/* Card Header (Gradient Area) */}
-                    <div className={`relative h-44 bg-gradient-to-br ${gradient} flex items-center justify-center overflow-hidden`}>
-                      <div className="absolute inset-0 bg-black/10"></div>
-                      <div className="absolute top-0 left-0 w-full h-full opacity-25 mix-blend-overlay">
-                        <svg className="w-full h-full" viewBox="0 0 100 100" preserveAspectRatio="none">
-                          <circle cx="20" cy="20" r="15" fill="white" />
-                          <circle cx="80" cy="70" r="25" fill="white" />
-                        </svg>
-                      </div>
-                      
-                      {/* Decorative Floating Sparkles */}
-                      <div className="absolute inset-0 pointer-events-none">
-                        <span className="absolute top-6 left-12 text-sm opacity-30 text-white animate-pulse">✦</span>
-                        <span className="absolute bottom-8 right-16 text-xs opacity-40 text-white animate-pulse">✦</span>
-                        <span className="absolute top-12 right-12 text-lg opacity-25 text-white animate-pulse">✦</span>
-                      </div>
-
-                      {/* Floating Glass Container for the Icon */}
-                      <div className="relative z-10 w-24 h-24 rounded-2xl bg-slate-900/40 backdrop-blur-md border border-slate-700/50 flex items-center justify-center shadow-2xl shadow-black/40">
-                        {voted ? (
-                          <div className="relative flex items-center justify-center">
-                            <div className="absolute -inset-1 bg-emerald-500/30 blur-md rounded-full animate-pulse"></div>
-                            <Check className="w-10 h-10 text-emerald-400 filter drop-shadow-[0_0_8px_rgba(52,211,153,0.6)]" strokeWidth={3} />
-                          </div>
-                        ) : (
-                          icon
+                    <div className="min-w-0 pr-3">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className={`text-[11px] font-mono font-extrabold tracking-wider ${
+                          voted ? 'text-emerald-400' : 'text-indigo-400'
+                        }`}>
+                          {formattedNum}
+                        </span>
+                        {voted && (
+                          <span className="w-4 h-4 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center">
+                            <Check className="w-3 h-3 stroke-[3]" />
+                          </span>
                         )}
                       </div>
-                    </div>
 
-                    {/* Card Body (White Background) */}
-                    <div className="p-6 flex-1 flex flex-col text-center">
-                      <h3 className="font-extrabold text-[#0B1220] text-xl tracking-tight leading-snug mb-2">
+                      <h3 className="font-extrabold text-white text-sm sm:text-base tracking-tight truncate group-hover:text-indigo-300 transition-colors">
                         {cat.name}
                       </h3>
-                      
-                      {/* Badge Status */}
-                      <div className="mb-4">
+
+                      <div className="mt-1.5">
                         {voted ? (
-                          <span className="inline-flex items-center gap-1.5 px-4.5 py-1.5 rounded-full text-[10px] uppercase font-extrabold tracking-widest bg-emerald-50 text-emerald-600 border border-emerald-100">
-                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-                            Sudah Memilih
+                          <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-400">
+                            Selesai
                           </span>
                         ) : (
-                          <span className="inline-flex items-center gap-1.5 px-4.5 py-1.5 rounded-full text-[10px] uppercase font-extrabold tracking-widest bg-indigo-50 text-indigo-600 border border-indigo-100">
-                            <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-pulse"></span>
-                            Belum Memilih
+                          <span className="inline-flex items-center gap-1 text-[11px] font-medium text-slate-400">
+                            Belum dipilih
                           </span>
                         )}
                       </div>
-
-                      <p className="text-slate-500 text-xs leading-relaxed max-w-[280px] mx-auto mb-6 flex-1">
-                        {desc}
-                      </p>
-
-                      {/* Custom Button inside Card */}
-                      <div 
-                        className={`w-full py-3.5 px-5 rounded-xl font-bold text-sm transition-all duration-300 flex items-center justify-between border ${
-                          voted 
-                            ? 'bg-emerald-50 border-emerald-100 text-emerald-700 hover:bg-emerald-100/70' 
-                            : 'bg-white hover:bg-slate-50 border-slate-200 text-indigo-600 hover:border-indigo-500 hover:text-indigo-700'
-                        }`}
-                      >
-                        <span className="mx-auto flex items-center gap-2">
-                          {voted ? 'Lihat Pilihan' : 'Pilih Kategori'}
-                          <ChevronRight className="w-4 h-4" />
-                        </span>
-                      </div>
                     </div>
-                  </motion.div>
+
+                    <div className={`w-8 h-8 rounded-full border flex items-center justify-center shrink-0 transition-all ${
+                      voted
+                        ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400'
+                        : 'bg-[#1c2030] border-[#2a3050] text-slate-400 group-hover:border-indigo-500 group-hover:bg-indigo-600 group-hover:text-white'
+                    }`}>
+                      <ArrowRight className="w-4 h-4" />
+                    </div>
+                  </button>
                 );
               })}
             </div>
@@ -2063,10 +2152,13 @@ export default function VotingFlow({ voteMode, initialVoterCardId, onComplete, o
                                     whileHover={{ y: -6, scale: 1.01 }}
                                     whileTap={{ scale: 0.99 }}
                                     onClick={() => {
-                                      setSelectedMpkVotes(prev => ({
-                                        ...prev,
-                                        [currentClass]: cand.id
-                                      }));
+                                      if (selectedMpkVotes[currentClass] !== cand.id) {
+                                        setSelectedMpkVotes(prev => ({
+                                          ...prev,
+                                          [currentClass]: cand.id
+                                        }));
+                                        triggerCoblosAnimation(cand.id);
+                                      }
                                     }}
                                     className={`bg-white rounded-3xl overflow-hidden shadow-xl border-2 flex flex-col h-full group transition-all duration-300 cursor-pointer ${
                                       isSelected 
@@ -2090,28 +2182,57 @@ export default function VotingFlow({ voteMode, initialVoterCardId, onComplete, o
                                       )}
                                       
                                       {/* Nomor Paslon Badge */}
-                                      <div className={`absolute left-4 top-4 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest text-white shadow-lg transition-all ${
+                                      <div className={`absolute left-4 top-4 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest text-white shadow-lg transition-all z-10 ${
                                         isSelected ? 'bg-indigo-600 shadow-indigo-600/25' : 'bg-slate-800'
                                       }`}>
                                         KANDIDAT {String(cand.number).padStart(2, '0')}
                                       </div>
 
-                                      {/* Selection Check Badge */}
-                                      <div className="absolute right-4 top-4">
-                                        {isSelected ? (
-                                          <motion.div 
-                                            initial={{ scale: 0, opacity: 0 }}
-                                            animate={{ scale: 1, opacity: 1 }}
-                                            className="px-3 py-1.5 bg-indigo-600 border border-indigo-400 text-white font-extrabold text-[10px] rounded-xl flex items-center justify-center shadow-lg shadow-indigo-600/30"
-                                          >
-                                            Dipilih
-                                          </motion.div>
-                                        ) : (
+                                      {/* Center Overlay for Selected / Coblos Animation */}
+                                      {isSelected && (
+                                        <div className="absolute inset-0 bg-slate-950/40 backdrop-blur-[1.5px] z-20 flex items-center justify-center p-2">
+                                          <AnimatePresence mode="wait">
+                                            {animatingCandId === cand.id ? (
+                                              <motion.div
+                                                key="pin-anim"
+                                                initial={{ scale: 2.2, y: -45, rotate: -25, opacity: 0 }}
+                                                animate={{
+                                                  scale: [2.2, 0.9, 1.1, 1],
+                                                  y: [-45, 2, -2, 0],
+                                                  rotate: [-25, 4, -2, 0],
+                                                  opacity: [0, 1, 1, 1]
+                                                }}
+                                                exit={{ scale: 0.5, opacity: 0 }}
+                                                transition={{ duration: 0.8, ease: "easeOut" }}
+                                                className="flex flex-col items-center justify-center pointer-events-none"
+                                              >
+                                                <span className="text-5xl sm:text-6xl filter drop-shadow-[0_8px_16px_rgba(0,0,0,0.7)] select-none">
+                                                  📌
+                                                </span>
+                                              </motion.div>
+                                            ) : (
+                                              <motion.div
+                                                key="coblos-badge"
+                                                initial={{ scale: 0.8, opacity: 0 }}
+                                                animate={{ scale: 1, opacity: 1 }}
+                                                transition={{ duration: 0.25, ease: "easeOut" }}
+                                                className="px-4 py-2 bg-emerald-500 border-2 border-emerald-300 text-slate-950 font-black text-xs sm:text-sm tracking-wider uppercase rounded-xl flex items-center justify-center gap-1.5 shadow-2xl shadow-emerald-500/50"
+                                              >
+                                                <Check className="w-4 h-4 stroke-[3]" />
+                                                <span>DICOBLOS</span>
+                                              </motion.div>
+                                            )}
+                                          </AnimatePresence>
+                                        </div>
+                                      )}
+
+                                      {!isSelected && (
+                                        <div className="absolute right-4 top-4 z-10">
                                           <div className="w-6 h-6 rounded-full border-2 border-slate-300/80 bg-white/40 backdrop-blur-md flex items-center justify-center">
                                             <div className="w-2.5 h-2.5 rounded-full bg-transparent"></div>
                                           </div>
-                                        )}
-                                      </div>
+                                        </div>
+                                      )}
                                     </div>
 
                                     {/* Card Content Area (White background) */}
@@ -2240,7 +2361,12 @@ export default function VotingFlow({ voteMode, initialVoterCardId, onComplete, o
                               key={cand.id}
                               whileHover={{ y: -6, scale: 1.01 }}
                               whileTap={{ scale: 0.99 }}
-                              onClick={() => setSelectedCandidate(cand)}
+                              onClick={() => {
+                                if (selectedCandidate?.id !== cand.id) {
+                                  setSelectedCandidate(cand);
+                                  triggerCoblosAnimation(cand.id);
+                                }
+                              }}
                               className={`bg-white rounded-3xl overflow-hidden shadow-xl border-2 flex flex-col h-full group transition-all duration-300 cursor-pointer ${
                                 isSelected 
                                   ? 'border-indigo-600 ring-4 ring-indigo-600/15 shadow-indigo-600/10' 
@@ -2263,28 +2389,57 @@ export default function VotingFlow({ voteMode, initialVoterCardId, onComplete, o
                                 )}
                                 
                                 {/* Nomor Paslon Badge */}
-                                <div className={`absolute left-4 top-4 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest text-white shadow-lg transition-all ${
+                                <div className={`absolute left-4 top-4 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest text-white shadow-lg transition-all z-10 ${
                                   isSelected ? 'bg-indigo-600 shadow-indigo-600/25' : 'bg-slate-800'
                                 }`}>
                                   PASLON {String(cand.number).padStart(2, '0')}
                                 </div>
 
-                                {/* Selection Check Badge */}
-                                <div className="absolute right-4 top-4">
-                                  {isSelected ? (
-                                    <motion.div 
-                                      initial={{ scale: 0, opacity: 0 }}
-                                      animate={{ scale: 1, opacity: 1 }}
-                                      className="px-3 py-1.5 bg-indigo-600 border border-indigo-400 text-white font-extrabold text-[10px] rounded-xl flex items-center justify-center shadow-lg shadow-indigo-600/30"
-                                    >
-                                      Dipilih
-                                    </motion.div>
-                                  ) : (
+                                {/* Center Overlay for Selected / Coblos Animation */}
+                                {isSelected && (
+                                  <div className="absolute inset-0 bg-slate-950/40 backdrop-blur-[1.5px] z-20 flex items-center justify-center p-2">
+                                    <AnimatePresence mode="wait">
+                                      {animatingCandId === cand.id ? (
+                                        <motion.div
+                                          key="pin-anim"
+                                          initial={{ scale: 2.2, y: -45, rotate: -25, opacity: 0 }}
+                                          animate={{
+                                            scale: [2.2, 0.9, 1.1, 1],
+                                            y: [-45, 2, -2, 0],
+                                            rotate: [-25, 4, -2, 0],
+                                            opacity: [0, 1, 1, 1]
+                                          }}
+                                          exit={{ scale: 0.5, opacity: 0 }}
+                                          transition={{ duration: 0.8, ease: "easeOut" }}
+                                          className="flex flex-col items-center justify-center pointer-events-none"
+                                        >
+                                          <span className="text-5xl sm:text-6xl filter drop-shadow-[0_8px_16px_rgba(0,0,0,0.7)] select-none">
+                                            📌
+                                          </span>
+                                        </motion.div>
+                                      ) : (
+                                        <motion.div
+                                          key="coblos-badge"
+                                          initial={{ scale: 0.8, opacity: 0 }}
+                                          animate={{ scale: 1, opacity: 1 }}
+                                          transition={{ duration: 0.25, ease: "easeOut" }}
+                                          className="px-4 py-2 bg-emerald-500 border-2 border-emerald-300 text-slate-950 font-black text-xs sm:text-sm tracking-wider uppercase rounded-xl flex items-center justify-center gap-1.5 shadow-2xl shadow-emerald-500/50"
+                                        >
+                                          <Check className="w-4 h-4 stroke-[3]" />
+                                          <span>DICOBLOS</span>
+                                        </motion.div>
+                                      )}
+                                    </AnimatePresence>
+                                  </div>
+                                )}
+
+                                {!isSelected && (
+                                  <div className="absolute right-4 top-4 z-10">
                                     <div className="w-6 h-6 rounded-full border-2 border-slate-300/80 bg-white/40 backdrop-blur-md flex items-center justify-center">
                                       <div className="w-2.5 h-2.5 rounded-full bg-transparent"></div>
                                     </div>
-                                  )}
-                                </div>
+                                  </div>
+                                )}
                               </div>
 
                               {/* Card Content Area (White background) */}
