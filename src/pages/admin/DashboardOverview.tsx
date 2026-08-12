@@ -11,6 +11,7 @@ import { getHelpdeskButtons } from '../../lib/helpdesk';
 import { getAdminButtonSettings, AdminButtonSettings } from '../../lib/adminButtonService';
 import { Profile, Category, Vote } from '../../types';
 import BackToHomeButton from '../../components/BackToHomeButton';
+import { M3ExpressiveLoadingIndicator } from '../../components/ui/M3ExpressiveLoadingIndicator';
 
 export default function DashboardOverview() {
   const navigate = useNavigate();
@@ -67,7 +68,7 @@ export default function DashboardOverview() {
     return (
       <div className="p-8 flex items-center justify-center min-h-[500px]">
         <div className="flex flex-col items-center gap-3">
-          <div className="w-10 h-10 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
+          <M3ExpressiveLoadingIndicator size="large" className="text-indigo-600 dark:text-sky-400" />
           <p className="text-slate-500 font-medium text-sm animate-pulse">Memuat data ringkasan...</p>
         </div>
       </div>

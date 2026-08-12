@@ -57,6 +57,117 @@
 }
 
 /* Custom clear styling for html5-qrcode video preview without white frame / shaded region */
+/* M3 Expressive Loading Indicator (Source of Truth CSS) */
+:root {
+  --md-sys-color-primary: #123E8A; 
+  --md-sys-color-primary-container: #EADDFF;
+}
+
+.dark {
+  --md-sys-color-primary: #38bdf8;
+}
+
+.m3-expressive-loader {
+  position: relative;
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: m3-global-rotate 3.6s linear infinite;
+  flex-shrink: 0;
+}
+
+.m3-shape {
+  width: 100%;
+  height: 100%;
+  background-color: var(--md-sys-color-primary, #123E8A);
+
+  animation: 
+    m3-morph-sequence 4s cubic-bezier(0.34, 1.56, 0.64, 1) infinite,
+    m3-local-kick 4s cubic-bezier(0.25, 1, 0.5, 1) infinite;
+}
+
+@keyframes m3-morph-sequence {
+  0%, 15% {
+    /* Shape 1: Organic 4-Scallop / Cookie Squircle */
+    clip-path: polygon(
+      30% 0%, 50% 10%, 70% 0%, 90% 10%,
+      100% 30%, 90% 50%, 100% 70%, 90% 90%,
+      70% 100%, 50% 90%, 30% 100%, 10% 90%,
+      0% 70%, 10% 50%, 0% 30%, 10% 10%
+    );
+    border-radius: 42% 42% 42% 42%;
+  }
+
+  25%, 40% {
+    /* Shape 2: Superellipse / Smooth M3 Squircle */
+    clip-path: polygon(
+      18% 0%, 50% 0%, 82% 0%, 100% 18%,
+      100% 50%, 100% 82%, 82% 100%, 50% 100%,
+      18% 100%, 0% 82%, 0% 50%, 0% 18%,
+      5% 5%, 95% 5%, 95% 95%, 5% 95%
+    );
+    border-radius: 28% 28% 28% 28%;
+  }
+
+  50%, 65% {
+    /* Shape 3: Organic Soft Circle / Rounded Pebble */
+    clip-path: polygon(
+      29% 0%, 50% 0%, 71% 0%, 91% 9%,
+      100% 29%, 100% 50%, 100% 71%, 91% 91%,
+      71% 100%, 50% 100%, 29% 100%, 9% 91%,
+      0% 71%, 0% 50%, 0% 29%, 9% 9%
+    );
+    border-radius: 50% 50% 50% 50%;
+  }
+
+  75%, 90% {
+    /* Shape 4: Curved 4-Point Starburst / Organic Diamond */
+    clip-path: polygon(
+      50% 0%, 62% 20%, 80% 20%, 80% 38%,
+      100% 50%, 80% 62%, 80% 80%, 62% 80%,
+      50% 100%, 38% 80%, 20% 80%, 20% 62%,
+      0% 50%, 20% 38%, 20% 20%, 38% 20%
+    );
+    border-radius: 38% 14% 38% 14%;
+  }
+
+  100% {
+    /* Back to Shape 1: Organic 4-Scallop / Cookie Squircle */
+    clip-path: polygon(
+      30% 0%, 50% 10%, 70% 0%, 90% 10%,
+      100% 30%, 90% 50%, 100% 70%, 90% 90%,
+      70% 100%, 50% 90%, 30% 100%, 10% 90%,
+      0% 70%, 10% 50%, 0% 30%, 10% 10%
+    );
+    border-radius: 42% 42% 42% 42%;
+  }
+}
+
+@keyframes m3-local-kick {
+  0%, 15% { transform: rotate(0deg); }
+  25%, 40% { transform: rotate(90deg); }
+  50%, 65% { transform: rotate(180deg); }
+  75%, 90% { transform: rotate(270deg); }
+  100% { transform: rotate(360deg); }
+}
+
+@keyframes m3-global-rotate {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .m3-expressive-loader {
+    animation: none;
+  }
+
+  .m3-shape {
+    animation: m3-morph-sequence 10s linear infinite;
+  }
+}
+
 #qr-terminal-reader,
 #ppu-qr-reader {
   border: none !important;

@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import VotingFlow from '../components/voting/VotingFlow';
 import { getVoteMode, VoteMode } from '../lib/voteModeService';
 import { Lock, ShieldAlert } from 'lucide-react';
+import { M3ExpressiveLoadingIndicator } from '../components/ui/M3ExpressiveLoadingIndicator';
 
 export default function VotePage() {
   const [searchParams] = useSearchParams();
@@ -27,7 +28,7 @@ export default function VotePage() {
     return (
       <div className="min-h-screen bg-[#0d0f14] text-[#e8ecf5] flex items-center justify-center font-sans">
         <div className="text-center space-y-3">
-          <div className="w-10 h-10 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin mx-auto"></div>
+          <M3ExpressiveLoadingIndicator size="large" className="text-indigo-400 mx-auto" />
           <p className="text-xs text-slate-400 font-semibold">Memuat sistem bilik suara...</p>
         </div>
       </div>

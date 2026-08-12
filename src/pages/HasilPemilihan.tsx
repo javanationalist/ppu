@@ -10,6 +10,7 @@ import { getUserAccessSettings } from '../lib/userAccessService';
 import { getAllProfiles } from '../lib/adminService';
 import { getCategories, getCandidates, getAllVotes, getDapils, getElectionStatistics, ElectionStatistics } from '../lib/votingService';
 import { Profile, Category, Vote as VoteType, Candidate, Dapil } from '../types';
+import { M3ExpressiveLoadingIndicator } from '../components/ui/M3ExpressiveLoadingIndicator';
 
 const CHART_COLORS = [
   '#3B82F6', // Blue
@@ -171,7 +172,7 @@ export default function HasilPemilihan() {
     return (
       <div className="min-h-screen bg-ppu-surface flex items-center justify-center">
         <div className="flex flex-col items-center gap-3">
-          <div className="w-10 h-10 border-4 border-ppu-blue border-t-transparent rounded-full animate-spin"></div>
+          <M3ExpressiveLoadingIndicator size="large" className="text-ppu-blue" />
           <p className="text-slate-600 font-bold text-sm animate-pulse">Menghitung perolehan suara...</p>
         </div>
       </div>
@@ -247,7 +248,11 @@ export default function HasilPemilihan() {
             disabled={refreshing}
             className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-2 shadow-sm shadow-blue-500/10 hover:shadow-blue-500/20 active:scale-[0.98] transition-all disabled:opacity-50 cursor-pointer"
           >
-            <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? 'animate-spin' : ''}`} />
+            {refreshing ? (
+              <M3ExpressiveLoadingIndicator size="small" className="text-white" />
+            ) : (
+              <RefreshCw className="w-3.5 h-3.5" />
+            )}
             <span>{refreshing ? 'Memperbarui...' : 'Segarkan Data'}</span>
           </button>
         </div>

@@ -23,6 +23,7 @@ import {
   RotateCcw,
   HelpCircle
 } from 'lucide-react';
+import { M3ExpressiveLoadingIndicator } from '../components/ui/M3ExpressiveLoadingIndicator';
 
 export default function Scanner() {
   const { profile, signOut } = useAuth();
@@ -532,7 +533,7 @@ export default function Scanner() {
             {/* Loading Indicator */}
             {isProcessing && (
               <div className="absolute inset-0 bg-white/70 flex flex-col items-center justify-center gap-2 z-10">
-                <Loader2 className="w-7 h-7 text-indigo-600 animate-spin" />
+                <M3ExpressiveLoadingIndicator size="medium" className="text-indigo-600" />
                 <span className="text-xs font-semibold text-slate-700">Memproses konfirmasi...</span>
               </div>
             )}
@@ -613,7 +614,11 @@ export default function Scanner() {
                   className="p-1.5 text-slate-500 hover:text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors cursor-pointer"
                   title="Refresh Data"
                 >
-                  <RefreshCw className={`w-3.5 h-3.5 ${isLoadingList ? 'animate-spin' : ''}`} />
+                  {isLoadingList ? (
+                    <M3ExpressiveLoadingIndicator size="small" className="text-indigo-600" />
+                  ) : (
+                    <RefreshCw className="w-3.5 h-3.5" />
+                  )}
                 </button>
                 <button
                   type="button"
@@ -712,7 +717,7 @@ export default function Scanner() {
             <div className="overflow-x-auto border border-slate-200 rounded-xl">
               {isLoadingList ? (
                 <div className="py-10 flex flex-col items-center justify-center gap-2 text-slate-400">
-                  <Loader2 className="w-5 h-5 animate-spin text-indigo-600" />
+                  <M3ExpressiveLoadingIndicator size="medium" className="text-indigo-600" />
                   <span className="text-xs font-medium">Memuat data dari Supabase...</span>
                 </div>
               ) : sortedList.length === 0 ? (

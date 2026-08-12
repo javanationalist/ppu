@@ -5,6 +5,7 @@ import { verifyVoterByCardId } from '../../lib/votingService';
 import { confirmVoterAccount, resetVoterConfirmation, resetAllVotersConfirmation } from '../../lib/adminService';
 import { Profile } from '../../types';
 import { Card } from '../ui/Card';
+import { M3ExpressiveLoadingIndicator } from '../ui/M3ExpressiveLoadingIndicator';
 import { 
   QrCode, 
   Search, 
@@ -459,7 +460,7 @@ export default function ScannerCore({
               {/* Spinner loader overlay */}
               {isProcessingAuto && (
                 <div className="absolute inset-0 bg-white/80 backdrop-blur-sm z-10 flex flex-col items-center justify-center gap-3">
-                  <div className="w-10 h-10 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
+                  <M3ExpressiveLoadingIndicator size="large" className="text-indigo-600" />
                   <p className="text-xs text-indigo-700 font-black animate-pulse">Menghubungkan & Mengonfirmasi...</p>
                 </div>
               )}

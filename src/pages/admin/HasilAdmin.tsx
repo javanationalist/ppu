@@ -7,6 +7,7 @@ import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 import { getAllProfiles } from '../../lib/adminService';
 import { getCategories, getCandidates, getAllVotes, getDapils, getElectionStatistics, ElectionStatistics } from '../../lib/votingService';
 import { Profile, Category, Vote, Candidate, Dapil } from '../../types';
+import { M3ExpressiveLoadingIndicator } from '../../components/ui/M3ExpressiveLoadingIndicator';
 
 const COLORS = [
   '#4f46e5', // indigo-600
@@ -98,7 +99,7 @@ export default function HasilAdmin() {
     return (
       <div className="p-8 flex items-center justify-center min-h-[500px]">
         <div className="flex flex-col items-center gap-3">
-          <div className="w-10 h-10 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
+          <M3ExpressiveLoadingIndicator size="large" className="text-indigo-600 dark:text-sky-400" />
           <p className="text-slate-500 font-medium text-sm animate-pulse">Menghitung perolehan suara...</p>
         </div>
       </div>
@@ -132,7 +133,11 @@ export default function HasilAdmin() {
           disabled={refreshing}
           className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 shadow-sm transition-all disabled:opacity-50 cursor-pointer"
         >
-          <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? 'animate-spin' : ''}`} />
+          {refreshing ? (
+            <M3ExpressiveLoadingIndicator size="small" className="text-white" />
+          ) : (
+            <RefreshCw className="w-3.5 h-3.5" />
+          )}
           <span>{refreshing ? 'Memperbarui...' : 'Segarkan Data'}</span>
         </button>
       </div>

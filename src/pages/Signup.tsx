@@ -7,6 +7,7 @@ import { ALL_CLASSES } from '../lib/classConstants';
 import { Skeleton } from '../components/Skeleton';
 import { motion, AnimatePresence } from 'motion/react';
 import { Clock, RefreshCw, CheckCircle2, AlertTriangle, LogIn, ArrowRight } from 'lucide-react';
+import { M3ExpressiveLoadingIndicator } from '../components/ui/M3ExpressiveLoadingIndicator';
 
 // Helper to generate random number
 const getRandomInt = (min: number, max: number) => {
@@ -569,7 +570,7 @@ export default function Signup() {
               {queueStatus === 'processing' && (
                 <div className="space-y-6">
                   <div className="w-16 h-16 bg-indigo-500/10 border border-indigo-500/30 rounded-2xl flex items-center justify-center mx-auto text-indigo-400">
-                    <RefreshCw className="w-8 h-8 animate-spin" />
+                    <M3ExpressiveLoadingIndicator size={36} className="text-indigo-400" />
                   </div>
 
                   <div className="space-y-2">

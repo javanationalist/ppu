@@ -28,7 +28,7 @@ export function OtpInputGroup({
           onChange={(e) => handleOtpChange(idx, e.target.value)}
           onKeyDown={(e) => handleOtpKeyDown(idx, e)}
           disabled={searchLoading}
-          className="w-12 h-14 sm:w-14 sm:h-16 text-center text-xl sm:text-2xl font-black text-white bg-slate-900 border-2 border-slate-700 focus:border-sky-400 rounded-2xl outline-none transition-all shadow-inner disabled:opacity-50"
+          className="w-12 h-14 sm:w-14 sm:h-16 text-center text-xl sm:text-2xl font-black text-slate-900 bg-slate-50 border-2 border-slate-200 focus:border-blue-500 rounded-2xl outline-none transition-all shadow-2xs disabled:opacity-50"
           placeholder="•"
         />
       ))}

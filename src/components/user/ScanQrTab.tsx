@@ -14,6 +14,7 @@ import {
   LifeBuoy
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
+import { M3ExpressiveLoadingIndicator } from '../ui/M3ExpressiveLoadingIndicator';
 import { getVoteMode, connectVoterToBooth, VoteMode, getBoothSession, getBoothProfileByCode } from '../../lib/voteModeService';
 import { Html5QrcodeScanner } from 'html5-qrcode';
 import { HelpdeskButton, Dapil } from '../../types';
@@ -386,7 +387,7 @@ export default function ScanQrTab({
     return (
       <div className="max-w-md mx-auto p-8 flex items-center justify-center min-h-[300px]">
         <div className="flex flex-col items-center gap-3 animate-pulse">
-          <RefreshCw className="w-8 h-8 text-indigo-650 dark:text-sky-400 animate-spin" />
+          <M3ExpressiveLoadingIndicator size="medium" className="text-indigo-650 dark:text-sky-400" />
           <p className="text-slate-500 dark:text-slate-400 font-bold text-xs">Memvalidasi Status Sistem...</p>
         </div>
       </div>
@@ -420,7 +421,7 @@ export default function ScanQrTab({
       return (
         <div className="bg-white dark:bg-[#1a1a1a] border border-slate-200 dark:border-[#2a2a2a] rounded-[24px] p-6 sm:p-8 text-center shadow-sm transition-colors duration-300 space-y-6">
           <div className="w-20 h-20 bg-indigo-50 dark:bg-indigo-950/40 rounded-full flex items-center justify-center border border-indigo-100 dark:border-indigo-900/40 mx-auto mb-2 shadow-sm animate-pulse">
-            <RefreshCw className="w-10 h-10 text-indigo-600 dark:text-indigo-400 animate-spin" />
+            <M3ExpressiveLoadingIndicator size={40} className="text-indigo-600 dark:text-indigo-400" />
           </div>
           <div className="space-y-2">
             <h2 className="text-xl font-black text-slate-800 dark:text-[#f5f5f5] tracking-tight">Pemungutan Suara Berlangsung</h2>
@@ -518,7 +519,7 @@ export default function ScanQrTab({
             
             {isConnecting && (
               <div className="absolute inset-0 bg-white/90 dark:bg-[#1a1a1a]/90 backdrop-blur-xs flex flex-col items-center justify-center gap-3 z-20">
-                <RefreshCw className="w-8 h-8 text-blue-600 dark:text-sky-400 animate-spin" />
+                <M3ExpressiveLoadingIndicator size="medium" className="text-blue-600 dark:text-sky-400" />
                 <p className="text-xs font-bold text-slate-800 dark:text-slate-200">Menghubungkan Pemilih...</p>
               </div>
             )}

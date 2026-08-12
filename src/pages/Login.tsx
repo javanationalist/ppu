@@ -4,6 +4,7 @@ import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { CheckCircle2, AlertCircle } from 'lucide-react';
 import { registerSession, checkSessionActive } from '../lib/sessionService';
+import { M3ExpressiveLoadingIndicator } from '../components/ui/M3ExpressiveLoadingIndicator';
 
 export default function Login() {
   const [email, setEmail] = useState('');
@@ -305,7 +306,7 @@ export default function Login() {
   if (authLoading || checkingBilikSession || (user && profile && !showSuccess && !bilikSessionConflict)) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-slate-50 dark:bg-[#1a1a1a] gap-3">
-        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600 dark:border-sky-400"></div>
+        <M3ExpressiveLoadingIndicator size="large" className="text-ppu-blue dark:text-sky-400" />
         <p className="text-xs font-semibold text-slate-600 dark:text-slate-300">
           Memeriksa profil dan mengarahkan...
         </p>
@@ -363,7 +364,7 @@ export default function Login() {
             >
               {forceLogoutLoading ? (
                 <>
-                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  <M3ExpressiveLoadingIndicator size="small" className="text-white" />
                   Memutus Sesi Perangkat...
                 </>
               ) : (
@@ -379,7 +380,7 @@ export default function Login() {
             >
               {loading ? (
                 <>
-                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  <M3ExpressiveLoadingIndicator size="small" className="text-white" />
                   Memeriksa...
                 </>
               ) : (
@@ -508,9 +509,16 @@ export default function Login() {
             <button
               type="submit"
               disabled={loading}
-              className="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-bold rounded-xl text-white bg-ppu-blue hover:bg-ppu-blue-dark active:scale-[0.98] transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-ppu-blue disabled:opacity-50 cursor-pointer shadow-md shadow-ppu-blue/10"
+              className="group relative w-full flex justify-center items-center gap-2 py-3 px-4 border border-transparent text-sm font-bold rounded-xl text-white bg-ppu-blue hover:bg-ppu-blue-dark active:scale-[0.98] transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-ppu-blue disabled:opacity-50 cursor-pointer shadow-md shadow-ppu-blue/10"
             >
-              {loading ? 'Logging in...' : 'Login'}
+              {loading ? (
+                <>
+                  <M3ExpressiveLoadingIndicator size="small" className="text-white" />
+                  <span>Logging in...</span>
+                </>
+              ) : (
+                'Login'
+              )}
             </button>
           </div>
         </form>

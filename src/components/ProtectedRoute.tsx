@@ -2,6 +2,7 @@ import React from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { Role } from '../types';
+import { M3ExpressiveLoadingIndicator } from './ui/M3ExpressiveLoadingIndicator';
 
 export const ProtectedRoute = ({
   children,
@@ -15,8 +16,8 @@ export const ProtectedRoute = ({
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
+      <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-[#1a1a1a]">
+        <M3ExpressiveLoadingIndicator size="large" className="text-ppu-blue dark:text-sky-400" label="Memuat..." />
       </div>
     );
   }

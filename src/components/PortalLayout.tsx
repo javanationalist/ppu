@@ -4,6 +4,7 @@ import { Menu, X, Sun, Moon } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
 import { supabase } from '../lib/supabase';
 import WafoSlider from './WafoSlider';
+import { M3ExpressiveLoadingIndicator } from './ui/M3ExpressiveLoadingIndicator';
 
 interface NavLinkItem {
   id: string;
@@ -98,16 +99,24 @@ export default function PortalLayout() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             {/* Logo and Name */}
-            <Link to="/" className="flex items-center gap-2 group" onClick={closeMenu}>
-              <img
-                src={isDark ? "https://bfuuuzmcrkfjblancewz.supabase.co/storage/v1/object/public/official%20logo/PPU%20WHITE.webp" : "https://bfuuuzmcrkfjblancewz.supabase.co/storage/v1/object/public/official%20logo/PPU.webp"}
-                alt="PPU Logo"
-                className="w-9 h-9 object-contain select-none shrink-0"
+            <div className="flex items-center gap-2 sm:gap-3">
+              <Link to="/" className="flex items-center gap-2 group" onClick={closeMenu}>
+                <img
+                  src={isDark ? "https://bfuuuzmcrkfjblancewz.supabase.co/storage/v1/object/public/official%20logo/PPU%20WHITE.webp" : "https://bfuuuzmcrkfjblancewz.supabase.co/storage/v1/object/public/official%20logo/PPU.webp"}
+                  alt="PPU Logo"
+                  className="w-9 h-9 object-contain select-none shrink-0"
+                />
+                <div className="inline-flex items-center px-2.5 py-0.5 rounded-full bg-ppu-blue/10 dark:bg-sky-500/10 text-ppu-blue dark:text-sky-400 text-[11px] font-semibold uppercase tracking-wider shrink-0 transition-colors group-hover:bg-ppu-blue/15 dark:group-hover:bg-sky-500/15">
+                  SUARAKU 2026
+                </div>
+              </Link>
+
+              {/* Standalone M3 Expressive Header Indicator */}
+              <M3ExpressiveLoadingIndicator 
+                size={22} 
+                isActivityIndicator={true}
               />
-              <div className="inline-flex items-center px-2.5 py-0.5 rounded-full bg-ppu-blue/10 dark:bg-sky-500/10 text-ppu-blue dark:text-sky-400 text-[11px] font-semibold uppercase tracking-wider shrink-0 transition-colors group-hover:bg-ppu-blue/15 dark:group-hover:bg-sky-500/15">
-                SUARAKU 2026
-              </div>
-            </Link>
+            </div>
 
             {/* Desktop / Mobile Menu Toggle */}
             <div className="flex items-center">

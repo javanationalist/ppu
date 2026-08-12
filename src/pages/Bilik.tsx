@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { QRCodeCanvas } from 'qrcode.react';
 import { Monitor, RefreshCw, AlertCircle, Clock, CheckCircle2, Terminal, QrCode, LogOut, Radio, ShieldCheck, Sparkles } from 'lucide-react';
+import { M3ExpressiveLoadingIndicator } from '../components/ui/M3ExpressiveLoadingIndicator';
 import { 
   createBoothSession, 
   getBoothSession, 
@@ -381,7 +382,7 @@ export default function BilikPage({ isGtkMode = false, isStudentMode = false }: 
             >
               {forceLogoutLoading ? (
                 <>
-                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  <M3ExpressiveLoadingIndicator size="small" className="text-white" />
                   Memutus Sesi Perangkat...
                 </>
               ) : (
@@ -426,7 +427,7 @@ export default function BilikPage({ isGtkMode = false, isStudentMode = false }: 
             >
               {loading ? (
                 <>
-                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  <M3ExpressiveLoadingIndicator size="small" className="text-white" />
                   Memeriksa...
                 </>
               ) : (
@@ -562,7 +563,7 @@ export default function BilikPage({ isGtkMode = false, isStudentMode = false }: 
       <main className="flex-1 flex items-center justify-center p-4 sm:p-6 md:p-8 z-10 my-auto">
         {loading ? (
           <div className="flex flex-col items-center justify-center gap-3 py-12">
-            <RefreshCw className="w-8 h-8 text-blue-600 animate-spin" />
+            <M3ExpressiveLoadingIndicator size="large" className="text-blue-600" />
             <p className="text-xs font-bold text-slate-600">Menginisialisasi gerbang bilik suara...</p>
           </div>
         ) : (
