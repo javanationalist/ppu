@@ -1,5 +1,6 @@
 import { supabase, isSupabaseConfigured } from './supabase';
 import { Category, Candidate, Vote, Profile, Dapil } from '../types';
+import { deleteCandidatePhotoByUrl } from './candidateStorageService';
 
 const defaultCategories: Category[] = [
   { id: 'osis',   name: 'Ketua OSIS',           icon: '🏫', order: 1, type: 'regular' },
@@ -504,7 +505,22 @@ export const saveCandidate = async (candidate: Candidate): Promise<boolean> => {
 };
 
 // Delete candidate
-export const deleteCandidate = async (candidateId: string): Promise<boolean> => {
+export const deleteCandidate = async (candidateId: string, photoUrl?: string): Promise<boolean> => {
+  let urlToDelete = photoUrl;
+
+  // If photoUrl not passed, fetch candidate record first to get photo_url
+  if (!urlToDelete) {
+    try {
+      const [regRes, mpkRes] = await Promise.all([
+        supabase.from('candidates').select('photo_url').eq('id', candidateId).single(),
+        supabase.from('candidates_mpk').select('photo_url').eq('id', candidateId).single()
+      ]);
+      urlToDelete = regRes.data?.photo_url || mpkRes.data?.photo_url || '';
+    } catch (e) {
+      // Ignore lookup error
+    }
+  }
+
   const [resReg, resMpk] = await Promise.all([
     supabase.from('candidates').delete().eq('id', candidateId),
     supabase.from('candidates_mpk').delete().eq('id', candidateId)
@@ -512,6 +528,11 @@ export const deleteCandidate = async (candidateId: string): Promise<boolean> => 
 
   if (resReg.error) throw resReg.error;
   if (resMpk.error) throw resMpk.error;
+
+  // Delete photo from storage if candidate deleted from database
+  if (urlToDelete) {
+    await deleteCandidatePhotoByUrl(urlToDelete);
+  }
 
   return true;
 };

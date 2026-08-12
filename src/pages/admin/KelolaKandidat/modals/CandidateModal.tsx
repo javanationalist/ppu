@@ -1,6 +1,7 @@
 import React from 'react';
 import { X } from 'lucide-react';
 import { Candidate } from '../../../../types';
+import { CandidatePhotoUploader } from '../../../../components/admin/CandidatePhotoUploader';
 
 interface CandidateModalProps {
   isOpen: boolean;
@@ -19,6 +20,10 @@ interface CandidateModalProps {
   setCandMisi: (val: string) => void;
   candPhotoUrl: string;
   setCandPhotoUrl: (val: string) => void;
+  selectedPhotoFile: File | null;
+  setSelectedPhotoFile: (file: File | null) => void;
+  isUploadingPhoto?: boolean;
+  photoUploadError?: string | null;
   isMpk: boolean;
   selectedMpkClass: string;
   onSubmit: (e: React.FormEvent) => void;
@@ -41,6 +46,10 @@ export function CandidateModal({
   setCandMisi,
   candPhotoUrl,
   setCandPhotoUrl,
+  selectedPhotoFile,
+  setSelectedPhotoFile,
+  isUploadingPhoto = false,
+  photoUploadError = null,
   isMpk,
   selectedMpkClass,
   onSubmit,
@@ -58,7 +67,8 @@ export function CandidateModal({
           <button 
             type="button" 
             onClick={onClose}
-            className="text-white/80 hover:text-white p-1 rounded-lg hover:bg-white/10 transition-colors"
+            disabled={isUploadingPhoto}
+            className="text-white/80 hover:text-white p-1 rounded-lg hover:bg-white/10 transition-colors disabled:opacity-50"
           >
             <X className="w-5 h-5" />
           </button>
@@ -74,6 +84,7 @@ export function CandidateModal({
                 value={candNumber}
                 onChange={(e) => setCandNumber(parseInt(e.target.value) || 1)}
                 required
+                disabled={isUploadingPhoto}
                 className="w-full px-3 py-2 text-sm border border-slate-200 dark:border-slate-800 rounded-xl bg-slate-50 dark:bg-[#202020] text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-emerald-600 outline-none font-bold text-center"
               />
             </div>
@@ -88,6 +99,7 @@ export function CandidateModal({
                 onChange={(e) => setCandChairman(e.target.value)}
                 placeholder="Nama Lengkap..."
                 required
+                disabled={isUploadingPhoto}
                 className="w-full px-3 py-2 text-sm border border-slate-200 dark:border-slate-800 rounded-xl bg-slate-50 dark:bg-[#202020] text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-emerald-600 outline-none"
               />
             </div>
@@ -101,21 +113,21 @@ export function CandidateModal({
                 value={candVice}
                 onChange={(e) => setCandVice(e.target.value)}
                 placeholder="Nama Wakil Paslon..."
+                disabled={isUploadingPhoto}
                 className="w-full px-3 py-2 text-sm border border-slate-200 dark:border-slate-800 rounded-xl bg-slate-50 dark:bg-[#202020] text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-emerald-600 outline-none"
               />
             </div>
           )}
 
-          <div>
-            <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-1">URL Foto Profil Kandidat</label>
-            <input 
-              type="url"
-              value={candPhotoUrl}
-              onChange={(e) => setCandPhotoUrl(e.target.value)}
-              placeholder="https://..."
-              className="w-full px-3 py-2 text-sm border border-slate-200 dark:border-slate-800 rounded-xl bg-slate-50 dark:bg-[#202020] text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-emerald-600 outline-none"
-            />
-          </div>
+          {/* Photo Upload Component */}
+          <CandidatePhotoUploader
+            currentPhotoUrl={candPhotoUrl}
+            selectedFile={selectedPhotoFile}
+            onSelectFile={setSelectedPhotoFile}
+            isUploading={isUploadingPhoto}
+            uploadError={photoUploadError}
+            disabled={isUploadingPhoto}
+          />
 
           <div>
             <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-1">Visi Utama</label>
@@ -124,6 +136,7 @@ export function CandidateModal({
               value={candVisi}
               onChange={(e) => setCandVisi(e.target.value)}
               placeholder="Gagasan & Visi utama..."
+              disabled={isUploadingPhoto}
               className="w-full px-3 py-2 text-sm border border-slate-200 dark:border-slate-800 rounded-xl bg-slate-50 dark:bg-[#202020] text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-emerald-600 outline-none resize-none"
             />
           </div>
@@ -135,6 +148,7 @@ export function CandidateModal({
               value={candMisi}
               onChange={(e) => setCandMisi(e.target.value)}
               placeholder="1. Misi Pertama&#10;2. Misi Kedua..."
+              disabled={isUploadingPhoto}
               className="w-full px-3 py-2 text-sm border border-slate-200 dark:border-slate-800 rounded-xl bg-slate-50 dark:bg-[#202020] text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-emerald-600 outline-none font-sans"
             />
           </div>
@@ -143,15 +157,17 @@ export function CandidateModal({
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 py-2.5 px-4 bg-slate-100 dark:bg-[#252525] hover:bg-slate-200 dark:hover:bg-[#303030] text-slate-700 dark:text-slate-300 font-bold text-xs sm:text-sm rounded-xl transition-all"
+              disabled={isUploadingPhoto}
+              className="flex-1 py-2.5 px-4 bg-slate-100 dark:bg-[#252525] hover:bg-slate-200 dark:hover:bg-[#303030] text-slate-700 dark:text-slate-300 font-bold text-xs sm:text-sm rounded-xl transition-all disabled:opacity-50"
             >
               Batal
             </button>
             <button
               type="submit"
-              className="flex-1 py-2.5 px-4 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs sm:text-sm rounded-xl transition-all shadow-md shadow-emerald-600/20"
+              disabled={isUploadingPhoto}
+              className="flex-1 py-2.5 px-4 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs sm:text-sm rounded-xl transition-all shadow-md shadow-emerald-600/20 disabled:opacity-50 flex items-center justify-center gap-2"
             >
-              Simpan Kandidat
+              {isUploadingPhoto ? 'Mengunggah & Menyimpan...' : 'Simpan Kandidat'}
             </button>
           </div>
         </form>

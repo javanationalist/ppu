@@ -17,6 +17,7 @@ import { CategoryModal } from './modals/CategoryModal';
 import { DapilModal } from './modals/DapilModal';
 import { CandidateModal } from './modals/CandidateModal';
 import { CandidateDetailModal } from './modals/CandidateDetailModal';
+import { uploadCandidatePhoto, deleteCandidatePhotoByUrl } from '../../../lib/candidateStorageService';
 
 export default function KelolaPemilihan() {
   const { profile: adminProfile } = useAuth();
@@ -65,6 +66,9 @@ export default function KelolaPemilihan() {
   const [candVisi, setCandVisi] = useState('');
   const [candMisi, setCandMisi] = useState('');
   const [candPhotoUrl, setCandPhotoUrl] = useState('');
+  const [selectedPhotoFile, setSelectedPhotoFile] = useState<File | null>(null);
+  const [isUploadingPhoto, setIsUploadingPhoto] = useState<boolean>(false);
+  const [photoUploadError, setPhotoUploadError] = useState<string | null>(null);
   
   // Modal 4: Candidate Detail Preview
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
@@ -427,6 +431,8 @@ export default function KelolaPemilihan() {
     setCandVisi('');
     setCandMisi('');
     setCandPhotoUrl('');
+    setSelectedPhotoFile(null);
+    setPhotoUploadError(null);
 
     if (isMpk) {
       const curDap = dapils.find(d => d.id === selectedDapilId);
@@ -453,13 +459,24 @@ export default function KelolaPemilihan() {
     setCandVisi(cand.visi);
     setCandMisi(cand.misi ? cand.misi.join('\n') : '');
     setCandPhotoUrl(cand.photo_url || '');
+    setSelectedPhotoFile(null);
+    setPhotoUploadError(null);
     setIsCandModalOpen(true);
   };
 
   const handleCandidateSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setPhotoUploadError(null);
+
     if (!candChairman.trim() || (!isMpk && (!candVisi.trim() || !candMisi.trim()))) {
       triggerToast('error', 'Harap lengkapi semua isian wajib mendasar.');
+      return;
+    }
+
+    // Require photo when adding a new candidate if none selected
+    if (!candEditing && !selectedPhotoFile && !candPhotoUrl) {
+      setPhotoUploadError('Foto kandidat wajib diunggah.');
+      triggerToast('error', 'Foto kandidat wajib diunggah.');
       return;
     }
 
@@ -474,23 +491,69 @@ export default function KelolaPemilihan() {
       return 'cand-' + Math.random().toString(36).substring(2, 11) + '-' + Date.now().toString(36);
     };
 
+    const targetCandidateId = candEditing ? candEditing.id : generateSafeId();
+    let finalPhotoUrl = candPhotoUrl.trim();
+
+    // Step 1: Upload photo if a new file was chosen by the admin
+    if (selectedPhotoFile) {
+      console.log('[Candidate Photo] File selected for submit:', {
+        name: selectedPhotoFile.name,
+        type: selectedPhotoFile.type,
+        size: selectedPhotoFile.size,
+        targetCandidateId
+      });
+      setIsUploadingPhoto(true);
+      try {
+        const uploadResult = await uploadCandidatePhoto(
+          selectedPhotoFile,
+          isMpk,
+          selectedCatId,
+          targetCandidateId,
+          '2026'
+        );
+        finalPhotoUrl = uploadResult.publicUrl;
+        console.log('[Candidate Photo] Upload process finished successfully. Photo URL:', finalPhotoUrl);
+      } catch (uploadErr: any) {
+        setIsUploadingPhoto(false);
+        const errMsg = uploadErr.message || 'Gagal mengunggah foto kandidat ke Supabase Storage.';
+        console.error('[Candidate Photo] Upload failed, aborting candidate save:', errMsg);
+        setPhotoUploadError(errMsg);
+        triggerToast('error', errMsg);
+        return; // Stop execution: do NOT save candidate with broken/half-baked photo
+      }
+    }
+
     const payload: Candidate = {
-      id: candEditing ? candEditing.id : generateSafeId(),
+      id: targetCandidateId,
       category_id: selectedCatId,
       number: Number(candNumber),
       chairman: candChairman.trim(),
       vice: isMpk ? undefined : (candVice.trim() || undefined),
       visi: candVisi.trim(),
       misi: compileMisi,
-      photo_url: candPhotoUrl.trim() || undefined,
+      photo_url: finalPhotoUrl || undefined,
       dapil_id: isMpk ? selectedDapilId : undefined,
       class_name: isMpk ? selectedMpkClass : undefined,
       candidate_class: isMpk ? selectedMpkClass : undefined,
     };
 
+    // Step 2: Save candidate data to database
     try {
+      console.log('[Candidate Photo] Database update started for candidate:', payload.chairman, 'ID:', payload.id);
       await saveCandidate(payload);
+      console.log('[Candidate Photo] Database update success for candidate:', payload.id);
+
+      // Step 3: If edit succeeded and a NEW photo was uploaded, clean up old photo from storage
+      if (candEditing && candEditing.photo_url && selectedPhotoFile && candEditing.photo_url !== finalPhotoUrl) {
+        console.log('[Candidate Photo] Deleting old candidate photo from storage:', candEditing.photo_url);
+        deleteCandidatePhotoByUrl(candEditing.photo_url).catch((err) => {
+          console.warn('[Candidate Photo] Old candidate photo deletion warning:', err);
+        });
+      }
+
       setIsCandModalOpen(false);
+      setSelectedPhotoFile(null);
+      setPhotoUploadError(null);
       triggerToast('success', `Profil kandidat "${candChairman}" berhasil disimpan.`);
       await loadCandidatesForCategory(selectedCatId);
 
@@ -502,7 +565,9 @@ export default function KelolaPemilihan() {
         );
       }
     } catch (err: any) {
-      triggerToast('error', `Gagal: ${err.message || err.details || 'Sistem gagal mengeksekusi penyimpanan kandidat.'}`);
+      triggerToast('error', `Gagal menyimpan data kandidat: ${err.message || err.details || 'Terjadi kesalahan pada database.'}`);
+    } finally {
+      setIsUploadingPhoto(false);
     }
   };
 
@@ -511,7 +576,7 @@ export default function KelolaPemilihan() {
       return;
     }
     try {
-      await deleteCandidate(cand.id);
+      await deleteCandidate(cand.id, cand.photo_url);
       triggerToast('success', `Kandidat "${cand.chairman}" berhasil dihapus.`);
       await loadCandidatesForCategory(selectedCatId);
 
@@ -974,6 +1039,10 @@ export default function KelolaPemilihan() {
         setCandMisi={setCandMisi}
         candPhotoUrl={candPhotoUrl}
         setCandPhotoUrl={setCandPhotoUrl}
+        selectedPhotoFile={selectedPhotoFile}
+        setSelectedPhotoFile={setSelectedPhotoFile}
+        isUploadingPhoto={isUploadingPhoto}
+        photoUploadError={photoUploadError}
         isMpk={isMpk}
         selectedMpkClass={selectedMpkClass}
         onSubmit={handleCandidateSubmit}
