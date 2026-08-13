@@ -17,12 +17,15 @@ import { CategoryModal } from './modals/CategoryModal';
 import { DapilModal } from './modals/DapilModal';
 import { CandidateModal } from './modals/CandidateModal';
 import { CandidateDetailModal } from './modals/CandidateDetailModal';
+import { StorageDiagnosticModal } from '../../../components/admin/StorageDiagnosticModal';
 import { uploadCandidatePhoto, deleteCandidatePhotoByUrl } from '../../../lib/candidateStorageService';
+import { PhotoInputMode, validatePhotoUrl } from '../../../components/admin/CandidatePhotoUploader';
 
 export default function KelolaPemilihan() {
   const { profile: adminProfile } = useAuth();
   
   const [currentLevel, setCurrentLevel] = useState<'category' | 'dapil' | 'candidate'>('category');
+  const [isDiagnosticOpen, setIsDiagnosticOpen] = useState(false);
 
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
@@ -69,6 +72,7 @@ export default function KelolaPemilihan() {
   const [selectedPhotoFile, setSelectedPhotoFile] = useState<File | null>(null);
   const [isUploadingPhoto, setIsUploadingPhoto] = useState<boolean>(false);
   const [photoUploadError, setPhotoUploadError] = useState<string | null>(null);
+  const [photoInputMode, setPhotoInputMode] = useState<PhotoInputMode>('url');
   
   // Modal 4: Candidate Detail Preview
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
@@ -433,6 +437,7 @@ export default function KelolaPemilihan() {
     setCandPhotoUrl('');
     setSelectedPhotoFile(null);
     setPhotoUploadError(null);
+    setPhotoInputMode('url');
 
     if (isMpk) {
       const curDap = dapils.find(d => d.id === selectedDapilId);
@@ -461,6 +466,7 @@ export default function KelolaPemilihan() {
     setCandPhotoUrl(cand.photo_url || '');
     setSelectedPhotoFile(null);
     setPhotoUploadError(null);
+    setPhotoInputMode('url');
     setIsCandModalOpen(true);
   };
 
@@ -473,11 +479,20 @@ export default function KelolaPemilihan() {
       return;
     }
 
-    // Require photo when adding a new candidate if none selected
-    if (!candEditing && !selectedPhotoFile && !candPhotoUrl) {
-      setPhotoUploadError('Foto kandidat wajib diunggah.');
-      triggerToast('error', 'Foto kandidat wajib diunggah.');
-      return;
+    // Require & validate photo input based on active mode
+    if (photoInputMode === 'url') {
+      const urlValidation = validatePhotoUrl(candPhotoUrl);
+      if (!urlValidation.valid) {
+        setPhotoUploadError(urlValidation.error || 'URL foto tidak valid.');
+        triggerToast('error', urlValidation.error || 'URL foto tidak valid.');
+        return;
+      }
+    } else {
+      if (!candEditing && !selectedPhotoFile && !candPhotoUrl) {
+        setPhotoUploadError('Foto kandidat wajib diunggah.');
+        triggerToast('error', 'Foto kandidat wajib diunggah.');
+        return;
+      }
     }
 
     const compileMisi = candMisi
@@ -494,8 +509,8 @@ export default function KelolaPemilihan() {
     const targetCandidateId = candEditing ? candEditing.id : generateSafeId();
     let finalPhotoUrl = candPhotoUrl.trim();
 
-    // Step 1: Upload photo if a new file was chosen by the admin
-    if (selectedPhotoFile) {
+    // Step 1: Upload photo ONLY IF in upload mode and a file was chosen
+    if (photoInputMode === 'upload' && selectedPhotoFile) {
       console.log('[Candidate Photo] File selected for submit:', {
         name: selectedPhotoFile.name,
         type: selectedPhotoFile.type,
@@ -515,11 +530,11 @@ export default function KelolaPemilihan() {
         console.log('[Candidate Photo] Upload process finished successfully. Photo URL:', finalPhotoUrl);
       } catch (uploadErr: any) {
         setIsUploadingPhoto(false);
-        const errMsg = uploadErr.message || 'Gagal mengunggah foto kandidat ke Supabase Storage.';
-        console.error('[Candidate Photo] Upload failed, aborting candidate save:', errMsg);
+        const errMsg = uploadErr.message || 'Gagal mengunggah foto kandidat.';
+        console.warn('[Candidate Photo] Upload process encountered warning:', errMsg);
         setPhotoUploadError(errMsg);
         triggerToast('error', errMsg);
-        return; // Stop execution: do NOT save candidate with broken/half-baked photo
+        return;
       }
     }
 
@@ -857,13 +872,23 @@ export default function KelolaPemilihan() {
               </h2>
               <p className="text-xs text-slate-500">Atur nomor urut, foto, nama paslon/perwakilan, visi & misi.</p>
             </div>
-            <button
-              onClick={() => openAddCandidate()}
-              className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl flex items-center gap-2 shadow-md shadow-emerald-600/15 transition-all self-start sm:self-auto cursor-pointer"
-            >
-              <Plus className="w-4 h-4" />
-              <span>Tambah Kandidat</span>
-            </button>
+            <div className="flex items-center gap-2 self-start sm:self-auto">
+              <button
+                type="button"
+                onClick={() => setIsDiagnosticOpen(true)}
+                className="px-3.5 py-2.5 bg-slate-100 hover:bg-indigo-50 hover:text-indigo-700 text-slate-700 font-bold text-xs rounded-xl flex items-center gap-2 border border-slate-200 transition-all cursor-pointer"
+              >
+                <ShieldAlert className="w-4 h-4 text-indigo-600" />
+                <span>Diagnostik Storage</span>
+              </button>
+              <button
+                onClick={() => openAddCandidate()}
+                className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl flex items-center gap-2 shadow-md shadow-emerald-600/15 transition-all cursor-pointer"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Tambah Kandidat</span>
+              </button>
+            </div>
           </div>
 
           {/* Sub-navigation for MPK classes inside current Dapil */}
@@ -1043,15 +1068,23 @@ export default function KelolaPemilihan() {
         setSelectedPhotoFile={setSelectedPhotoFile}
         isUploadingPhoto={isUploadingPhoto}
         photoUploadError={photoUploadError}
+        photoInputMode={photoInputMode}
+        setPhotoInputMode={setPhotoInputMode}
         isMpk={isMpk}
         selectedMpkClass={selectedMpkClass}
         onSubmit={handleCandidateSubmit}
+        onOpenDiagnostic={() => setIsDiagnosticOpen(true)}
       />
 
       <CandidateDetailModal
         isOpen={isDetailModalOpen}
         onClose={() => setIsDetailModalOpen(false)}
         candidate={detailCandidate}
+      />
+
+      <StorageDiagnosticModal
+        isOpen={isDiagnosticOpen}
+        onClose={() => setIsDiagnosticOpen(false)}
       />
     </div>
   );

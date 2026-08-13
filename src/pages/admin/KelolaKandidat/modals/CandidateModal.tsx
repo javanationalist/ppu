@@ -1,7 +1,7 @@
 import React from 'react';
 import { X } from 'lucide-react';
 import { Candidate } from '../../../../types';
-import { CandidatePhotoUploader } from '../../../../components/admin/CandidatePhotoUploader';
+import { CandidatePhotoUploader, PhotoInputMode } from '../../../../components/admin/CandidatePhotoUploader';
 
 interface CandidateModalProps {
   isOpen: boolean;
@@ -24,9 +24,12 @@ interface CandidateModalProps {
   setSelectedPhotoFile: (file: File | null) => void;
   isUploadingPhoto?: boolean;
   photoUploadError?: string | null;
+  photoInputMode?: PhotoInputMode;
+  setPhotoInputMode?: (mode: PhotoInputMode) => void;
   isMpk: boolean;
   selectedMpkClass: string;
   onSubmit: (e: React.FormEvent) => void;
+  onOpenDiagnostic?: () => void;
 }
 
 export function CandidateModal({
@@ -50,9 +53,12 @@ export function CandidateModal({
   setSelectedPhotoFile,
   isUploadingPhoto = false,
   photoUploadError = null,
+  photoInputMode = 'url',
+  setPhotoInputMode,
   isMpk,
   selectedMpkClass,
   onSubmit,
+  onOpenDiagnostic
 }: CandidateModalProps) {
   if (!isOpen) return null;
 
@@ -68,7 +74,7 @@ export function CandidateModal({
             type="button" 
             onClick={onClose}
             disabled={isUploadingPhoto}
-            className="text-white/80 hover:text-white p-1 rounded-lg hover:bg-white/10 transition-colors disabled:opacity-50"
+            className="text-white/80 hover:text-white p-1 rounded-lg hover:bg-white/10 transition-colors disabled:opacity-50 cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>
@@ -119,14 +125,20 @@ export function CandidateModal({
             </div>
           )}
 
-          {/* Photo Upload Component */}
+          {/* Photo Source & Uploader Component */}
           <CandidatePhotoUploader
+            photoInputMode={photoInputMode}
+            onModeChange={setPhotoInputMode}
+            photoUrl={candPhotoUrl}
+            onPhotoUrlChange={setCandPhotoUrl}
+            urlError={photoUploadError}
             currentPhotoUrl={candPhotoUrl}
             selectedFile={selectedPhotoFile}
             onSelectFile={setSelectedPhotoFile}
             isUploading={isUploadingPhoto}
             uploadError={photoUploadError}
             disabled={isUploadingPhoto}
+            onOpenDiagnostic={onOpenDiagnostic}
           />
 
           <div>
@@ -158,14 +170,14 @@ export function CandidateModal({
               type="button"
               onClick={onClose}
               disabled={isUploadingPhoto}
-              className="flex-1 py-2.5 px-4 bg-slate-100 dark:bg-[#252525] hover:bg-slate-200 dark:hover:bg-[#303030] text-slate-700 dark:text-slate-300 font-bold text-xs sm:text-sm rounded-xl transition-all disabled:opacity-50"
+              className="flex-1 py-2.5 px-4 bg-slate-100 dark:bg-[#252525] hover:bg-slate-200 dark:hover:bg-[#303030] text-slate-700 dark:text-slate-300 font-bold text-xs sm:text-sm rounded-xl transition-all disabled:opacity-50 cursor-pointer"
             >
               Batal
             </button>
             <button
               type="submit"
               disabled={isUploadingPhoto}
-              className="flex-1 py-2.5 px-4 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs sm:text-sm rounded-xl transition-all shadow-md shadow-emerald-600/20 disabled:opacity-50 flex items-center justify-center gap-2"
+              className="flex-1 py-2.5 px-4 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs sm:text-sm rounded-xl transition-all shadow-md shadow-emerald-600/20 disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer"
             >
               {isUploadingPhoto ? 'Mengunggah & Menyimpan...' : 'Simpan Kandidat'}
             </button>

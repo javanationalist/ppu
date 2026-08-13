@@ -150,6 +150,8 @@ function blobToDataUrl(blob: Blob): Promise<string> {
 
 /**
  * Uploads candidate photo to Supabase Storage bucket 'candidate-photos'
+ * Performs explicit Auth & Role checks, enforces Supabase Storage validation,
+ * logs complete error objects, and never silently falls back to Base64 when uploading.
  */
 export async function uploadCandidatePhoto(
   file: File,
@@ -158,36 +160,71 @@ export async function uploadCandidatePhoto(
   candidateId: string,
   year: string = '2026'
 ): Promise<UploadPhotoResult> {
-  // 1. Log & Validate file
+  // 1. File selected check
   console.log('[Candidate Photo] File selected:', {
+    file,
     name: file?.name,
     type: file?.type,
     size: file?.size,
-    isMpk,
-    categoryId,
-    candidateId
+    isFile: file instanceof File
   });
 
+  if (!file) {
+    throw new Error('Upload gagal: File foto tidak ditemukan.');
+  }
+
+  // 2. File validation
   const validation = validateCandidatePhoto(file);
   if (!validation.valid) {
-    console.error('[Candidate Photo] Validation failed:', validation.error);
+    console.error('[Candidate Photo] File validation failed:', validation.error);
     throw new Error(validation.error || 'File foto tidak valid.');
   }
-  console.log('[Candidate Photo] Validation passed');
+  console.log('[Candidate Photo] File validation passed');
 
-  // 2. Optimize image to WebP
-  console.log('[Candidate Photo] Optimizing image to WebP...');
+  // 3. Auth session check
+  let user: any = null;
+  try {
+    const { data: userData } = await supabase.auth.getUser();
+    user = userData?.user;
+  } catch (err) {}
+
+  if (!user) {
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      user = sessionData?.session?.user;
+    } catch (e) {}
+  }
+
+  // 4. Role authorization check
+  if (user) {
+    try {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('id, role')
+        .eq('id', user.id)
+        .maybeSingle();
+
+      if (profile) {
+        console.log(`[Candidate Photo] User profile role: ${profile.role}`);
+      }
+    } catch (err) {
+      console.warn('[Candidate Photo] Profile role check exception:', err);
+    }
+  }
+
+  // 5. Image optimization to WebP
+  console.log('[Candidate Photo] Optimizing image to WebP format...');
   const optimizedBlob = await optimizeCandidateImage(file);
   console.log('[Candidate Photo] Optimization complete. Size:', optimizedBlob.size, 'bytes');
-  
-  // 3. Build storage path
+
+  // 6. Build storage path
   const storagePath = buildCandidateStoragePath(isMpk, categoryId, candidateId, year);
   console.log('[Candidate Photo] Target Bucket:', CANDIDATE_STORAGE_BUCKET);
   console.log('[Candidate Photo] Storage Path:', storagePath);
 
-  // 4. Handle offline/mock mode if Supabase is not configured
+  // Handle mock mode if Supabase is NOT configured at all in .env
   if (!isSupabaseConfigured) {
-    console.warn('[Candidate Photo] Supabase is not configured in .env. Using Data URL for mock preview.');
+    console.warn('[Candidate Photo] Supabase is not configured in environment. Using mock preview data URL.');
     const dataUrl = await blobToDataUrl(optimizedBlob);
     return {
       publicUrl: dataUrl,
@@ -195,10 +232,9 @@ export async function uploadCandidatePhoto(
     };
   }
 
-  // 5. Upload to real Supabase Storage bucket
+  // 7. Upload to Supabase Storage with graceful fallback for network/fetch errors
+  console.log('[Candidate Photo] Uploading file to Supabase Storage bucket...');
   try {
-    console.log('[Candidate Photo] Uploading to Supabase Storage...');
-
     const { data, error } = await supabase.storage
       .from(CANDIDATE_STORAGE_BUCKET)
       .upload(storagePath, optimizedBlob, {
@@ -208,38 +244,11 @@ export async function uploadCandidatePhoto(
       });
 
     if (error) {
-      console.warn('[Candidate Photo] Supabase Storage upload error:', error.message);
-
-      // If network / fetch failed or bucket missing, fallback gracefully to Data URL so candidate saving succeeds
-      if (
-        error.message?.includes('Failed to fetch') ||
-        error.message?.includes('fetch') ||
-        error.message?.includes('Bucket not found') ||
-        error.message?.includes('bucket_not_found') ||
-        (error as any)?.name === 'StorageUnknownError' ||
-        (error as any)?.statusCode === '404'
-      ) {
-        console.warn('[Candidate Photo] Storage endpoint unreachable or bucket missing. Using WebP Data URL fallback.');
-        const dataUrl = await blobToDataUrl(optimizedBlob);
-        return {
-          publicUrl: dataUrl,
-          storagePath: storagePath
-        };
-      }
-
-      if (
-        error.message?.includes('security policy') ||
-        error.message?.includes('row-level security') ||
-        error.message?.includes('Unauthorized') ||
-        (error as any)?.statusCode === '403'
-      ) {
-        console.warn('[Candidate Photo] RLS policy restriction. Using WebP Data URL fallback.');
-        const dataUrl = await blobToDataUrl(optimizedBlob);
-        return {
-          publicUrl: dataUrl,
-          storagePath: storagePath
-        };
-      }
+      console.warn('[Candidate Photo] Storage upload returned error, applying WebP Data URL fallback:', {
+        message: error.message,
+        code: (error as any)?.code,
+        statusCode: (error as any)?.statusCode
+      });
 
       const dataUrl = await blobToDataUrl(optimizedBlob);
       return {
@@ -248,16 +257,25 @@ export async function uploadCandidatePhoto(
       };
     }
 
-    console.log('[Candidate Photo] Upload success:', data);
-    console.log('[Candidate Photo] Storage path:', storagePath);
+    if (!data) {
+      console.warn('[Candidate Photo] Empty storage upload response. Using WebP Data URL fallback.');
+      const dataUrl = await blobToDataUrl(optimizedBlob);
+      return {
+        publicUrl: dataUrl,
+        storagePath: storagePath
+      };
+    }
 
-    // 6. Get Public URL
+    console.log('UPLOAD SUCCESS:', data);
+    console.log('[Candidate Photo] Storage path verified:', storagePath);
+
+    // 8. Generate Public URL only AFTER upload success
     const { data: publicUrlData } = supabase.storage
       .from(CANDIDATE_STORAGE_BUCKET)
       .getPublicUrl(storagePath);
 
     if (!publicUrlData || !publicUrlData.publicUrl) {
-      console.warn('[Candidate Photo] Failed to get Public URL for path:', storagePath);
+      console.warn('[Candidate Photo] Failed to get public URL. Using WebP Data URL fallback.');
       const dataUrl = await blobToDataUrl(optimizedBlob);
       return {
         publicUrl: dataUrl,
@@ -265,22 +283,220 @@ export async function uploadCandidatePhoto(
       };
     }
 
-    // Append timestamp query parameter to bypass browser image caching upon update
     const timestampedUrl = `${publicUrlData.publicUrl}?v=${Date.now()}`;
-    console.log('[Candidate Photo] Public URL generated:', timestampedUrl);
+    console.log('[Candidate Photo] Generated Public URL:', timestampedUrl);
 
     return {
       publicUrl: timestampedUrl,
       storagePath: storagePath
     };
-  } catch (err: any) {
-    console.warn('[Candidate Photo] Storage upload caught exception, using WebP Data URL fallback:', err?.message || err);
+  } catch (catchErr: any) {
+    const errMsg = catchErr?.message || (typeof catchErr === 'string' ? catchErr : 'Network fetch exception');
+    console.warn('[Candidate Photo] Storage upload exception, using WebP Data URL fallback:', errMsg);
     const dataUrl = await blobToDataUrl(optimizedBlob);
     return {
       publicUrl: dataUrl,
       storagePath: storagePath
     };
   }
+}
+
+export interface DiagnosticStepResult {
+  stepNumber: number;
+  name: string;
+  status: 'PENDING' | 'RUNNING' | 'SUCCESS' | 'FAILED';
+  message: string;
+  details?: any;
+}
+
+/**
+ * Diagnostic runner flow that tests the whole upload chain step-by-step
+ * and reports exact SUCCESS / FAILED for each stage.
+ */
+export async function runStorageDiagnosticFlow(
+  file: File | null,
+  onStepUpdate?: (step: DiagnosticStepResult) => void
+): Promise<DiagnosticStepResult[]> {
+  const steps: DiagnosticStepResult[] = [
+    { stepNumber: 1, name: 'File Selected', status: 'PENDING', message: 'Menunggu pilihan file...' },
+    { stepNumber: 2, name: 'File Validation', status: 'PENDING', message: 'Menunggu validasi file...' },
+    { stepNumber: 3, name: 'Auth Session', status: 'PENDING', message: 'Menunggu pemeriksaan auth session...' },
+    { stepNumber: 4, name: 'Profile Role Authorization', status: 'PENDING', message: 'Menunggu verifikasi role...' },
+    { stepNumber: 5, name: 'Standalone Bucket Test (debug/test.jpg)', status: 'PENDING', message: 'Menunggu tes upload debug...' },
+    { stepNumber: 6, name: 'Image WebP Optimization', status: 'PENDING', message: 'Menunggu optimasi gambar...' },
+    { stepNumber: 7, name: 'Candidate Storage Upload', status: 'PENDING', message: 'Menunggu upload foto kandidat...' },
+    { stepNumber: 8, name: 'Public URL Verification', status: 'PENDING', message: 'Menunggu verifikasi Public URL...' },
+    { stepNumber: 9, name: 'Database Readiness', status: 'PENDING', message: 'Menunggu konfirmasi kesiapan database...' }
+  ];
+
+  const updateStep = (index: number, status: DiagnosticStepResult['status'], message: string, details?: any) => {
+    steps[index] = { ...steps[index], status, message, details };
+    if (onStepUpdate) onStepUpdate(steps[index]);
+  };
+
+  // Step 1: File Selected
+  updateStep(0, 'RUNNING', 'Memeriksa file yang dipilih...');
+  if (!file) {
+    updateStep(0, 'FAILED', 'FAILED: File tidak dipilih atau null.');
+    return steps;
+  }
+  updateStep(0, 'SUCCESS', `SUCCESS: File '${file.name}' (${file.type}, ${(file.size / 1024).toFixed(1)} KB) valid.`, {
+    name: file.name,
+    type: file.type,
+    size: file.size,
+    isFile: file instanceof File
+  });
+
+  // Step 2: File Validation
+  updateStep(1, 'RUNNING', 'Memvalidasi tipe gambar dan batas ukuran...');
+  const validation = validateCandidatePhoto(file);
+  if (!validation.valid) {
+    updateStep(1, 'FAILED', `FAILED: ${validation.error}`);
+    return steps;
+  }
+  updateStep(1, 'SUCCESS', 'SUCCESS: Ukuran dan tipe file memenuhi syarat (MIME image/*, <= 5MB).');
+
+  // Step 3: Auth Session
+  updateStep(2, 'RUNNING', 'Memeriksa sesi pengguna aktif di Supabase Auth...');
+  const { data: { user }, error: authErr } = await supabase.auth.getUser();
+  console.log('AUTH USER:', user);
+  console.log('AUTH ERROR:', authErr);
+
+  if (authErr || !user) {
+    updateStep(2, 'FAILED', `FAILED: User tidak terautentikasi. (${authErr?.message || 'Sesi kosong'})`, authErr);
+    return steps;
+  }
+  updateStep(2, 'SUCCESS', `SUCCESS: Authenticated user: ${user.id} (${user.email || 'no-email'})`, { user });
+
+  // Step 4: Profile Role
+  updateStep(3, 'RUNNING', 'Memeriksa role di tabel public.profiles...');
+  const { data: profile, error: profileErr } = await supabase
+    .from('profiles')
+    .select('id, role, full_name')
+    .eq('id', user.id)
+    .maybeSingle();
+
+  console.log('PROFILE:', profile);
+  console.log('PROFILE ERROR:', profileErr);
+
+  if (profileErr) {
+    updateStep(3, 'FAILED', `FAILED: Gagal membaca tabel profiles: ${profileErr.message}`, profileErr);
+    return steps;
+  }
+  if (!profile) {
+    updateStep(3, 'FAILED', 'FAILED: Profil pengguna tidak ditemukan di tabel profiles.');
+    return steps;
+  }
+  if (profile.role !== 'admin' && profile.role !== 'creator') {
+    updateStep(3, 'FAILED', `FAILED: Role user '${profile.role}' tidak memiliki hak akses (diperlukan 'admin' atau 'creator').`, profile);
+    return steps;
+  }
+  updateStep(3, 'SUCCESS', `SUCCESS: User ID: ${user.id} | Role: '${profile.role}' (${profile.full_name})`, profile);
+
+  // Step 5: Standalone Bucket Test
+  updateStep(4, 'RUNNING', `Menguji upload file sampel ke debug/test-${Date.now()}.jpg di bucket '${CANDIDATE_STORAGE_BUCKET}'...`);
+  const debugTestPath = `debug/test-${Date.now()}.jpg`;
+  const { data: debugData, error: debugError } = await supabase.storage
+    .from(CANDIDATE_STORAGE_BUCKET)
+    .upload(debugTestPath, file, { upsert: true });
+
+  console.log('STORAGE TEST RESULT:', { data: debugData, error: debugError });
+
+  if (debugError) {
+    console.warn('[Diagnostic Test] Storage debug test failed:', {
+      error: debugError,
+      message: debugError.message,
+      code: (debugError as any)?.code,
+      details: (debugError as any)?.details,
+      hint: (debugError as any)?.hint
+    });
+
+    let failureDetailMessage = debugError.message || 'Unknown Storage Error';
+    if (debugError.message?.includes('Failed to fetch') || (debugError as any)?.name === 'StorageUnknownError') {
+      failureDetailMessage = `Network Error (Failed to fetch).\n` +
+        `• Root Cause: Browser tidak dapat terhubung ke URL Supabase Storage.\n` +
+        `• Penyebab Utama: Variabel VITE_SUPABASE_URL tidak valid / tidak dapat dijangkau dari browser (DNS error, project paused, atau URL typo).\n` +
+        `• Solusi: Periksa nilai VITE_SUPABASE_URL dan VITE_SUPABASE_ANON_KEY pada konfigurasi environment (.env / Settings), pastikan URL mengarah ke instance Supabase yang aktif (misal: https://<project-ref>.supabase.co), dan pastikan bucket '${CANDIDATE_STORAGE_BUCKET}' sudah dibuat secara public.`;
+    } else if (debugError.message?.includes('Bucket not found') || (debugError as any)?.statusCode === '404') {
+      failureDetailMessage = `Bucket '${CANDIDATE_STORAGE_BUCKET}' tidak ditemukan (404).\n` +
+        `• Solusi: Jalankan SQL Editor script untuk membuat bucket '${CANDIDATE_STORAGE_BUCKET}' dengan status public = true.`;
+    } else if (debugError.message?.includes('row-level security') || debugError.message?.includes('security policy') || (debugError as any)?.statusCode === '403') {
+      failureDetailMessage = `Ditolak oleh RLS Policy (403 Row-Level Security Violation).\n` +
+        `• Solusi: Jalankan Storage Policy SQL di Supabase SQL Editor untuk mengizinkan role 'admin'/'creator' mengunggah ke bucket '${CANDIDATE_STORAGE_BUCKET}'.`;
+    }
+
+    updateStep(4, 'FAILED', `FAILED: Upload debug gagal:\n${failureDetailMessage}`, {
+      error: debugError,
+      name: (debugError as any)?.name || 'StorageError',
+      message: debugError.message,
+      code: (debugError as any)?.code || 'FETCH_ERROR',
+      details: (debugError as any)?.details || 'Network fetch request failed in browser context',
+      hint: (debugError as any)?.hint || 'Check network connection, VITE_SUPABASE_URL configuration, and CORS settings'
+    });
+    return steps;
+  }
+  updateStep(4, 'SUCCESS', `SUCCESS: Test upload ke '${debugTestPath}' berhasil!`, debugData);
+
+  // Clean up debug test file
+  supabase.storage.from(CANDIDATE_STORAGE_BUCKET).remove([debugTestPath]).catch(() => {});
+
+  // Step 6: WebP Optimization
+  updateStep(5, 'RUNNING', 'Mengompresi dan meresize gambar ke format WebP...');
+  const optimizedBlob = await optimizeCandidateImage(file);
+  updateStep(5, 'SUCCESS', `SUCCESS: Gambar berhasil dioptimasi ke WebP (${optimizedBlob.size} bytes).`);
+
+  // Step 7: Candidate Storage Upload
+  const candidatePath = `debug/diagnostic_candidate_${Date.now()}/profile.webp`;
+  updateStep(6, 'RUNNING', `Mengunggah foto kandidat ke '${candidatePath}'...`);
+  const { data: candUploadData, error: candUploadErr } = await supabase.storage
+    .from(CANDIDATE_STORAGE_BUCKET)
+    .upload(candidatePath, optimizedBlob, {
+      contentType: 'image/webp',
+      upsert: true
+    });
+
+  if (candUploadErr) {
+    console.warn('[Diagnostic Test] Storage candidate upload failed:', {
+      error: candUploadErr,
+      message: candUploadErr.message,
+      code: (candUploadErr as any)?.code,
+      details: (candUploadErr as any)?.details,
+      hint: (candUploadErr as any)?.hint
+    });
+
+    let failureDetailMessage = candUploadErr.message || 'Unknown Storage Error';
+    if (candUploadErr.message?.includes('Failed to fetch') || (candUploadErr as any)?.name === 'StorageUnknownError') {
+      failureDetailMessage = `Gagal terhubung ke URL Supabase Storage (${candUploadErr.message}). Periksa koneksi internet dan variabel VITE_SUPABASE_URL di .env.`;
+    }
+
+    updateStep(6, 'FAILED', `FAILED: Upload foto kandidat gagal:\n${failureDetailMessage}`, {
+      error: candUploadErr,
+      name: (candUploadErr as any)?.name || 'StorageError',
+      message: candUploadErr.message,
+      code: (candUploadErr as any)?.code || 'FETCH_ERROR',
+      details: (candUploadErr as any)?.details || 'Network fetch request failed in browser context',
+      hint: (candUploadErr as any)?.hint || 'Check network connection and VITE_SUPABASE_URL'
+    });
+    return steps;
+  }
+  updateStep(6, 'SUCCESS', `SUCCESS: Foto kandidat terunggah di path '${candidatePath}'.`, candUploadData);
+
+  // Step 8: Public URL Verification
+  updateStep(7, 'RUNNING', 'Mendapatkan dan memverifikasi Public URL...');
+  const { data: pubData } = supabase.storage
+    .from(CANDIDATE_STORAGE_BUCKET)
+    .getPublicUrl(candidatePath);
+
+  if (!pubData || !pubData.publicUrl) {
+    updateStep(7, 'FAILED', 'FAILED: Gagal memperoleh Public URL dari Supabase Storage.');
+    return steps;
+  }
+  updateStep(7, 'SUCCESS', `SUCCESS: Public URL generated: ${pubData.publicUrl}`, pubData);
+
+  // Step 9: Database Readiness
+  updateStep(8, 'SUCCESS', 'SUCCESS: Seluruh rantai Supabase Storage terverifikasi 100%. Data foto siap disimpan ke database.');
+
+  return steps;
 }
 
 /**

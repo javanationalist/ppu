@@ -280,6 +280,26 @@ export const mockSupabase = {
       return { data: { session: null }, error: null };
     },
 
+    async getUser() {
+      seedMockData();
+      const sessionStr = localStorage.getItem('mock_session');
+      if (sessionStr) {
+        try {
+          const sess = JSON.parse(sessionStr);
+          if (sess?.user) {
+            return { data: { user: sess.user }, error: null };
+          }
+        } catch (e) {}
+      }
+      // Fallback mock user if no session
+      const mockUser = {
+        id: 'usr-admin-default',
+        email: 'admin@sman1bangsal.sch.id',
+        role: 'admin'
+      };
+      return { data: { user: mockUser }, error: null };
+    },
+
     async signUp({ email, password }: { email: string; password?: string }) {
       seedMockData();
       const users = getTableData('users') as MockAuthUser[];
@@ -492,6 +512,38 @@ export const mockSupabase = {
 
   removeChannel(channel: any) {
     return Promise.resolve();
+  },
+
+  storage: {
+    from(bucketName: string) {
+      return {
+        async upload(path: string, fileBody: any, options?: any) {
+          let dataUrl = '';
+          if (fileBody instanceof Blob || fileBody instanceof File) {
+            dataUrl = await new Promise<string>((resolve) => {
+              const reader = new FileReader();
+              reader.onload = (e) => resolve(e.target?.result as string);
+              reader.onerror = () => resolve('https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400');
+              reader.readAsDataURL(fileBody);
+            });
+          } else {
+            dataUrl = 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400';
+          }
+          return {
+            data: { path, fullPath: `${bucketName}/${path}` },
+            error: null
+          };
+        },
+        getPublicUrl(path: string) {
+          return {
+            data: { publicUrl: `https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400` }
+          };
+        },
+        async remove(paths: string[]) {
+          return { data: paths, error: null };
+        }
+      };
+    }
   }
 };
 
