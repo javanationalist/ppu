@@ -8,8 +8,10 @@ import {
   Camera, 
   CheckCircle2, 
   AlertTriangle, 
+  AlertCircle,
   LogOut, 
   ArrowRight, 
+  ArrowLeft,
   ChevronRight, 
   ChevronLeft, 
   ChevronDown,
@@ -441,6 +443,29 @@ export default function VotingFlow({ voteMode, initialVoterCardId, onComplete, o
   const [gtkProfiles, setGtkProfilesList] = useState<Profile[]>([]);
   const [selectedGtkId, setSelectedGtkId] = useState<string>('');
   const [gtkSearchQuery, setGtkSearchQuery] = useState<string>('');
+
+  // Protection Modal for Bilik Default
+  const [showBilikDefaultModal, setShowBilikDefaultModal] = useState<boolean>(false);
+  const [bilikCodeInput, setBilikCodeInput] = useState<string>('');
+  const [bilikCodeError, setBilikCodeError] = useState<string | null>(null);
+
+  const handleOpenBilikDefaultModal = () => {
+    setBilikCodeInput('');
+    setBilikCodeError(null);
+    setShowBilikDefaultModal(true);
+  };
+
+  const handleVerifyBilikCode = (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (bilikCodeInput.trim() === '2026') {
+      setShowBilikDefaultModal(false);
+      setBilikCodeInput('');
+      setBilikCodeError(null);
+      navigate('/bilik');
+    } else {
+      setBilikCodeError('Kode salah. Aksi dibatalkan.');
+    }
+  };
 
   // Student Mode States
   const [studentProfiles, setStudentProfiles] = useState<Profile[]>([]);
@@ -959,37 +984,39 @@ export default function VotingFlow({ voteMode, initialVoterCardId, onComplete, o
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-blue-100/50 via-slate-50 to-slate-100 pointer-events-none select-none z-0" />
 
       {/* Top Header Bar matching Informasi Design System */}
-      <header className="border-b border-slate-200/80 bg-white/90 backdrop-blur-md px-4 sm:px-8 py-3.5 flex justify-between items-center z-20 shadow-2xs">
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-xl bg-blue-600 text-white flex items-center justify-center font-black text-xs shadow-md shadow-blue-600/20">
-            PPU
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="font-black text-slate-900 text-sm tracking-tight">BILIK SUARA</span>
-            <span className="bg-blue-50 text-blue-700 text-xs font-bold px-2.5 py-0.5 rounded-full border border-blue-200/80">
-              {isGtkMode ? 'GURU & GTK' : isStudentMode ? 'SISWA' : 'PEMILIH'}
-            </span>
-          </div>
-        </div>
-
-        {screen !== 'thankyou' && (
-          <div className="flex items-center gap-2">
-            {voter && (
-              <span className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50 text-blue-700 text-xs font-semibold border border-blue-200/80">
-                <span className="w-2 h-2 rounded-full bg-blue-600 animate-pulse" />
-                {isGtkMode ? 'Sesi GTK' : voter.full_name}
+      {!isGtkMode && !isStudentMode && (
+        <header className="border-b border-slate-200/80 bg-white/90 backdrop-blur-md px-4 sm:px-8 py-3.5 flex justify-between items-center z-20 shadow-2xs">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-xl bg-blue-600 text-white flex items-center justify-center font-black text-xs shadow-md shadow-blue-600/20">
+              PPU
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="font-black text-slate-900 text-sm tracking-tight">BILIK SUARA</span>
+              <span className="bg-blue-50 text-blue-700 text-xs font-bold px-2.5 py-0.5 rounded-full border border-blue-200/80">
+                PEMILIH
               </span>
-            )}
-            <button
-              onClick={handleCancelVotingFlow}
-              className="text-xs font-bold text-slate-600 hover:text-rose-600 hover:bg-rose-50 border border-slate-200/80 hover:border-rose-200 px-3 py-1.5 rounded-xl transition-all cursor-pointer flex items-center gap-1.5 shadow-2xs"
-            >
-              <LogOut className="w-3.5 h-3.5" />
-              <span>{voter ? 'Batal Sesi' : 'Kembali'}</span>
-            </button>
+            </div>
           </div>
-        )}
-      </header>
+
+          {screen !== 'thankyou' && (
+            <div className="flex items-center gap-2">
+              {voter && (
+                <span className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50 text-blue-700 text-xs font-semibold border border-blue-200/80">
+                  <span className="w-2 h-2 rounded-full bg-blue-600 animate-pulse" />
+                  {voter.full_name}
+                </span>
+              )}
+              <button
+                onClick={handleCancelVotingFlow}
+                className="text-xs font-bold text-slate-600 hover:text-rose-600 hover:bg-rose-50 border border-slate-200/80 hover:border-rose-200 px-3 py-1.5 rounded-xl transition-all cursor-pointer flex items-center gap-1.5 shadow-2xs"
+              >
+                <LogOut className="w-3.5 h-3.5" />
+                <span>{voter ? 'Batal Sesi' : 'Kembali'}</span>
+              </button>
+            </div>
+          )}
+        </header>
+      )}
 
       <div className="relative z-10 flex-1 flex flex-col w-full">
       {/* SCREEN 0: FORBIDDEN / DISABLED */}
@@ -1030,14 +1057,30 @@ export default function VotingFlow({ voteMode, initialVoterCardId, onComplete, o
       {screen === 'scan' && (
         <main className="flex-1 flex flex-col items-center justify-center p-4 sm:p-6 w-full max-w-md mx-auto my-auto">
           
+          {/* Top Button: Bilik Default (for GTK / Siswa mode) */}
+          {(isGtkMode || isStudentMode) && (
+            <div className="w-full flex justify-start mb-4">
+              <button
+                type="button"
+                onClick={handleOpenBilikDefaultModal}
+                className="inline-flex items-center gap-2 text-xs font-bold text-slate-700 hover:text-blue-600 bg-white hover:bg-slate-50 border border-slate-200/90 px-3.5 py-2 rounded-xl transition-all cursor-pointer shadow-2xs"
+              >
+                <ArrowLeft className="w-3.5 h-3.5" />
+                <span>Bilik Default</span>
+              </button>
+            </div>
+          )}
+
           {/* Header Title & Subtitle */}
           <div className="text-center mb-6 space-y-1.5">
-            <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-blue-50 text-blue-700 rounded-full text-[11px] font-bold tracking-wider uppercase border border-blue-200/80 mb-1 shadow-2xs">
-              <Sparkles className="w-3.5 h-3.5 text-blue-600" />
-              <span>{isGtkMode ? 'SESI GTK' : isStudentMode ? 'SESI SISWA' : 'IDENTIFIKASI PEMILIH'}</span>
-            </div>
+            {!isGtkMode && !isStudentMode && (
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-blue-50 text-blue-700 rounded-full text-[11px] font-bold tracking-wider uppercase border border-blue-200/80 mb-1 shadow-2xs">
+                <Sparkles className="w-3.5 h-3.5 text-blue-600" />
+                <span>IDENTIFIKASI PEMILIH</span>
+              </div>
+            )}
             <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
-              {isGtkMode ? 'Bilik Guru & GTK' : isStudentMode ? 'Bilik Siswa' : 'Verifikasi Pemilih'}
+              {isGtkMode ? 'Bilik Guru & Tenaga Kependidikan' : isStudentMode ? 'Bilik Siswa' : 'Verifikasi Pemilih'}
             </h1>
             <p className="text-xs sm:text-sm text-slate-500 leading-relaxed font-medium max-w-sm mx-auto">
               {isGtkMode 
@@ -1103,61 +1146,63 @@ export default function VotingFlow({ voteMode, initialVoterCardId, onComplete, o
                   </div>
                 </div>
 
-                {/* List of matched GTK profiles */}
-                <div className="bg-slate-50 border border-slate-200/80 rounded-2xl p-2 max-h-[220px] overflow-y-auto space-y-1.5 custom-scrollbar">
-                  {gtkProfiles.filter(p => 
-                    !gtkSearchQuery || p.full_name.toLowerCase().includes(gtkSearchQuery.toLowerCase())
-                  ).length === 0 ? (
-                    <div className="text-center py-8 text-xs text-slate-500 font-medium">
-                      Tidak ada nama yang cocok dengan pencarian Anda.
-                    </div>
-                  ) : (
-                    gtkProfiles.filter(p => 
-                      !gtkSearchQuery || p.full_name.toLowerCase().includes(gtkSearchQuery.toLowerCase())
-                    ).map(p => {
-                      const isVoted = p.voting_status === 'sudah';
-                      const isSelected = selectedGtkId === p.id;
-                      return (
-                        <button
-                          key={p.id}
-                          type="button"
-                          disabled={isVoted}
-                          onClick={() => {
-                            setSelectedGtkId(p.id);
-                            setGtkSearchQuery(p.full_name);
-                          }}
-                          className={`w-full p-3 rounded-xl flex items-center justify-between text-left transition-all ${
-                            isSelected 
-                              ? 'bg-blue-50 border-2 border-blue-600 text-slate-900 shadow-2xs' 
-                              : isVoted 
-                                ? 'opacity-50 cursor-not-allowed bg-slate-100 text-slate-400 border border-slate-200' 
-                                : 'bg-white border border-slate-200 hover:border-blue-300 hover:bg-blue-50/40 text-slate-800'
-                          }`}
-                        >
-                          <div className="min-w-0 pr-2">
-                            <p className="text-xs font-bold truncate text-slate-900">{p.full_name}</p>
-                            <p className="text-[10px] text-slate-500 font-semibold mt-0.5">Sektor Guru & Tenaga Kependidikan</p>
-                          </div>
-                          <div>
-                            {isVoted ? (
-                              <span className="text-[9px] bg-rose-50 text-rose-700 border border-rose-200 px-2.5 py-0.5 rounded-full font-bold uppercase tracking-wider">
-                                Sudah Memilih
-                              </span>
-                            ) : isSelected ? (
-                              <span className="text-[9px] bg-blue-600 text-white px-2.5 py-0.5 rounded-full font-bold uppercase tracking-wider shadow-2xs">
-                                Terpilih
-                              </span>
-                            ) : (
-                              <span className="text-[9px] bg-slate-100 hover:bg-blue-50 text-slate-600 border border-slate-200 px-2.5 py-0.5 rounded-full font-bold uppercase tracking-wider transition-all">
-                                Pilih
-                              </span>
-                            )}
-                          </div>
-                        </button>
-                      );
-                    })
-                  )}
-                </div>
+                {/* List of matched GTK profiles (Tampil HANYA jika query >= 2 karakter) */}
+                {gtkSearchQuery.trim().length >= 2 && (
+                  <div className="bg-slate-50 border border-slate-200/80 rounded-2xl p-2 max-h-[220px] overflow-y-auto space-y-1.5 custom-scrollbar">
+                    {gtkProfiles.filter(p => 
+                      p.full_name.toLowerCase().includes(gtkSearchQuery.trim().toLowerCase())
+                    ).length === 0 ? (
+                      <div className="text-center py-8 text-xs text-slate-500 font-medium">
+                        Tidak ditemukan akun GTK yang sesuai.
+                      </div>
+                    ) : (
+                      gtkProfiles.filter(p => 
+                        p.full_name.toLowerCase().includes(gtkSearchQuery.trim().toLowerCase())
+                      ).map(p => {
+                        const isVoted = p.voting_status === 'sudah';
+                        const isSelected = selectedGtkId === p.id;
+                        return (
+                          <button
+                            key={p.id}
+                            type="button"
+                            disabled={isVoted}
+                            onClick={() => {
+                              setSelectedGtkId(p.id);
+                              setGtkSearchQuery(p.full_name);
+                            }}
+                            className={`w-full p-3 rounded-xl flex items-center justify-between text-left transition-all ${
+                              isSelected 
+                                ? 'bg-blue-50 border-2 border-blue-600 text-slate-900 shadow-2xs' 
+                                : isVoted 
+                                  ? 'opacity-50 cursor-not-allowed bg-slate-100 text-slate-400 border border-slate-200' 
+                                  : 'bg-white border border-slate-200 hover:border-blue-300 hover:bg-blue-50/40 text-slate-800'
+                            }`}
+                          >
+                            <div className="min-w-0 pr-2">
+                              <p className="text-xs font-bold truncate text-slate-900">{p.full_name}</p>
+                              <p className="text-[10px] text-slate-500 font-semibold mt-0.5">Sektor Guru & Tenaga Kependidikan</p>
+                            </div>
+                            <div>
+                              {isVoted ? (
+                                <span className="text-[9px] bg-rose-50 text-rose-700 border border-rose-200 px-2.5 py-0.5 rounded-full font-bold uppercase tracking-wider">
+                                  Sudah Memilih
+                                </span>
+                              ) : isSelected ? (
+                                <span className="text-[9px] bg-blue-600 text-white px-2.5 py-0.5 rounded-full font-bold uppercase tracking-wider shadow-2xs">
+                                  Terpilih
+                                </span>
+                              ) : (
+                                <span className="text-[9px] bg-slate-100 hover:bg-blue-50 text-slate-600 border border-slate-200 px-2.5 py-0.5 rounded-full font-bold uppercase tracking-wider transition-all">
+                                  Pilih
+                                </span>
+                              )}
+                            </div>
+                          </button>
+                        );
+                      })
+                    )}
+                  </div>
+                )}
               </div>
             ) : (
               <div className="w-full space-y-4">
@@ -2185,114 +2230,205 @@ export default function VotingFlow({ voteMode, initialVoterCardId, onComplete, o
                                     }`}
                                   >
                                     {/* Header Gradient + Photo Area */}
+
                                     <div className="relative w-full aspect-[4/3] bg-slate-100 overflow-hidden shrink-0 flex items-center justify-center text-slate-400 border-b border-slate-100">
-                                      {cand.photo_url ? (
-                                        <img 
-                                          src={cand.photo_url} 
-                                          alt={cand.chairman} 
-                                          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                                          referrerPolicy="no-referrer"
-                                        />
-                                      ) : (
-                                        <div className="absolute inset-0 flex flex-col items-center justify-center p-4 bg-slate-100">
-                                          <span className="text-[10px] text-slate-400 font-extrabold uppercase tracking-widest">Pasfoto Kandidat</span>
-                                        </div>
-                                      )}
-                                      
-                                      {/* Nomor Paslon Badge */}
-                                      <div className={`absolute left-3 top-3 px-2.5 py-1 rounded-xl text-[10px] font-black uppercase tracking-widest text-white shadow-xs transition-all z-10 ${
-                                        isSelected ? 'bg-blue-600' : 'bg-slate-800'
-                                      }`}>
-                                        KANDIDAT {String(cand.number).padStart(2, '0')}
+
+                                      {/* Nomor Paslon Badge (z-30, never blurred) */}
+
+                                      <div className={`absolute left-3 top-3 min-w-[32px] h-8 px-2.5 rounded-xl font-black text-xs sm:text-sm text-white shadow-md transition-all z-30 inline-flex items-center justify-center ${isSelected ? 'bg-blue-600 ring-2 ring-white/90' : 'bg-slate-900/80 backdrop-blur-xs'}`}>
+
+                                        {cand.number}
+
                                       </div>
 
-                                      {/* Center Overlay for Selected / Coblos Animation */}
+
+                                      {/* Photo Layer (blurred ONLY during 1s coblos animation) */}
+
+                                      <div className={`w-full h-full relative transition-all duration-300 ${isSelected && animatingCandId === cand.id ? 'filter blur-[3px] brightness-75 scale-105' : 'filter-none'}`}>
+
+                                        {cand.photo_url ? (
+
+                                          <img 
+
+                                            src={cand.photo_url} 
+
+                                            alt={cand.chairman} 
+
+                                            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+
+                                            referrerPolicy="no-referrer"
+
+                                          />
+
+                                        ) : (
+
+                                          <div className="absolute inset-0 flex flex-col items-center justify-center p-4 bg-slate-100">
+
+                                            <span className="text-[10px] text-slate-400 font-extrabold uppercase tracking-widest">Pasfoto Kandidat</span>
+
+                                          </div>
+
+                                        )}
+
+                                      </div>
+
+
+                                      {/* Overlay Animasi & Status DICOBLOS */}
+
                                       {isSelected && (
-                                        <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-[1.5px] z-20 flex items-center justify-center p-2">
-                                          <AnimatePresence mode="wait">
-                                            {animatingCandId === cand.id ? (
+
+                                        <>
+
+                                          {animatingCandId === cand.id ? (
+
+                                            /* Tahap 1: Animasi Coblos 📌 (durasi ~1 detik) */
+
+                                            <div className="absolute inset-0 bg-slate-900/35 z-20 flex items-center justify-center p-2 pointer-events-none">
+
+                                              <AnimatePresence mode="wait">
+
+                                                <motion.div
+
+                                                  key="pin-anim"
+
+                                                  initial={{ scale: 2.2, y: -45, rotate: -25, opacity: 0 }}
+
+                                                  animate={{
+
+                                                    scale: [2.2, 0.9, 1.1, 1],
+
+                                                    y: [-45, 2, -2, 0],
+
+                                                    rotate: [-25, 4, -2, 0],
+
+                                                    opacity: [0, 1, 1, 1]
+
+                                                  }}
+
+                                                  exit={{ scale: 0.5, opacity: 0 }}
+
+                                                  transition={{ duration: 0.8, ease: "easeOut" }}
+
+                                                  className="flex flex-col items-center justify-center"
+
+                                                >
+
+                                                  <span className="text-5xl sm:text-6xl filter drop-shadow-[0_8px_16px_rgba(0,0,0,0.7)] select-none">
+
+                                                    📌
+
+                                                  </span>
+
+                                                </motion.div>
+
+                                              </AnimatePresence>
+
+                                            </div>
+
+                                          ) : (
+
+                                            /* Tahap 2: Status ✓ DICOBLOS (setelah 1s, foto jelas kembali) */
+
+                                            <div className="absolute bottom-3 right-3 z-20 pointer-events-none">
+
                                               <motion.div
-                                                key="pin-anim"
-                                                initial={{ scale: 2.2, y: -45, rotate: -25, opacity: 0 }}
-                                                animate={{
-                                                  scale: [2.2, 0.9, 1.1, 1],
-                                                  y: [-45, 2, -2, 0],
-                                                  rotate: [-25, 4, -2, 0],
-                                                  opacity: [0, 1, 1, 1]
-                                                }}
-                                                exit={{ scale: 0.5, opacity: 0 }}
-                                                transition={{ duration: 0.8, ease: "easeOut" }}
-                                                className="flex flex-col items-center justify-center pointer-events-none"
-                                              >
-                                                <span className="text-5xl sm:text-6xl filter drop-shadow-[0_8px_16px_rgba(0,0,0,0.7)] select-none">
-                                                  📌
-                                                </span>
-                                              </motion.div>
-                                            ) : (
-                                              <motion.div
+
                                                 key="coblos-badge"
+
                                                 initial={{ scale: 0.8, opacity: 0 }}
+
                                                 animate={{ scale: 1, opacity: 1 }}
+
                                                 transition={{ duration: 0.25, ease: "easeOut" }}
-                                                className="px-4 py-2 bg-emerald-500 border-2 border-emerald-300 text-white font-black text-xs sm:text-sm tracking-wider uppercase rounded-xl flex items-center justify-center gap-1.5 shadow-lg"
+
+                                                className="px-3 py-1.5 bg-emerald-500 border-2 border-emerald-300 text-white font-black text-xs tracking-wider uppercase rounded-xl flex items-center gap-1.5 shadow-lg"
+
                                               >
+
                                                 <Check className="w-4 h-4 stroke-[3]" />
+
                                                 <span>DICOBLOS</span>
+
                                               </motion.div>
-                                            )}
-                                          </AnimatePresence>
-                                        </div>
+
+                                            </div>
+
+                                          )}
+
+                                        </>
+
                                       )}
+
 
                                       {!isSelected && (
-                                        <div className="absolute right-3 top-3 z-10">
-                                          <div className="w-6 h-6 rounded-full border-2 border-slate-300 bg-white/80 backdrop-blur-md flex items-center justify-center shadow-xs">
-                                            <div className="w-2.5 h-2.5 rounded-full bg-transparent"></div>
-                                          </div>
-                                        </div>
-                                      )}
-                                    </div>
 
-                                    {/* Card Content Area */}
-                                    <div className="p-5 flex-1 flex flex-col justify-between text-left">
-                                      <div className="flex-1 flex flex-col justify-between">
-                                        <div className="space-y-2 mb-4">
-                                          <div>
-                                            <span className="block text-[10px] font-extrabold text-slate-400 uppercase tracking-wider mb-0.5">Ketua / Perwakilan</span>
-                                            <span className="font-black text-slate-900 text-base leading-tight block">
-                                              {cand.chairman}
-                                            </span>
+                                        <div className="absolute right-3 top-3 z-20">
+
+                                          <div className="w-6 h-6 rounded-full border-2 border-slate-300 bg-white/80 backdrop-blur-md flex items-center justify-center shadow-xs">
+
+                                            <div className="w-2.5 h-2.5 rounded-full bg-transparent"></div>
+
                                           </div>
-                                          {cand.vice && (
+
+                                        </div>
+
+                                      )}
+
+                                    </div>
+                                    {/* Card Content Area */}
+                                    <div className="p-5 flex-1 flex flex-col justify-between">
+                                      <div className="flex-1 flex flex-col space-y-4">
+                                        {/* Ketua & Wakil Section - Horizontal */}
+                                        {cand.vice ? (
+                                          <div className="grid grid-cols-2 gap-3 text-center pb-3 border-b border-slate-100">
                                             <div>
-                                              <span className="block text-[10px] font-extrabold text-slate-400 uppercase tracking-wider mb-0.5">Wakil Ketua</span>
-                                              <span className="font-bold text-slate-700 text-xs sm:text-sm leading-tight block">
+                                              <span className="block text-[10px] font-extrabold text-slate-400 uppercase tracking-wider mb-0.5">KETUA</span>
+                                              <span className="font-black text-slate-900 text-sm sm:text-base leading-tight block truncate">
+                                                {cand.chairman}
+                                              </span>
+                                            </div>
+                                            <div>
+                                              <span className="block text-[10px] font-extrabold text-slate-400 uppercase tracking-wider mb-0.5">WAKIL KETUA</span>
+                                              <span className="font-bold text-slate-800 text-xs sm:text-sm leading-tight block truncate">
                                                 {cand.vice}
                                               </span>
                                             </div>
-                                          )}
-                                        </div>
-
-                                        {cand.visi && cand.visi.trim() !== '' && (
-                                          <div className="mb-3 text-left">
-                                            <span className="block text-[10px] font-extrabold text-slate-800 uppercase tracking-wider mb-0.5 font-mono">VISI</span>
-                                            <p className="text-slate-600 text-xs font-normal leading-relaxed text-justify">
-                                              "{cand.visi}"
-                                            </p>
+                                          </div>
+                                        ) : (
+                                          <div className="text-center pb-3 border-b border-slate-100">
+                                            <span className="block text-[10px] font-extrabold text-slate-400 uppercase tracking-wider mb-0.5">KETUA</span>
+                                            <span className="font-black text-slate-900 text-sm sm:text-base leading-tight block truncate">
+                                              {cand.chairman}
+                                            </span>
                                           </div>
                                         )}
 
+                                        {/* Visi Section */}
+                                        {cand.visi && cand.visi.trim() !== '' && (
+                                          <div className="text-center">
+                                            <span className="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wider mb-1 font-mono">Visi</span>
+                                            <div className="bg-slate-50 border border-slate-100 p-3 rounded-2xl text-left">
+                                              <p className="text-slate-600 text-xs font-normal leading-relaxed text-justify">
+                                                "{cand.visi}"
+                                              </p>
+                                            </div>
+                                          </div>
+                                        )}
+
+                                        {/* Misi Section */}
                                         {cand.misi && cand.misi.length > 0 && (
-                                          <div className="mb-4 text-left">
-                                            <span className="block text-[10px] font-extrabold text-slate-800 uppercase tracking-wider mb-0.5 font-mono">MISI</span>
-                                            <ul className="space-y-1 text-left">
-                                              {cand.misi.slice(0, 3).map((m, mIdx) => (
-                                                <li key={mIdx} className="text-slate-600 text-xs font-normal leading-relaxed flex gap-1.5 items-start text-justify">
-                                                  <span className="text-slate-400 shrink-0 select-none">•</span>
-                                                  <span>{m}</span>
-                                                </li>
-                                              ))}
-                                            </ul>
+                                          <div className="text-center">
+                                            <span className="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wider mb-1 font-mono">Misi</span>
+                                            <div className="bg-slate-50 border border-slate-100 p-3 rounded-2xl text-left">
+                                              <ul className="space-y-1 text-left">
+                                                {cand.misi.slice(0, 3).map((m, mIdx) => (
+                                                  <li key={mIdx} className="text-slate-600 text-xs font-normal leading-relaxed flex gap-1.5 items-start text-justify">
+                                                    <span className="text-slate-400 shrink-0 select-none">•</span>
+                                                    <span>{m}</span>
+                                                  </li>
+                                                ))}
+                                              </ul>
+                                            </div>
                                           </div>
                                         )}
                                       </div>
@@ -2390,114 +2526,205 @@ export default function VotingFlow({ voteMode, initialVoterCardId, onComplete, o
                               }`}
                             >
                               {/* Header Gradient + Photo Area */}
+
                               <div className="relative w-full aspect-[4/3] bg-slate-100 overflow-hidden shrink-0 flex items-center justify-center text-slate-400 border-b border-slate-100">
-                                {cand.photo_url ? (
-                                  <img 
-                                    src={cand.photo_url} 
-                                    alt={cand.chairman} 
-                                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                                    referrerPolicy="no-referrer"
-                                  />
-                                ) : (
-                                  <div className="absolute inset-0 flex flex-col items-center justify-center p-4 bg-slate-100">
-                                    <span className="text-[10px] text-slate-400 font-extrabold uppercase tracking-widest">Pasfoto Kandidat</span>
-                                  </div>
-                                )}
-                                
-                                {/* Nomor Paslon Badge */}
-                                <div className={`absolute left-3 top-3 px-2.5 py-1 rounded-xl text-[10px] font-black uppercase tracking-widest text-white shadow-xs transition-all z-10 ${
-                                  isSelected ? 'bg-blue-600' : 'bg-slate-800'
-                                }`}>
-                                  PASLON {String(cand.number).padStart(2, '0')}
+
+                                {/* Nomor Paslon Badge (z-30, never blurred) */}
+
+                                <div className={`absolute left-3 top-3 min-w-[32px] h-8 px-2.5 rounded-xl font-black text-xs sm:text-sm text-white shadow-md transition-all z-30 inline-flex items-center justify-center ${isSelected ? 'bg-blue-600 ring-2 ring-white/90' : 'bg-slate-900/80 backdrop-blur-xs'}`}>
+
+                                  {cand.number}
+
                                 </div>
 
-                                {/* Center Overlay for Selected / Coblos Animation */}
+
+                                {/* Photo Layer (blurred ONLY during 1s coblos animation) */}
+
+                                <div className={`w-full h-full relative transition-all duration-300 ${isSelected && animatingCandId === cand.id ? 'filter blur-[3px] brightness-75 scale-105' : 'filter-none'}`}>
+
+                                  {cand.photo_url ? (
+
+                                    <img 
+
+                                      src={cand.photo_url} 
+
+                                      alt={cand.chairman} 
+
+                                      className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+
+                                      referrerPolicy="no-referrer"
+
+                                    />
+
+                                  ) : (
+
+                                    <div className="absolute inset-0 flex flex-col items-center justify-center p-4 bg-slate-100">
+
+                                      <span className="text-[10px] text-slate-400 font-extrabold uppercase tracking-widest">Pasfoto Kandidat</span>
+
+                                    </div>
+
+                                  )}
+
+                                </div>
+
+
+                                {/* Overlay Animasi & Status DICOBLOS */}
+
                                 {isSelected && (
-                                  <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-[1.5px] z-20 flex items-center justify-center p-2">
-                                    <AnimatePresence mode="wait">
-                                      {animatingCandId === cand.id ? (
+
+                                  <>
+
+                                    {animatingCandId === cand.id ? (
+
+                                      /* Tahap 1: Animasi Coblos 📌 (durasi ~1 detik) */
+
+                                      <div className="absolute inset-0 bg-slate-900/35 z-20 flex items-center justify-center p-2 pointer-events-none">
+
+                                        <AnimatePresence mode="wait">
+
+                                          <motion.div
+
+                                            key="pin-anim"
+
+                                            initial={{ scale: 2.2, y: -45, rotate: -25, opacity: 0 }}
+
+                                            animate={{
+
+                                              scale: [2.2, 0.9, 1.1, 1],
+
+                                              y: [-45, 2, -2, 0],
+
+                                              rotate: [-25, 4, -2, 0],
+
+                                              opacity: [0, 1, 1, 1]
+
+                                            }}
+
+                                            exit={{ scale: 0.5, opacity: 0 }}
+
+                                            transition={{ duration: 0.8, ease: "easeOut" }}
+
+                                            className="flex flex-col items-center justify-center"
+
+                                          >
+
+                                            <span className="text-5xl sm:text-6xl filter drop-shadow-[0_8px_16px_rgba(0,0,0,0.7)] select-none">
+
+                                              📌
+
+                                            </span>
+
+                                          </motion.div>
+
+                                        </AnimatePresence>
+
+                                      </div>
+
+                                    ) : (
+
+                                      /* Tahap 2: Status ✓ DICOBLOS (setelah 1s, foto jelas kembali) */
+
+                                      <div className="absolute bottom-3 right-3 z-20 pointer-events-none">
+
                                         <motion.div
-                                          key="pin-anim"
-                                          initial={{ scale: 2.2, y: -45, rotate: -25, opacity: 0 }}
-                                          animate={{
-                                            scale: [2.2, 0.9, 1.1, 1],
-                                            y: [-45, 2, -2, 0],
-                                            rotate: [-25, 4, -2, 0],
-                                            opacity: [0, 1, 1, 1]
-                                          }}
-                                          exit={{ scale: 0.5, opacity: 0 }}
-                                          transition={{ duration: 0.8, ease: "easeOut" }}
-                                          className="flex flex-col items-center justify-center pointer-events-none"
-                                        >
-                                          <span className="text-5xl sm:text-6xl filter drop-shadow-[0_8px_16px_rgba(0,0,0,0.7)] select-none">
-                                            📌
-                                          </span>
-                                        </motion.div>
-                                      ) : (
-                                        <motion.div
+
                                           key="coblos-badge"
+
                                           initial={{ scale: 0.8, opacity: 0 }}
+
                                           animate={{ scale: 1, opacity: 1 }}
+
                                           transition={{ duration: 0.25, ease: "easeOut" }}
-                                          className="px-4 py-2 bg-emerald-500 border-2 border-emerald-300 text-white font-black text-xs sm:text-sm tracking-wider uppercase rounded-xl flex items-center justify-center gap-1.5 shadow-lg"
+
+                                          className="px-3 py-1.5 bg-emerald-500 border-2 border-emerald-300 text-white font-black text-xs tracking-wider uppercase rounded-xl flex items-center gap-1.5 shadow-lg"
+
                                         >
+
                                           <Check className="w-4 h-4 stroke-[3]" />
+
                                           <span>DICOBLOS</span>
+
                                         </motion.div>
-                                      )}
-                                    </AnimatePresence>
-                                  </div>
+
+                                      </div>
+
+                                    )}
+
+                                  </>
+
                                 )}
+
 
                                 {!isSelected && (
-                                  <div className="absolute right-3 top-3 z-10">
-                                    <div className="w-6 h-6 rounded-full border-2 border-slate-300 bg-white/80 backdrop-blur-md flex items-center justify-center shadow-xs">
-                                      <div className="w-2.5 h-2.5 rounded-full bg-transparent"></div>
-                                    </div>
-                                  </div>
-                                )}
-                              </div>
 
-                              {/* Card Content Area */}
-                              <div className="p-5 flex-1 flex flex-col justify-between text-left">
-                                <div className="flex-1 flex flex-col justify-between">
-                                  <div className="space-y-2 mb-4">
-                                    <div>
-                                      <span className="block text-[10px] font-extrabold text-slate-400 uppercase tracking-wider mb-0.5">Ketua</span>
-                                      <span className="font-black text-slate-900 text-base leading-tight block">
-                                        {cand.chairman}
-                                      </span>
+                                  <div className="absolute right-3 top-3 z-20">
+
+                                    <div className="w-6 h-6 rounded-full border-2 border-slate-300 bg-white/80 backdrop-blur-md flex items-center justify-center shadow-xs">
+
+                                      <div className="w-2.5 h-2.5 rounded-full bg-transparent"></div>
+
                                     </div>
-                                    {cand.vice && (
+
+                                  </div>
+
+                                )}
+
+                              </div>
+                              {/* Card Content Area */}
+                              <div className="p-5 flex-1 flex flex-col justify-between">
+                                <div className="flex-1 flex flex-col space-y-4">
+                                  {/* Ketua & Wakil Section - Horizontal */}
+                                  {cand.vice ? (
+                                    <div className="grid grid-cols-2 gap-3 text-center pb-3 border-b border-slate-100">
                                       <div>
-                                        <span className="block text-[10px] font-extrabold text-slate-400 uppercase tracking-wider mb-0.5">Wakil Ketua</span>
-                                        <span className="font-bold text-slate-700 text-xs sm:text-sm leading-tight block">
+                                        <span className="block text-[10px] font-extrabold text-slate-400 uppercase tracking-wider mb-0.5">KETUA</span>
+                                        <span className="font-black text-slate-900 text-sm sm:text-base leading-tight block truncate">
+                                          {cand.chairman}
+                                        </span>
+                                      </div>
+                                      <div>
+                                        <span className="block text-[10px] font-extrabold text-slate-400 uppercase tracking-wider mb-0.5">WAKIL KETUA</span>
+                                        <span className="font-bold text-slate-800 text-xs sm:text-sm leading-tight block truncate">
                                           {cand.vice}
                                         </span>
                                       </div>
-                                    )}
-                                  </div>
-
-                                  {cand.visi && cand.visi.trim() !== '' && (
-                                    <div className="mb-3 text-left">
-                                      <span className="block text-[10px] font-extrabold text-slate-800 uppercase tracking-wider mb-0.5 font-mono">VISI</span>
-                                      <p className="text-slate-600 text-xs font-normal leading-relaxed text-justify">
-                                        "{cand.visi}"
-                                      </p>
+                                    </div>
+                                  ) : (
+                                    <div className="text-center pb-3 border-b border-slate-100">
+                                      <span className="block text-[10px] font-extrabold text-slate-400 uppercase tracking-wider mb-0.5">KETUA</span>
+                                      <span className="font-black text-slate-900 text-sm sm:text-base leading-tight block truncate">
+                                        {cand.chairman}
+                                      </span>
                                     </div>
                                   )}
 
+                                  {/* Visi Section */}
+                                  {cand.visi && cand.visi.trim() !== '' && (
+                                    <div className="text-center">
+                                      <span className="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wider mb-1 font-mono">Visi</span>
+                                      <div className="bg-slate-50 border border-slate-100 p-3 rounded-2xl text-left">
+                                        <p className="text-slate-600 text-xs font-normal leading-relaxed text-justify">
+                                          "{cand.visi}"
+                                        </p>
+                                      </div>
+                                    </div>
+                                  )}
+
+                                  {/* Misi Section */}
                                   {cand.misi && cand.misi.length > 0 && (
-                                    <div className="mb-4 text-left">
-                                      <span className="block text-[10px] font-extrabold text-slate-800 uppercase tracking-wider mb-0.5 font-mono">MISI</span>
-                                      <ul className="space-y-1 text-left">
-                                        {cand.misi.slice(0, 3).map((m, mIdx) => (
-                                          <li key={mIdx} className="text-slate-600 text-xs font-normal leading-relaxed flex gap-1.5 items-start text-justify">
-                                            <span className="text-slate-400 shrink-0 select-none">•</span>
-                                            <span>{m}</span>
-                                          </li>
-                                        ))}
-                                      </ul>
+                                    <div className="text-center">
+                                      <span className="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wider mb-1 font-mono">Misi</span>
+                                      <div className="bg-slate-50 border border-slate-100 p-3 rounded-2xl text-left">
+                                        <ul className="space-y-1 text-left">
+                                          {cand.misi.slice(0, 3).map((m, mIdx) => (
+                                            <li key={mIdx} className="text-slate-600 text-xs font-normal leading-relaxed flex gap-1.5 items-start text-justify">
+                                              <span className="text-slate-400 shrink-0 select-none">•</span>
+                                              <span>{m}</span>
+                                            </li>
+                                          ))}
+                                        </ul>
+                                      </div>
                                     </div>
                                   )}
                                 </div>
@@ -2708,7 +2935,7 @@ export default function VotingFlow({ voteMode, initialVoterCardId, onComplete, o
                           <span className="font-extrabold text-slate-900 text-xs block truncate leading-tight mt-0.5">{cand.chairman}</span>
                         </div>
                         <span className="text-[9px] font-mono font-bold text-slate-600 bg-slate-200 px-2 py-0.5 rounded-lg shrink-0">
-                          No. {String(cand.number).padStart(2, '0')}
+                          No. {cand.number}
                         </span>
                       </div>
                     );
@@ -2718,7 +2945,7 @@ export default function VotingFlow({ voteMode, initialVoterCardId, onComplete, o
                 <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 mb-6">
                   <span className="block text-[8px] font-black text-blue-600 tracking-wider mb-0.5 uppercase">Kandidat Terpilih</span>
                   <span className="block text-[11px] font-extrabold text-slate-500 tracking-wider mb-1 uppercase">
-                    PASLON {String(selectedCandidate?.number).padStart(2, '0')}
+                    No. {selectedCandidate?.number}
                   </span>
                   <span className="font-black text-slate-900 text-base leading-tight block truncate mb-0.5">
                     {selectedCandidate?.chairman}
@@ -2824,6 +3051,68 @@ export default function VotingFlow({ voteMode, initialVoterCardId, onComplete, o
           <Maximize className="w-4 h-4" />
           <span>Layar Penuh (Fullscreen)</span>
         </button>
+      )}
+
+      {/* Modal Protection Kode Akses Bilik Default */}
+      {showBilikDefaultModal && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-[9999] flex items-center justify-center p-4">
+          <div className="bg-white border border-slate-200 w-full max-w-sm rounded-2xl p-6 shadow-2xl text-center space-y-5">
+            <div className="w-12 h-12 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center border border-blue-200 mx-auto shadow-xs">
+              <Lock className="w-6 h-6" />
+            </div>
+
+            <div className="space-y-1.5">
+              <h3 className="text-base font-black text-slate-900 tracking-tight">
+                Proteksi Akses Bilik
+              </h3>
+              <p className="text-xs text-slate-500 leading-relaxed">
+                Masukkan kode keamanan untuk kembali ke halaman <span className="font-bold text-slate-800">Bilik Default</span>.
+              </p>
+            </div>
+
+            <form onSubmit={handleVerifyBilikCode} className="space-y-4">
+              <div>
+                <input
+                  type="password"
+                  autoFocus
+                  placeholder="Masukkan kode..."
+                  value={bilikCodeInput}
+                  onChange={(e) => {
+                    setBilikCodeInput(e.target.value);
+                    if (bilikCodeError) setBilikCodeError(null);
+                  }}
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 focus:border-blue-600 rounded-xl outline-none text-slate-900 font-mono text-center text-lg tracking-widest font-bold transition-all focus:ring-4 focus:ring-blue-500/10 placeholder:font-sans placeholder:text-slate-400 placeholder:text-xs placeholder:tracking-normal"
+                />
+                {bilikCodeError && (
+                  <p className="text-xs font-bold text-rose-600 mt-2 flex items-center justify-center gap-1">
+                    <AlertCircle className="w-3.5 h-3.5" />
+                    <span>{bilikCodeError}</span>
+                  </p>
+                )}
+              </div>
+
+              <div className="flex gap-2.5 pt-1">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowBilikDefaultModal(false);
+                    setBilikCodeInput('');
+                    setBilikCodeError(null);
+                  }}
+                  className="flex-1 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition-colors cursor-pointer"
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition-all shadow-md shadow-blue-600/20 cursor-pointer"
+                >
+                  Konfirmasi
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
       )}
 
       </div>

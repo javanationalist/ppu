@@ -538,6 +538,21 @@ export default function BilikPage({ isGtkMode = false, isStudentMode = false }: 
         </div>
 
         <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={() => navigate('/bilik/pemilih-gtk')}
+            className="text-xs font-bold text-slate-700 hover:text-blue-600 hover:bg-blue-50/80 bg-white border border-slate-200/90 hover:border-blue-200 px-3 py-1.5 rounded-xl transition-all cursor-pointer shadow-2xs"
+          >
+            GTK
+          </button>
+          <button
+            type="button"
+            onClick={() => navigate('/bilik/pemilih-siswa')}
+            className="text-xs font-bold text-slate-700 hover:text-blue-600 hover:bg-blue-50/80 bg-white border border-slate-200/90 hover:border-blue-200 px-3 py-1.5 rounded-xl transition-all cursor-pointer shadow-2xs"
+          >
+            Siswa
+          </button>
+
           <span className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-50 text-amber-700 text-xs font-semibold border border-amber-200/80 shadow-2xs">
             <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
             MENUNGGU PEMILIH

@@ -967,31 +967,47 @@ export default function KelolaPemilihan() {
                         </div>
                       </div>
 
-                      <div className="flex items-center gap-3 mb-3">
-                        <div className="w-20 aspect-[4/3] rounded-xl overflow-hidden bg-slate-100 border border-slate-200 shrink-0 flex items-center justify-center">
-                          {cand.photo_url ? (
-                            <img src={cand.photo_url} alt={cand.chairman} className="w-full h-full object-cover" />
-                          ) : (
-                            <User className="w-6 h-6 text-slate-400" />
-                          )}
-                        </div>
-                        <div>
-                          <h4 className="text-sm font-extrabold text-slate-800 line-clamp-1">{cand.chairman}</h4>
-                          {cand.vice && (
-                            <p className="text-xs font-semibold text-slate-500 line-clamp-1">& {cand.vice}</p>
-                          )}
-                          {isMpk && (
-                            <span className="text-[10px] font-bold text-purple-600 bg-purple-50 px-2 py-0.5 rounded-md inline-block mt-1">
-                              {cand.class_name || cand.candidate_class || selectedMpkClass}
-                            </span>
-                          )}
-                        </div>
+                      {/* Photo as main visual element */}
+                      <div className="relative w-full aspect-[4/3] rounded-2xl overflow-hidden bg-slate-100 border border-slate-200 mb-3 flex items-center justify-center">
+                        {cand.photo_url ? (
+                          <img src={cand.photo_url} alt={cand.chairman} className="w-full h-full object-cover" />
+                        ) : (
+                          <User className="w-8 h-8 text-slate-400" />
+                        )}
+                        {isMpk && (
+                          <span className="absolute bottom-2 left-2 text-[10px] font-bold text-purple-700 bg-purple-100/90 backdrop-blur-xs px-2 py-0.5 rounded-md">
+                            {cand.class_name || cand.candidate_class || selectedMpkClass}
+                          </span>
+                        )}
                       </div>
 
+                      {/* Ketua & Wakil Horizontal Layout */}
+                      {cand.vice ? (
+                        <div className="grid grid-cols-2 gap-2 text-center pb-3 border-b border-slate-100 mb-3">
+                          <div>
+                            <span className="block text-[10px] font-extrabold text-slate-400 uppercase tracking-wider mb-0.5">KETUA</span>
+                            <span className="font-extrabold text-slate-800 text-xs sm:text-sm leading-tight block truncate">{cand.chairman}</span>
+                          </div>
+                          <div>
+                            <span className="block text-[10px] font-extrabold text-slate-400 uppercase tracking-wider mb-0.5">WAKIL KETUA</span>
+                            <span className="font-bold text-slate-700 text-xs leading-tight block truncate">{cand.vice}</span>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="text-center pb-3 border-b border-slate-100 mb-3">
+                          <span className="block text-[10px] font-extrabold text-slate-400 uppercase tracking-wider mb-0.5">KETUA</span>
+                          <span className="font-extrabold text-slate-800 text-xs sm:text-sm leading-tight block truncate">{cand.chairman}</span>
+                        </div>
+                      )}
+
+                      {/* Visi */}
                       {cand.visi && (
-                        <p className="text-xs text-slate-500 line-clamp-2 italic mb-3 bg-slate-50 p-2 rounded-xl border border-slate-100">
-                          "{cand.visi}"
-                        </p>
+                        <div className="text-center mb-3">
+                          <span className="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wider mb-1 font-mono">Visi</span>
+                          <p className="text-xs text-slate-600 line-clamp-2 bg-slate-50 p-2.5 rounded-xl border border-slate-100 text-justify">
+                            "{cand.visi}"
+                          </p>
+                        </div>
                       )}
                     </div>
 
