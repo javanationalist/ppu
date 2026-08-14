@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { QRCodeCanvas } from 'qrcode.react';
-import { Monitor, RefreshCw, AlertCircle, Clock, CheckCircle2, Terminal, QrCode, LogOut, Radio, ShieldCheck, Sparkles } from 'lucide-react';
+import { Monitor, RefreshCw, AlertCircle, Clock, CheckCircle2, Terminal, QrCode, LogOut, Radio, ShieldCheck, Sparkles, Lock, Eye, EyeOff } from 'lucide-react';
 import { M3ExpressiveLoadingIndicator } from '../components/ui/M3ExpressiveLoadingIndicator';
 import { 
   createBoothSession, 
@@ -27,9 +27,12 @@ function generateRandomSessionCode(): string {
   return result;
 }
 
+// Temporary toggle flag for QR Code generation (Set to true to re-enable QR code generation)
+const ENABLE_QR_CODE = false;
+
 export default function BilikPage({ isGtkMode = false, isStudentMode = false }: { isGtkMode?: boolean; isStudentMode?: boolean }) {
   const navigate = useNavigate();
-  const { profile, signOut } = useAuth();
+  const { user, profile, signOut } = useAuth();
   
   const [session, setSession] = useState<BoothSession | null>(null);
   const sessionRef = useRef<BoothSession | null>(null);
@@ -40,6 +43,107 @@ export default function BilikPage({ isGtkMode = false, isStudentMode = false }: 
   const [forceLogoutLoading, setForceLogoutLoading] = useState(false);
   const [forceLogoutError, setForceLogoutError] = useState<string | null>(null);
   const [showForceConfirmModal, setShowForceConfirmModal] = useState(false);
+
+  // Protection Modal for entering GTK or Siswa from /bilik (Code: "2027")
+  const [bilikAccessModal, setBilikAccessModal] = useState<{ target: 'gtk' | 'siswa' } | null>(null);
+  const [accessCodeInput, setAccessCodeInput] = useState<string>('');
+  const [accessCodeError, setAccessCodeError] = useState<string | null>(null);
+
+  // Password Input for Remote Logout
+  const [remotePasswordInput, setRemotePasswordInput] = useState<string>('');
+  const [showRemotePassword, setShowRemotePassword] = useState<boolean>(false);
+  const [remotePasswordError, setRemotePasswordError] = useState<string | null>(null);
+
+  // Local Logout Password Verification
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const [logoutPasswordInput, setLogoutPasswordInput] = useState<string>('');
+  const [logoutPasswordError, setLogoutPasswordError] = useState<string | null>(null);
+  const [logoutLoading, setLogoutLoading] = useState(false);
+
+  const handleOpenLogoutModal = () => {
+    setLogoutPasswordInput('');
+    setLogoutPasswordError(null);
+    setShowLogoutModal(true);
+  };
+
+  const handleVerifyLogoutPassword = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+
+    if (!logoutPasswordInput.trim()) {
+      setLogoutPasswordError('Password salah. Logout dibatalkan.');
+      return;
+    }
+
+    setLogoutLoading(true);
+    setLogoutPasswordError(null);
+
+    try {
+      const { supabase, isSupabaseConfigured } = await import('../lib/supabase');
+      const userEmail = user?.email || profile?.email || profileRef.current?.email || '';
+
+      let isValidPassword = false;
+
+      if (isSupabaseConfigured && userEmail) {
+        const { data, error } = await supabase.auth.signInWithPassword({
+          email: userEmail,
+          password: logoutPasswordInput,
+        });
+        if (!error && data?.user) {
+          isValidPassword = true;
+        }
+      } else {
+        // Fallback for mock environment
+        const localProfilesStr = localStorage.getItem('mock_profiles') || '[]';
+        const profiles = JSON.parse(localProfilesStr);
+        const curProf = profileRef.current || profile;
+        const match = profiles.find((p: any) => p.id === curProf?.id);
+        if (match) {
+          if (!match.password || match.password === logoutPasswordInput) {
+            isValidPassword = true;
+          }
+        } else {
+          isValidPassword = true;
+        }
+      }
+
+      if (!isValidPassword) {
+        setLogoutPasswordError('Password salah. Logout dibatalkan.');
+        setLogoutLoading(false);
+        return;
+      }
+
+      if (profile) {
+        await updateBoothStatus(profile.id, 'offline');
+      }
+      setShowLogoutModal(false);
+      await signOut();
+      navigate('/login');
+    } catch (err: any) {
+      console.error(err);
+      setLogoutPasswordError('Password salah. Logout dibatalkan.');
+    } finally {
+      setLogoutLoading(false);
+    }
+  };
+
+  const handleOpenBilikAccessModal = (target: 'gtk' | 'siswa') => {
+    setAccessCodeInput('');
+    setAccessCodeError(null);
+    setBilikAccessModal({ target });
+  };
+
+  const handleVerifyAccessCode = (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (accessCodeInput.trim() === '2027') {
+      const targetPath = bilikAccessModal?.target === 'gtk' ? '/bilik/pemilih-gtk' : '/bilik/pemilih-siswa';
+      setBilikAccessModal(null);
+      setAccessCodeInput('');
+      setAccessCodeError(null);
+      navigate(targetPath);
+    } else {
+      setAccessCodeError('Kode salah. Akses dibatalkan.');
+    }
+  };
   
   const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const profileRef = useRef(profile);
@@ -305,20 +409,65 @@ export default function BilikPage({ isGtkMode = false, isStudentMode = false }: 
     );
   }
 
-  const handleConfirmForceLogout = async () => {
-    setShowForceConfirmModal(false);
+  const handleConfirmForceLogout = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+
+    if (!remotePasswordInput.trim()) {
+      setRemotePasswordError('Password salah. Sesi perangkat lain tetap aktif.');
+      return;
+    }
+
     setForceLogoutLoading(true);
+    setRemotePasswordError(null);
     setForceLogoutError(null);
+
     try {
-      const { forceRegisterSession } = await import('../lib/sessionService');
+      const { supabase, isSupabaseConfigured } = await import('../lib/supabase');
       const curProf = profileRef.current;
+      const userEmail = user?.email || profile?.email || curProf?.email || '';
+
+      let isValidPassword = false;
+
+      if (isSupabaseConfigured && userEmail) {
+        const { data, error } = await supabase.auth.signInWithPassword({
+          email: userEmail,
+          password: remotePasswordInput,
+        });
+        if (!error && data?.user) {
+          isValidPassword = true;
+        }
+      } else {
+        // Fallback for mock environment
+        const localProfilesStr = localStorage.getItem('mock_profiles') || '[]';
+        const profiles = JSON.parse(localProfilesStr);
+        const match = profiles.find((p: any) => p.id === curProf?.id);
+        if (match) {
+          if (!match.password || match.password === remotePasswordInput) {
+            isValidPassword = true;
+          }
+        } else {
+          isValidPassword = true;
+        }
+      }
+
+      if (!isValidPassword) {
+        setRemotePasswordError('Password salah. Sesi perangkat lain tetap aktif.');
+        setForceLogoutLoading(false);
+        return;
+      }
+
       if (!curProf) {
         setForceLogoutError('Profil pengguna tidak ditemukan.');
         setForceLogoutLoading(false);
         return;
       }
+
+      const { forceRegisterSession } = await import('../lib/sessionService');
       const res = await forceRegisterSession(curProf.id, curProf.role || 'bilik');
       if (res.success) {
+        setShowForceConfirmModal(false);
+        setRemotePasswordInput('');
+        setRemotePasswordError(null);
         setSessionConflict(null);
         await restoreOrStartNewSession();
       } else {
@@ -326,7 +475,7 @@ export default function BilikPage({ isGtkMode = false, isStudentMode = false }: 
       }
     } catch (err: any) {
       console.error(err);
-      setForceLogoutError('Terjadi kesalahan sistem saat memutus sesi.');
+      setRemotePasswordError('Password salah. Sesi perangkat lain tetap aktif.');
     } finally {
       setForceLogoutLoading(false);
     }
@@ -376,7 +525,11 @@ export default function BilikPage({ isGtkMode = false, isStudentMode = false }: 
           <div className="pt-2 space-y-3">
             <button
               type="button"
-              onClick={() => setShowForceConfirmModal(true)}
+              onClick={() => {
+                setRemotePasswordInput('');
+                setRemotePasswordError(null);
+                setShowForceConfirmModal(true);
+              }}
               disabled={loading || forceLogoutLoading}
               className="w-full py-3 bg-red-600 hover:bg-red-700 disabled:opacity-55 active:scale-[0.98] transition-all text-white rounded-xl font-bold text-xs uppercase tracking-wider cursor-pointer flex items-center justify-center gap-2 shadow-lg shadow-red-600/20"
             >
@@ -437,42 +590,81 @@ export default function BilikPage({ isGtkMode = false, isStudentMode = false }: 
           </div>
         </div>
 
-        {/* Modal Confirmation Overlay */}
+        {/* Modal Confirmation Overlay with Password Input */}
         {showForceConfirmModal && (
           <div className="fixed inset-0 bg-black/80 backdrop-blur-xs z-[9999] flex items-center justify-center p-4">
             <div className="bg-[#161b22] border border-[#30363d] w-full max-w-sm rounded-2xl p-6 shadow-2xl text-center space-y-5">
               <div className="w-12 h-12 bg-amber-500/10 text-amber-500 rounded-xl flex items-center justify-center border border-amber-500/20 mx-auto">
-                <AlertCircle className="w-6 h-6" />
+                <Lock className="w-6 h-6" />
               </div>
               
               <div className="space-y-2">
                 <h3 className="text-base font-bold text-white tracking-tight">
-                  Konfirmasi Log Out Perangkat
+                  Keluar dari perangkat lain
                 </h3>
                 <p className="text-xs text-slate-300 leading-relaxed">
-                  Apakah Anda yakin ingin mengeluarkan akun bilik ini dari <span className="font-bold text-amber-400">{deviceLabel}</span>?
-                </p>
-                <p className="text-[11px] text-slate-400 leading-normal">
-                  Sesi pada perangkat lama akan terputus dan perangkat ini akan langsung terhubung ke bilik suara.
+                  Untuk mengeluarkan akun dari perangkat tersebut, masukkan password akun Anda.
                 </p>
               </div>
 
-              <div className="flex gap-2.5 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setShowForceConfirmModal(false)}
-                  className="flex-1 py-2.5 bg-[#21262d] hover:bg-[#30363d] text-slate-300 rounded-xl text-xs font-bold transition-colors cursor-pointer"
-                >
-                  Batal
-                </button>
-                <button
-                  type="button"
-                  onClick={handleConfirmForceLogout}
-                  className="flex-1 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-bold transition-all shadow-md cursor-pointer"
-                >
-                  Ya, Log Out
-                </button>
-              </div>
+              <form onSubmit={handleConfirmForceLogout} className="space-y-4">
+                <div className="relative">
+                  <input
+                    type={showRemotePassword ? 'text' : 'password'}
+                    autoFocus
+                    placeholder="Masukkan password akun..."
+                    value={remotePasswordInput}
+                    onChange={(e) => {
+                      setRemotePasswordInput(e.target.value);
+                      if (remotePasswordError) setRemotePasswordError(null);
+                    }}
+                    className="w-full pl-4 pr-11 py-3 bg-[#0d0f14] border border-[#30363d] focus:border-red-500 rounded-xl outline-none text-white text-center text-sm font-semibold transition-all focus:ring-2 focus:ring-red-500/20 placeholder:text-slate-500"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowRemotePassword(!showRemotePassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white p-1 transition-colors cursor-pointer"
+                  >
+                    {showRemotePassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                  {remotePasswordError && (
+                    <p className="text-xs font-bold text-rose-400 mt-2 flex items-center justify-center gap-1">
+                      <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                      <span>{remotePasswordError}</span>
+                    </p>
+                  )}
+                </div>
+
+                <div className="flex gap-2.5 pt-1">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowForceConfirmModal(false);
+                      setRemotePasswordInput('');
+                      setShowRemotePassword(false);
+                      setRemotePasswordError(null);
+                    }}
+                    disabled={forceLogoutLoading}
+                    className="flex-1 py-2.5 bg-[#21262d] hover:bg-[#30363d] text-slate-300 rounded-xl text-xs font-bold transition-colors cursor-pointer disabled:opacity-50"
+                  >
+                    Batal
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={forceLogoutLoading}
+                    className="flex-1 py-2.5 bg-red-600 hover:bg-red-700 disabled:opacity-55 text-white rounded-xl text-xs font-bold transition-all shadow-md cursor-pointer flex items-center justify-center gap-1.5"
+                  >
+                    {forceLogoutLoading ? (
+                      <>
+                        <M3ExpressiveLoadingIndicator size="small" className="text-white" />
+                        Memverifikasi...
+                      </>
+                    ) : (
+                      'Konfirmasi & Keluar'
+                    )}
+                  </button>
+                </div>
+              </form>
             </div>
           </div>
         )}
@@ -540,14 +732,14 @@ export default function BilikPage({ isGtkMode = false, isStudentMode = false }: 
         <div className="flex items-center gap-3">
           <button
             type="button"
-            onClick={() => navigate('/bilik/pemilih-gtk')}
+            onClick={() => handleOpenBilikAccessModal('gtk')}
             className="text-xs font-bold text-slate-700 hover:text-blue-600 hover:bg-blue-50/80 bg-white border border-slate-200/90 hover:border-blue-200 px-3 py-1.5 rounded-xl transition-all cursor-pointer shadow-2xs"
           >
             GTK
           </button>
           <button
             type="button"
-            onClick={() => navigate('/bilik/pemilih-siswa')}
+            onClick={() => handleOpenBilikAccessModal('siswa')}
             className="text-xs font-bold text-slate-700 hover:text-blue-600 hover:bg-blue-50/80 bg-white border border-slate-200/90 hover:border-blue-200 px-3 py-1.5 rounded-xl transition-all cursor-pointer shadow-2xs"
           >
             Siswa
@@ -559,14 +751,9 @@ export default function BilikPage({ isGtkMode = false, isStudentMode = false }: 
           </span>
 
           <button
-            onClick={async () => {
-              if (profile) {
-                await updateBoothStatus(profile.id, 'offline');
-              }
-              await signOut();
-              navigate('/login');
-            }}
-            className="text-xs font-semibold text-slate-500 hover:text-rose-600 hover:bg-rose-50 border border-slate-200/80 hover:border-rose-200 px-3 py-1.5 rounded-xl transition-all cursor-pointer flex items-center gap-1.5"
+            type="button"
+            onClick={handleOpenLogoutModal}
+            className="text-xs font-semibold text-slate-500 hover:text-rose-600 hover:bg-rose-50 border border-slate-200/80 hover:border-rose-200 px-3 py-1.5 rounded-xl transition-all cursor-pointer flex items-center gap-1.5 shadow-2xs"
           >
             <LogOut className="w-3.5 h-3.5" />
             <span>Keluar</span>
@@ -608,13 +795,17 @@ export default function BilikPage({ isGtkMode = false, isStudentMode = false }: 
               
               {/* Responsive 1:1 QR Box */}
               <div className="bg-white p-4 sm:p-5 rounded-2xl shadow-md border border-slate-200/90 flex items-center justify-center w-48 h-48 sm:w-60 sm:h-60 md:w-64 md:h-64 max-w-full aspect-square relative shrink-0">
-                <QRCodeCanvas
-                  value={session?.id || ''}
-                  size={300}
-                  level="H"
-                  includeMargin={false}
-                  style={{ width: '100%', height: '100%', objectFit: 'contain' }}
-                />
+                {ENABLE_QR_CODE ? (
+                  <QRCodeCanvas
+                    value={session?.id || ''}
+                    size={300}
+                    level="H"
+                    includeMargin={false}
+                    style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+                  />
+                ) : (
+                  <M3ExpressiveLoadingIndicator size="xlarge" className="text-blue-600" />
+                )}
               </div>
 
               {/* Code Info Badge */}
@@ -672,6 +863,141 @@ export default function BilikPage({ isGtkMode = false, isStudentMode = false }: 
       <footer className="border-t border-slate-200/80 bg-white/70 backdrop-blur-xs py-3.5 px-4 text-center text-[11px] text-slate-500 z-10 font-medium">
         <p>PPU SMAN 1 BANGSAL © 2026 • PANITIA PEMILU RAYA DIGITAL</p>
       </footer>
+
+      {/* Modal Proteksi Masuk Ke Bilik GTK / Siswa */}
+      {bilikAccessModal && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-[9999] flex items-center justify-center p-4">
+          <div className="bg-white border border-slate-200 w-full max-w-sm rounded-2xl p-6 shadow-2xl text-center space-y-5">
+            <div className="w-12 h-12 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center border border-blue-200 mx-auto shadow-xs">
+              <Lock className="w-6 h-6" />
+            </div>
+
+            <div className="space-y-1.5">
+              <h3 className="text-base font-black text-slate-900 tracking-tight">
+                Proteksi Akses Bilik
+              </h3>
+              <p className="text-xs text-slate-500 leading-relaxed">
+                {bilikAccessModal.target === 'gtk'
+                  ? 'Masukkan kode untuk membuka Bilik GTK'
+                  : 'Masukkan kode untuk membuka Bilik Siswa'}
+              </p>
+            </div>
+
+            <form onSubmit={handleVerifyAccessCode} className="space-y-4">
+              <div>
+                <input
+                  type="password"
+                  autoFocus
+                  placeholder="Masukkan kode..."
+                  value={accessCodeInput}
+                  onChange={(e) => {
+                    setAccessCodeInput(e.target.value);
+                    if (accessCodeError) setAccessCodeError(null);
+                  }}
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 focus:border-blue-600 rounded-xl outline-none text-slate-900 font-mono text-center text-lg tracking-widest font-bold transition-all focus:ring-4 focus:ring-blue-500/10 placeholder:font-sans placeholder:text-slate-400 placeholder:text-xs placeholder:tracking-normal"
+                />
+                {accessCodeError && (
+                  <p className="text-xs font-bold text-rose-600 mt-2 flex items-center justify-center gap-1">
+                    <AlertCircle className="w-3.5 h-3.5 text-rose-600" />
+                    <span>{accessCodeError}</span>
+                  </p>
+                )}
+              </div>
+
+              <div className="flex gap-2.5 pt-1">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setBilikAccessModal(null);
+                    setAccessCodeInput('');
+                    setAccessCodeError(null);
+                  }}
+                  className="flex-1 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition-colors cursor-pointer"
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition-all shadow-md shadow-blue-600/20 cursor-pointer"
+                >
+                  Konfirmasi
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Proteksi Logout Akun Bilik (Password verification) */}
+      {showLogoutModal && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-[9999] flex items-center justify-center p-4">
+          <div className="bg-white border border-slate-200 w-full max-w-sm rounded-2xl p-6 shadow-2xl text-center space-y-5">
+            <div className="w-12 h-12 bg-rose-50 text-rose-600 rounded-2xl flex items-center justify-center border border-rose-200 mx-auto shadow-xs">
+              <Lock className="w-6 h-6" />
+            </div>
+
+            <div className="space-y-1.5">
+              <h3 className="text-base font-black text-slate-900 tracking-tight">
+                Konfirmasi Logout Akun
+              </h3>
+              <p className="text-xs text-slate-500 leading-relaxed font-medium">
+                Masukkan password akun untuk logout.
+              </p>
+            </div>
+
+            <form onSubmit={handleVerifyLogoutPassword} className="space-y-4">
+              <div>
+                <input
+                  type="password"
+                  autoFocus
+                  placeholder="Masukkan password akun..."
+                  value={logoutPasswordInput}
+                  onChange={(e) => {
+                    setLogoutPasswordInput(e.target.value);
+                    if (logoutPasswordError) setLogoutPasswordError(null);
+                  }}
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 focus:border-rose-600 rounded-xl outline-none text-slate-900 font-medium text-center text-sm transition-all focus:ring-4 focus:ring-rose-500/10 placeholder:font-sans placeholder:text-slate-400 placeholder:text-xs"
+                />
+                {logoutPasswordError && (
+                  <p className="text-xs font-bold text-rose-600 mt-2 flex items-center justify-center gap-1">
+                    <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                    <span>{logoutPasswordError}</span>
+                  </p>
+                )}
+              </div>
+
+              <div className="flex gap-2.5 pt-1">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowLogoutModal(false);
+                    setLogoutPasswordInput('');
+                    setLogoutPasswordError(null);
+                  }}
+                  disabled={logoutLoading}
+                  className="flex-1 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition-colors cursor-pointer disabled:opacity-50"
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  disabled={logoutLoading}
+                  className="flex-1 py-2.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold transition-all shadow-md shadow-rose-600/20 cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-55"
+                >
+                  {logoutLoading ? (
+                    <>
+                      <M3ExpressiveLoadingIndicator size="small" className="text-white" />
+                      Memverifikasi...
+                    </>
+                  ) : (
+                    'Logout'
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
