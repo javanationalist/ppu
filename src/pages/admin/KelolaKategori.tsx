@@ -68,6 +68,10 @@ export default function KelolaKategori() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!catEditing) {
+      triggerToast('error', 'Fitur tambah kategori saat ini dinonaktifkan.');
+      return;
+    }
     if (!catName.trim()) {
       triggerToast('error', 'Nama kategori tidak boleh kosong.');
       return;
@@ -213,8 +217,10 @@ export default function KelolaKategori() {
             <RefreshCw className={`w-5 h-5 ${loading ? 'animate-spin' : ''}`} />
           </button>
           <button
-            onClick={openAddModal}
-            className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 shadow-sm transition-all cursor-pointer"
+            type="button"
+            disabled
+            title="Tambah Kategori dinonaktifkan"
+            className="bg-slate-200 text-slate-400 border border-slate-300 px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 cursor-not-allowed opacity-60 select-none"
           >
             <Plus className="w-4 h-4" />
             <span>Tambah Kategori</span>

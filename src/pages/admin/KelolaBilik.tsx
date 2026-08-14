@@ -105,50 +105,8 @@ export default function KelolaBilik() {
   // CREATE BOOTH ACTION
   const handleCreateBoothSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setAddError(null);
-
-    const cleanCC = addBoothCode.trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
-
-    if (!addName.trim()) return setAddError('Nama Bilik harus diisi.');
-    if (!addBoothCode.trim()) return setAddError('Kode Bilik (CC) harus diisi.');
-    if (cleanCC !== addBoothCode.toUpperCase()) {
-      return setAddError('Kode Bilik hanya boleh berisi huruf dan angka tanpa spasi atau strip.');
-    }
-    if (!addKeterangan.trim()) return setAddError('Keterangan Bilik harus diisi.');
-    if (!addEmail.trim()) return setAddError('Email Login harus diisi.');
-    if (addPassword.length < 6) return setAddError('Sandi minimal harus 6 karakter.');
-    if (addPassword !== addConfirmPassword) return setAddError('Konfirmasi sandi tidak sesuai.');
-
-    setActionLoading(true);
-    try {
-      const res = await createBooth(
-        adminProfile?.email || 'admin@ppu.com',
-        addName,
-        addKeterangan,
-        addEmail,
-        addPassword,
-        cleanCC
-      );
-
-      if (res.success) {
-        triggerToast('success', `Bilik "${addName}" berhasil dibuat.`);
-        setAddModalOpen(false);
-        // Reset form
-        setAddName('');
-        setAddKeterangan('');
-        setAddEmail('');
-        setAddPassword('');
-        setAddConfirmPassword('');
-        setAddBoothCode('');
-        loadBooths();
-      } else {
-        setAddError(res.error || 'Gagal menyimpan Bilik Suara.');
-      }
-    } catch (err: any) {
-      setAddError(err.message || 'Terjadi kesalahan sistem.');
-    } finally {
-      setActionLoading(false);
-    }
+    setAddError('Fitur tambah bilik saat ini dinonaktifkan.');
+    return;
   };
 
   // UPDATE BOOTH ACTION
@@ -379,8 +337,10 @@ export default function KelolaBilik() {
           </button>
           
           <button
-            onClick={() => setAddModalOpen(true)}
-            className="flex items-center gap-2 bg-indigo-600 text-white px-4 py-2.5 rounded-xl font-bold hover:bg-indigo-700 active:scale-95 transition-all duration-150 shadow-sm"
+            type="button"
+            disabled
+            title="Tambah Bilik dinonaktifkan"
+            className="flex items-center gap-2 bg-slate-200 text-slate-400 border border-slate-300 px-4 py-2.5 rounded-xl font-bold cursor-not-allowed opacity-60 select-none"
           >
             <Plus className="w-4 h-4" />
             <span>Tambah Bilik</span>
@@ -401,8 +361,10 @@ export default function KelolaBilik() {
             </p>
           </div>
           <button
-            onClick={() => setAddModalOpen(true)}
-            className="bg-indigo-600 text-white px-4 py-2 rounded-xl font-semibold text-xs hover:bg-indigo-700 transition"
+            type="button"
+            disabled
+            title="Tambah Bilik dinonaktifkan"
+            className="bg-slate-200 text-slate-400 border border-slate-300 px-4 py-2 rounded-xl font-semibold text-xs cursor-not-allowed opacity-60 select-none"
           >
             Tambah Bilik Sekarang
           </button>

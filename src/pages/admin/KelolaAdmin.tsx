@@ -67,6 +67,7 @@ export default function KelolaAdmin() {
     if (!addEmail.trim()) return setAddError('Email Login harus diisi.');
     if (addPassword.length < 6) return setAddError('Sandi minimal harus 6 karakter.');
     if (addPassword !== addConfirmPassword) return setAddError('Konfirmasi sandi tidak sesuai.');
+    if (addRole === 'creator') return setAddError('Peran Creator saat ini dinonaktifkan.');
 
     setActionLoading(true);
     try {
@@ -276,15 +277,13 @@ export default function KelolaAdmin() {
 
                   <button
                     type="button"
-                    onClick={() => setAddRole('creator')}
-                    className={`p-3 border rounded-xl flex flex-col items-center gap-1 text-center transition-all cursor-pointer ${
-                      addRole === 'creator' 
-                        ? 'border-rose-600 bg-rose-50/50 text-rose-700' 
-                        : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
-                    }`}
+                    disabled
+                    className="p-3 border border-slate-200 bg-slate-100/80 text-slate-400 rounded-xl flex flex-col items-center gap-1 text-center cursor-not-allowed opacity-50 relative select-none"
+                    title="Peran Creator saat ini dinonaktifkan"
                   >
                     <span className="text-xs font-black">CREATOR</span>
                     <span className="text-[9px] font-normal text-slate-400">Hak akses penuh control center</span>
+                    <span className="text-[9px] font-bold text-slate-400 mt-0.5">(Dinonaktifkan)</span>
                   </button>
                 </div>
               </div>

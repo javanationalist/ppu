@@ -198,6 +198,10 @@ export default function KelolaPemilihan() {
 
   const handleCategorySubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!catEditing) {
+      triggerToast('error', 'Fitur tambah kategori saat ini dinonaktifkan.');
+      return;
+    }
     if (!catName.trim()) {
       triggerToast('error', 'Nama kategori wajib diisi.');
       return;
@@ -686,8 +690,10 @@ export default function KelolaPemilihan() {
               <p className="text-xs text-slate-500">Kelola daftar bilik/kategori pemilihan utama pada sistem.</p>
             </div>
             <button
-              onClick={openAddCategory}
-              className="px-4 py-2.5 bg-ppu-blue hover:bg-sky-700 text-white font-bold text-xs rounded-xl flex items-center gap-2 shadow-md shadow-ppu-blue/15 transition-all self-start sm:self-auto cursor-pointer"
+              type="button"
+              disabled
+              title="Tambah Kategori dinonaktifkan"
+              className="px-4 py-2.5 bg-slate-200 text-slate-400 border border-slate-300 font-bold text-xs rounded-xl flex items-center gap-2 cursor-not-allowed opacity-60 select-none self-start sm:self-auto"
             >
               <Plus className="w-4 h-4" />
               <span>Tambah Kategori</span>
