@@ -4,7 +4,7 @@
  */
 
 import React from 'react';
-import { HashRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { HashRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { ProtectedRoute } from './components/ProtectedRoute';
@@ -55,7 +55,8 @@ import NetworkStatus from './components/NetworkStatus';
 import { M3ExpressiveLoadingIndicator } from './components/ui/M3ExpressiveLoadingIndicator';
 
 function ExperimentalRoute({ children }: { children: React.ReactNode }) {
-  const { user, profile, loading } = useAuth();
+  const { user, profile, loading, signOut } = useAuth();
+  const location = useLocation();
 
   if (loading) {
     return (
@@ -65,8 +66,21 @@ function ExperimentalRoute({ children }: { children: React.ReactNode }) {
     );
   }
 
-  // If not logged in, or not having a creator role, render NotFound (pretend it doesn't exist)
-  if (!user || !profile || profile.role !== 'creator') {
+  // Check if session has expired
+  const sessionExpiresAt = localStorage.getItem('session_expires_at');
+  const isSessionExpired = sessionExpiresAt ? Date.now() > parseInt(sessionExpiresAt) : false;
+
+  if (!user || !profile || isSessionExpired) {
+    if (isSessionExpired) {
+      setTimeout(() => {
+        signOut();
+      }, 0);
+    }
+    return <Navigate to="/login" state={{ from: location }} replace />;
+  }
+
+  // Strictly allowed for creator only (admin and other roles are forbidden)
+  if (profile.role !== 'creator') {
     return <NotFound />;
   }
 

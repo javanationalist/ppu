@@ -63,7 +63,7 @@ function ConfirmModal({
 
   if (!isOpen) return null;
 
-  const isButtonEnabled = !requireInput || inputValue === requireInput;
+  const isButtonEnabled = !requireInput || inputValue.trim().toLowerCase() === requireInput.trim().toLowerCase();
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
@@ -228,12 +228,12 @@ export default function ExperimentalControlCenter() {
       }
 
       const [
-        { count: totalVotes },
-        { count: totalVoters },
-        { count: confirmedVoters },
-        { count: activeCountdowns },
-        { count: activeGelombang }
-      ] = await Promise.all([
+        totalVotesRes,
+        totalVotersRes,
+        confirmedVotersRes,
+        activeCountdownsRes,
+        activeGelombangRes
+      ] = await Promise.allSettled([
         supabase.from('votes').select('*', { count: 'exact', head: true }),
         supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('role', 'user'),
         supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('role', 'user').eq('account_status', 'dikonfirmasi'),
@@ -241,15 +241,28 @@ export default function ExperimentalControlCenter() {
         supabase.from('gelombang_voting').select('*', { count: 'exact', head: true })
       ]);
 
+      const totalVotes = totalVotesRes.status === 'fulfilled' && totalVotesRes.value.count != null ? totalVotesRes.value.count : 0;
+      const totalVoters = totalVotersRes.status === 'fulfilled' && totalVotersRes.value.count != null ? totalVotersRes.value.count : 0;
+      const confirmedVoters = confirmedVotersRes.status === 'fulfilled' && confirmedVotersRes.value.count != null ? confirmedVotersRes.value.count : 0;
+      const activeCountdowns = activeCountdownsRes.status === 'fulfilled' && activeCountdownsRes.value.count != null ? activeCountdownsRes.value.count : 0;
+      const activeGelombang = activeGelombangRes.status === 'fulfilled' && activeGelombangRes.value.count != null ? activeGelombangRes.value.count : 0;
+
       setTelemetry({
-        totalVotes: totalVotes || 0,
-        totalVoters: totalVoters || 0,
-        confirmedVoters: confirmedVoters || 0,
-        activeCountdowns: activeCountdowns || 0,
-        activeGelombang: activeGelombang || 0,
+        totalVotes,
+        totalVoters,
+        confirmedVoters,
+        activeCountdowns,
+        activeGelombang,
       });
     } catch (err: any) {
       console.error('Failed to fetch system telemetry:', err);
+      setTelemetry({
+        totalVotes: 0,
+        totalVoters: 0,
+        confirmedVoters: 0,
+        activeCountdowns: 0,
+        activeGelombang: 0,
+      });
     } finally {
       setLoadingTelemetry(false);
     }
@@ -733,7 +746,7 @@ export default function ExperimentalControlCenter() {
               <div className="h-7 w-12 bg-slate-100 dark:bg-neutral-800 animate-pulse rounded-md" />
             ) : (
               <span className="text-2xl font-black text-slate-800 dark:text-white">
-                {telemetry?.totalVotes.toLocaleString('id-ID') || 0}
+                {(telemetry?.totalVotes ?? 0).toLocaleString('id-ID')}
               </span>
             )}
             <span className="block text-[10px] text-slate-400 font-medium mt-0.5">di tabel votes</span>
@@ -750,7 +763,7 @@ export default function ExperimentalControlCenter() {
               <div className="h-7 w-12 bg-slate-100 dark:bg-neutral-800 animate-pulse rounded-md" />
             ) : (
               <span className="text-2xl font-black text-slate-800 dark:text-white">
-                {telemetry?.totalVoters.toLocaleString('id-ID') || 0}
+                {(telemetry?.totalVoters ?? 0).toLocaleString('id-ID')}
               </span>
             )}
             <span className="block text-[10px] text-slate-400 font-medium mt-0.5">akun role user</span>
@@ -767,7 +780,7 @@ export default function ExperimentalControlCenter() {
               <div className="h-7 w-12 bg-slate-100 dark:bg-neutral-800 animate-pulse rounded-md" />
             ) : (
               <span className="text-2xl font-black text-slate-800 dark:text-white">
-                {telemetry?.confirmedVoters.toLocaleString('id-ID') || 0}
+                {(telemetry?.confirmedVoters ?? 0).toLocaleString('id-ID')}
               </span>
             )}
             <span className="block text-[10px] text-slate-400 font-medium mt-0.5">status dikonfirmasi</span>
@@ -784,7 +797,7 @@ export default function ExperimentalControlCenter() {
               <div className="h-7 w-12 bg-slate-100 dark:bg-neutral-800 animate-pulse rounded-md" />
             ) : (
               <span className="text-2xl font-black text-slate-800 dark:text-white">
-                {telemetry?.activeCountdowns || 0}
+                {telemetry?.activeCountdowns ?? 0}
               </span>
             )}
             <span className="block text-[10px] text-slate-400 font-medium mt-0.5">countdown aktif</span>
