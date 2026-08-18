@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
+import { useAuth } from '../../contexts/AuthContext';
 import { 
   Users, CheckCircle2, Award, ClipboardCheck, Monitor,
   ChevronRight, ArrowUpRight, LifeBuoy, Database, History,
@@ -15,6 +16,7 @@ import { M3ExpressiveLoadingIndicator } from '../../components/ui/M3ExpressiveLo
 
 export default function DashboardOverview() {
   const navigate = useNavigate();
+  const { profile } = useAuth();
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [votes, setVotes] = useState<Vote[]>([]);
@@ -390,7 +392,7 @@ export default function DashboardOverview() {
               if (!aEnabled && bEnabled) return 1;
               return 0;
             }).map((item) => {
-              const isEnabled = (btnSettings as any)[item.key] !== false;
+              const isEnabled = profile?.role === 'creator' || (btnSettings as any)[item.key] !== false;
               return (
                 <button 
                   key={item.path}

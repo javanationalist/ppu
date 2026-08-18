@@ -43,7 +43,7 @@ interface NavGroup {
 }
 
 export const AdminLayout = () => {
-  const { signOut } = useAuth();
+  const { signOut, profile } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [isMobileOpen, setIsMobileOpen] = useState(false);
@@ -153,7 +153,12 @@ export const AdminLayout = () => {
   }, []);
 
   useEffect(() => {
-    if (btnSettings && location.pathname !== '/admin' && location.pathname !== '/admin/akses-pro') {
+    // Role 'creator' has full access to all admin routes and bypasses button locks
+    if (profile?.role === 'creator') {
+      return;
+    }
+
+    if (btnSettings && location.pathname !== '/admin' && location.pathname !== '/admin/akses-pro' && location.pathname !== '/akses-pro') {
       const currentPath = location.pathname;
       const matchedRoute = Object.keys(ROUTE_KEY_MAP).find(route => 
         currentPath === route || currentPath.startsWith(route + '/')
@@ -165,7 +170,7 @@ export const AdminLayout = () => {
         }
       }
     }
-  }, [location.pathname, btnSettings, voteMode]);
+  }, [location.pathname, btnSettings, voteMode, profile?.role]);
 
   useEffect(() => {
     const activeGroup = groups.find(isGroupActive);
@@ -185,6 +190,7 @@ export const AdminLayout = () => {
   };
 
   const isLinkEnabled = (key?: string): boolean => {
+    if (profile?.role === 'creator') return true;
     if (!key) return true;
     if (!btnSettings) return true;
     return (btnSettings as any)[key] !== false;

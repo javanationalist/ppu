@@ -79,9 +79,9 @@ function ExperimentalRoute({ children }: { children: React.ReactNode }) {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
-  // Strictly allowed for creator only (admin and other roles are forbidden)
+  // Strictly allowed for creator only (admin and other roles are redirected to /admin/akses-pro)
   if (profile.role !== 'creator') {
-    return <NotFound />;
+    return <Navigate to="/admin/akses-pro" replace />;
   }
 
   return <>{children}</>;
@@ -193,6 +193,18 @@ function AppContent() {
           }
         >
           <Route index element={<ConfirmAccount />} />
+        </Route>
+
+        {/* Direct Akses Pro Route */}
+        <Route
+          path="/akses-pro"
+          element={
+            <ProtectedRoute allowedRoles={['admin']}>
+              <AdminLayout />
+            </ProtectedRoute>
+          }
+        >
+          <Route index element={<AksesPro />} />
         </Route>
 
         {/* Experimental Route (Creator Only) */}
