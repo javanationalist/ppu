@@ -98,41 +98,47 @@ export const getBoothProfileByCode = async (cc: string): Promise<any | null> => 
 // VOTE MODE CONFIGURATIONS
 // ----------------------------------------------------
 
+let cachedVoteMode: VoteMode | null = null;
+
 export const getVoteMode = async (): Promise<VoteMode> => {
+  // Check in-memory cache first if available
   const saved = localStorage.getItem(MODE_STORAGE_KEY);
-  const defaultMode: VoteMode = (saved as VoteMode) === 'booth' ? 'booth' : 'regular';
+  const fallbackMode: VoteMode = cachedVoteMode || ((saved as VoteMode) === 'booth' ? 'booth' : 'regular');
 
   if (!isSupabaseConfigured) {
-    return defaultMode;
+    cachedVoteMode = fallbackMode;
+    return fallbackMode;
   }
 
   try {
     const { data, error } = await supabase
       .from('vote_mode')
-      .select('*')
+      .select('mode')
       .eq('id', 'current')
       .maybeSingle();
 
-    if (error || !data) {
-      // Seed table with default if it doesn't exist
-      if (!data) {
-        try {
-          await supabase.from('vote_mode').upsert({ id: 'current', mode: defaultMode });
-        } catch (seedErr) {
-          console.warn('Silent seeding warning:', seedErr);
-        }
-      }
-      return defaultMode;
+    if (error) {
+      if (import.meta.env.DEV) console.warn('[DB] Error fetching vote_mode, using fallback:', error.message);
+      return fallbackMode;
     }
 
-    return (data.mode === 'booth') ? 'booth' : 'regular';
+    if (data && data.mode) {
+      const activeMode: VoteMode = data.mode === 'booth' ? 'booth' : 'regular';
+      cachedVoteMode = activeMode;
+      localStorage.setItem(MODE_STORAGE_KEY, activeMode);
+      return activeMode;
+    }
+
+    // If no row exists, return fallback mode WITHOUT writing/upserting to database from client
+    return fallbackMode;
   } catch (err) {
-    console.error('Error fetching vote mode, falling back to local storage:', err);
-    return defaultMode;
+    if (import.meta.env.DEV) console.error('Error fetching vote mode, falling back:', err);
+    return fallbackMode;
   }
 };
 
 export const saveVoteMode = async (mode: VoteMode): Promise<boolean> => {
+  cachedVoteMode = mode;
   localStorage.setItem(MODE_STORAGE_KEY, mode);
 
   if (!isSupabaseConfigured) {
