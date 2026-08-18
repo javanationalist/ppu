@@ -114,6 +114,11 @@ export default function KelolaBilik() {
     e.preventDefault();
     setEditError(null);
 
+    if (adminProfile?.role !== 'creator') {
+      setEditError('Akses ditolak: Hanya role creator yang memiliki izin mengubah bilik.');
+      return;
+    }
+
     if (!selectedBooth) return;
     const cleanCC = editBoothCode.trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
 
@@ -152,6 +157,11 @@ export default function KelolaBilik() {
   const handleResetPasswordSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setPasswordError(null);
+
+    if (adminProfile?.role !== 'creator') {
+      setPasswordError('Akses ditolak: Hanya role creator yang memiliki izin mereset sandi.');
+      return;
+    }
 
     if (!selectedBooth) return;
     if (newPassword.length < 6) return setPasswordError('Sandi minimal harus 6 karakter.');
@@ -195,6 +205,11 @@ export default function KelolaBilik() {
 
   // TOGGLE DISABLE / ENABLE BOOTH ACTION
   const handleToggleActivation = async (booth: Profile) => {
+    if (adminProfile?.role !== 'creator') {
+      triggerToast('error', 'Akses ditolak: Hanya role creator yang memiliki izin menonaktifkan atau mengaktifkan bilik.');
+      return;
+    }
+
     try {
       const success = await toggleBoothActivation(
         adminProfile?.email || 'admin@ppu.com',
@@ -221,6 +236,11 @@ export default function KelolaBilik() {
 
   // DELETE BOOTH ACTION
   const handleDeleteBoothConfirm = async () => {
+    if (adminProfile?.role !== 'creator') {
+      triggerToast('error', 'Akses ditolak: Hanya role creator yang memiliki izin menghapus bilik.');
+      return;
+    }
+
     if (!selectedBooth) return;
     setActionLoading(true);
     try {
@@ -373,6 +393,9 @@ export default function KelolaBilik() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {booths.map((booth) => {
             const { statusLabel, sessionLabel, statusColor, sessionColor } = getBoothStatus(booth);
+            const isCreator = adminProfile?.role === 'creator';
+            const canLogoutDevice = !booth.is_deleted && booth.voting_status !== 'offline';
+            const hasActions = isCreator || canLogoutDevice;
             
             return (
               <div 
@@ -389,79 +412,91 @@ export default function KelolaBilik() {
                   </div>
                   
                   {/* Action Menu button */}
-                  <div className="relative">
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setActiveMenuId(activeMenuId === booth.id ? null : booth.id);
-                      }}
-                      className="p-1.5 rounded-lg text-slate-400 hover:bg-slate-50 hover:text-slate-600 transition"
-                    >
-                      <MoreVertical className="w-4 h-4" />
-                    </button>
-                    
-                    {activeMenuId === booth.id && (
-                      <div className="absolute right-0 top-8 z-30 w-48 bg-white border border-slate-100 rounded-xl shadow-lg py-1 text-xs">
-                        <button
-                          onClick={() => {
-                            setSelectedBooth(booth);
-                            setEditName(booth.full_name);
-                            setEditKeterangan(booth.class);
-                            setEditBoothCode(booth.booth_code || getBoothCode(booth));
-                            setEditModalOpen(true);
-                          }}
-                          className="w-full text-left px-3 py-2 text-slate-700 hover:bg-slate-50 flex items-center gap-2 font-medium"
-                        >
-                          <Edit2 className="w-3.5 h-3.5 text-slate-400" />
-                          <span>Edit Bilik</span>
-                        </button>
-                        
-                        <button
-                          onClick={() => {
-                            setSelectedBooth(booth);
-                            setNewPassword('');
-                            setConfirmNewPassword('');
-                            setPasswordModalOpen(true);
-                          }}
-                          className="w-full text-left px-3 py-2 text-slate-700 hover:bg-slate-50 flex items-center gap-2 font-medium"
-                        >
-                          <Lock className="w-3.5 h-3.5 text-slate-400" />
-                          <span>Reset Password</span>
-                        </button>
+                  {hasActions && (
+                    <div className="relative">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setActiveMenuId(activeMenuId === booth.id ? null : booth.id);
+                        }}
+                        className="p-1.5 rounded-lg text-slate-400 hover:bg-slate-50 hover:text-slate-600 transition"
+                      >
+                        <MoreVertical className="w-4 h-4" />
+                      </button>
+                      
+                      {activeMenuId === booth.id && (
+                        <div className="absolute right-0 top-8 z-30 w-48 bg-white border border-slate-100 rounded-xl shadow-lg py-1 text-xs">
+                          {isCreator && (
+                            <>
+                              <button
+                                onClick={() => {
+                                  setSelectedBooth(booth);
+                                  setEditName(booth.full_name);
+                                  setEditKeterangan(booth.class);
+                                  setEditBoothCode(booth.booth_code || getBoothCode(booth));
+                                  setEditModalOpen(true);
+                                }}
+                                className="w-full text-left px-3 py-2 text-slate-700 hover:bg-slate-50 flex items-center gap-2 font-medium"
+                              >
+                                <Edit2 className="w-3.5 h-3.5 text-slate-400" />
+                                <span>Edit Bilik</span>
+                              </button>
+                              
+                              <button
+                                onClick={() => {
+                                  setSelectedBooth(booth);
+                                  setNewPassword('');
+                                  setConfirmNewPassword('');
+                                  setPasswordModalOpen(true);
+                                }}
+                                className="w-full text-left px-3 py-2 text-slate-700 hover:bg-slate-50 flex items-center gap-2 font-medium"
+                              >
+                                <Lock className="w-3.5 h-3.5 text-slate-400" />
+                                <span>Reset Password</span>
+                              </button>
+                            </>
+                          )}
 
-                        {!booth.is_deleted && booth.voting_status !== 'offline' && (
-                          <button
-                            onClick={() => handleRemoteLogout(booth)}
-                            className="w-full text-left px-3 py-2 text-amber-700 hover:bg-amber-50 flex items-center gap-2 font-medium border-t border-slate-100"
-                          >
-                            <LogOut className="w-3.5 h-3.5 text-amber-500" />
-                            <span>Logout Device</span>
-                          </button>
-                        )}
+                          {canLogoutDevice && (
+                            <button
+                              onClick={() => handleRemoteLogout(booth)}
+                              className={`w-full text-left px-3 py-2 text-amber-700 hover:bg-amber-50 flex items-center gap-2 font-medium ${
+                                isCreator ? 'border-t border-slate-100' : ''
+                              }`}
+                            >
+                              <LogOut className="w-3.5 h-3.5 text-amber-500" />
+                              <span>Logout Device</span>
+                            </button>
+                          )}
 
-                        <button
-                          onClick={() => handleToggleActivation(booth)}
-                          className={`w-full text-left px-3 py-2 flex items-center gap-2 font-medium border-t border-slate-100 ${
-                            booth.is_deleted ? 'text-emerald-700 hover:bg-emerald-50' : 'text-rose-700 hover:bg-rose-50'
-                          }`}
-                        >
-                          <ShieldAlert className="w-3.5 h-3.5" />
-                          <span>{booth.is_deleted ? 'Aktifkan' : 'Nonaktifkan'}</span>
-                        </button>
+                          {isCreator && (
+                            <>
+                              <button
+                                onClick={() => handleToggleActivation(booth)}
+                                className={`w-full text-left px-3 py-2 flex items-center gap-2 font-medium border-t border-slate-100 ${
+                                  booth.is_deleted ? 'text-emerald-700 hover:bg-emerald-50' : 'text-rose-700 hover:bg-rose-50'
+                                }`}
+                              >
+                                <ShieldAlert className="w-3.5 h-3.5" />
+                                <span>{booth.is_deleted ? 'Aktifkan' : 'Nonaktifkan'}</span>
+                              </button>
 
-                        <button
-                          onClick={() => {
-                            setSelectedBooth(booth);
-                            setDeleteModalOpen(true);
-                          }}
-                          className="w-full text-left px-3 py-2 text-rose-700 hover:bg-rose-50 flex items-center gap-2 font-semibold border-t border-slate-100"
-                        >
-                          <Trash2 className="w-3.5 h-3.5 text-rose-500" />
-                          <span>Hapus Bilik</span>
-                        </button>
-                      </div>
-                    )}
-                  </div>
+                              <button
+                                onClick={() => {
+                                  setSelectedBooth(booth);
+                                  setDeleteModalOpen(true);
+                                }}
+                                className="w-full text-left px-3 py-2 text-rose-700 hover:bg-rose-50 flex items-center gap-2 font-semibold border-t border-slate-100"
+                              >
+                                <Trash2 className="w-3.5 h-3.5 text-rose-500" />
+                                <span>Hapus Bilik</span>
+                              </button>
+                            </>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
 
                 {/* Kode Bilik Details */}

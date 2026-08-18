@@ -531,6 +531,27 @@ export const createBooth = async (
   }
 };
 
+// Helper to verify if admin user has 'creator' role
+const verifyCreatorRole = async (adminEmail: string): Promise<boolean> => {
+  if (!isSupabaseConfigured) {
+    const localProfilesStr = localStorage.getItem('mock_profiles') || '[]';
+    const profiles = JSON.parse(localProfilesStr);
+    const p = profiles.find((prof: any) => prof.email?.toLowerCase() === adminEmail?.toLowerCase());
+    return p?.role === 'creator';
+  }
+  try {
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('email', adminEmail)
+      .maybeSingle();
+    if (error || !data) return false;
+    return data.role === 'creator';
+  } catch {
+    return false;
+  }
+};
+
 // UPDATE BOOTH
 export const updateBooth = async (
   adminEmail: string,
@@ -539,6 +560,12 @@ export const updateBooth = async (
   keterangan: string,
   boothCode: string
 ): Promise<boolean> => {
+  const isCreator = await verifyCreatorRole(adminEmail);
+  if (!isCreator) {
+    console.warn(`[AUTH] updateBooth rejected: "${adminEmail}" is not a creator.`);
+    return false;
+  }
+
   if (!isSupabaseConfigured) {
     const localProfilesStr = localStorage.getItem('mock_profiles');
     if (localProfilesStr) {
@@ -600,6 +627,12 @@ export const resetBoothPassword = async (
   boothEmail: string,
   newPassword: string
 ): Promise<boolean> => {
+  const isCreator = await verifyCreatorRole(adminEmail);
+  if (!isCreator) {
+    console.warn(`[AUTH] resetBoothPassword rejected: "${adminEmail}" is not a creator.`);
+    return false;
+  }
+
   const localUsersStr = localStorage.getItem('mock_users') || '[]';
   const users = JSON.parse(localUsersStr);
   const idx = users.findIndex((u: any) => u.email === boothEmail || u.id === boothId);
@@ -620,6 +653,12 @@ export const deleteBooth = async (
   boothId: string,
   boothName: string
 ): Promise<boolean> => {
+  const isCreator = await verifyCreatorRole(adminEmail);
+  if (!isCreator) {
+    console.warn(`[AUTH] deleteBooth rejected: "${adminEmail}" is not a creator.`);
+    return false;
+  }
+
   if (!isSupabaseConfigured) {
     const localProfilesStr = localStorage.getItem('mock_profiles');
     if (localProfilesStr) {
@@ -665,6 +704,12 @@ export const toggleBoothActivation = async (
   boothName: string,
   currentlyActive: boolean
 ): Promise<boolean> => {
+  const isCreator = await verifyCreatorRole(adminEmail);
+  if (!isCreator) {
+    console.warn(`[AUTH] toggleBoothActivation rejected: "${adminEmail}" is not a creator.`);
+    return false;
+  }
+
   const nextDeletedState = currentlyActive;
   if (!isSupabaseConfigured) {
     const localProfilesStr = localStorage.getItem('mock_profiles');
