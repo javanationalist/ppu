@@ -220,218 +220,220 @@ export default function DashboardOverview() {
         </div>
       </div>
 
-      {/* Visual Analytics & Access Control Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Chart representation & stats */}
-        <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm lg:col-span-2 space-y-6">
-          <div className="flex justify-between items-center pb-4 border-b border-slate-50">
-            <div>
-              <h3 className="text-lg font-bold text-slate-900">Perolehan Suara Masuk</h3>
-              <p className="text-xs text-slate-400">Distribusi jumlah suara yang masuk per kategori pemilihan</p>
-            </div>
-          </div>
-
-          <div className="space-y-4">
-            {categories.map(cat => {
-              const voteCount = categoryVotesCount[cat.id] || 0;
-              const barPercentage = verifiedVoters > 0 ? Math.min(100, Math.round((voteCount / verifiedVoters) * 100)) : 0;
-
-              return (
-                <div key={cat.id} className="space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span className="font-semibold text-slate-700 flex items-center gap-2">
-                      <span className="text-base">{cat.icon}</span> {cat.name}
-                    </span>
-                    <span className="font-mono font-bold text-slate-900">
-                      {voteCount} <span className="text-xs text-slate-400 font-normal">/ {verifiedVoters} DPT Terverifikasi ({barPercentage}%)</span>
-                    </span>
-                  </div>
-                  <div className="w-full bg-slate-100 h-4 rounded-lg overflow-hidden flex">
-                    <div 
-                      className="bg-indigo-600 h-full transition-all duration-1000 ease-out flex items-center justify-end pr-2 text-[9px] font-bold text-white shadow-inner" 
-                      style={{ width: `${Math.max(8, barPercentage)}%` }}
-                    >
-                      {barPercentage > 15 && `${barPercentage}%`}
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-
-          <div className="pt-4 border-t border-slate-50">
-            <div className="flex items-center justify-between mb-4">
+      {/* Visual Analytics & Access Control Grid - Only visible for Creator */}
+      {profile?.role === 'creator' && (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* Chart representation & stats */}
+          <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm lg:col-span-2 space-y-6">
+            <div className="flex justify-between items-center pb-4 border-b border-slate-50">
               <div>
-                <h3 className="text-lg font-bold text-slate-900">Kontrol Akses Menu Admin</h3>
-                <p className="text-xs text-slate-400">Status visibilitas fitur admin saat ini (Hanya dapat diubah langsung melalui database).</p>
+                <h3 className="text-lg font-bold text-slate-900">Perolehan Suara Masuk</h3>
+                <p className="text-xs text-slate-400">Distribusi jumlah suara yang masuk per kategori pemilihan</p>
               </div>
             </div>
 
-            <div className="overflow-hidden border border-slate-100 rounded-xl">
-              <table className="min-w-full divide-y divide-slate-100">
-                <thead className="bg-slate-50">
-                  <tr>
-                    <th scope="col" className="px-4 py-3 text-left text-xs font-black text-slate-500 uppercase tracking-widest">
-                      Nama Menu
-                    </th>
-                    <th scope="col" className="px-4 py-3 text-right text-xs font-black text-slate-500 uppercase tracking-widest w-36">
-                      Status
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-slate-100">
-                  {[
-                    { key: 'gelombang_voting', label: 'Gelombang Voting', icon: Clock },
-                    { key: 'mode_vote', label: 'Mode Vote', icon: Settings },
-                    { key: 'kelola_kategori', label: 'Kelola Kategori', icon: Settings },
-                    { key: 'kelola_kandidat', label: 'Kelola Kandidat', icon: Layers },
-                    { key: 'konfirmasi_pemilih', label: 'Konfirmasi Pemilih', icon: ShieldCheck },
-                    { key: 'kelola_pemilih', label: 'Kelola Pemilih', icon: Users },
-                    { key: 'kelola_admin', label: 'Kelola Admin', icon: ShieldCheck },
-                    { key: 'kelola_bilik', label: 'Kelola Bilik Suara', icon: Monitor },
-                    { key: 'wafo', label: 'WAFO', icon: FileText },
-                    { key: 'countdown', label: 'Countdown', icon: Clock },
-                    { key: 'kelola_helpdesk', label: 'Helpdesk', icon: LifeBuoy },
-                    { key: 'visibilitas_user', label: 'Visibilitas User', icon: ShieldAlert },
-                    { key: 'hasil_voting', label: 'Hasil Voting', icon: BarChart3 },
-                    { key: 'audit_log', label: 'Audit Log', icon: FileText },
-                    { key: 'export_data', label: 'Export Data', icon: FileText },
-                    { key: 'maintenance', label: 'Maintenance', icon: Settings },
-                    { key: 'system_update', label: 'System Update', icon: Sparkles },
-                  ].sort((a, b) => {
-                    const aEnabled = (btnSettings as any)[a.key] !== false;
-                    const bEnabled = (btnSettings as any)[b.key] !== false;
-                    if (aEnabled && !bEnabled) return -1;
-                    if (!aEnabled && bEnabled) return 1;
-                    return 0;
-                  }).map((item) => {
-                    const isEnabled = (btnSettings as any)[item.key] !== false;
-                    return (
-                      <tr key={item.key} className="hover:bg-slate-50/50 transition-colors">
-                        <td className="px-4 py-2.5 whitespace-nowrap">
-                          <div className="flex items-center gap-3">
-                            <div className={`p-1.5 rounded-lg shrink-0 ${isEnabled ? 'bg-indigo-50 text-indigo-600' : 'bg-slate-100 text-slate-400'}`}>
-                              <item.icon className="w-4 h-4" />
-                            </div>
-                            <span className="text-xs font-bold text-slate-700">{item.label}</span>
-                          </div>
-                        </td>
-                        <td className="px-4 py-2.5 whitespace-nowrap text-right">
-                          <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${
-                            isEnabled 
-                              ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' 
-                              : 'bg-rose-50 text-rose-700 border border-rose-100'
-                          }`}>
-                            <span className={`w-1 h-1 rounded-full ${isEnabled ? 'bg-emerald-500' : 'bg-rose-500'}`}></span>
-                            {isEnabled ? 'Aktif' : 'Nonaktif'}
-                          </span>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
+            <div className="space-y-4">
+              {categories.map(cat => {
+                const voteCount = categoryVotesCount[cat.id] || 0;
+                const barPercentage = verifiedVoters > 0 ? Math.min(100, Math.round((voteCount / verifiedVoters) * 100)) : 0;
 
-        {/* Quick Utilities Panel */}
-        <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm space-y-6">
-          <h3 className="text-lg font-bold text-slate-900">Akses Cepat Panel</h3>
-
-          <div className="grid grid-cols-1 gap-3">
-            {[
-              {
-                key: 'konfirmasi_pemilih',
-                label: 'Verifikasi Barcode',
-                desc: 'Konfirmasi pendaftaran siswa',
-                path: '/admin/konfirmasi',
-                icon: CheckCircle2,
-                colorClasses: {
-                  enabledIconBg: 'bg-indigo-100 text-indigo-700 group-hover:bg-indigo-200',
-                  hoverBorder: 'hover:bg-indigo-50 hover:border-indigo-100',
-                }
-              },
-              {
-                key: 'kelola_pemilih',
-                label: 'Kelola Daftar Pemilih',
-                desc: 'Tambah / hapus pemilih',
-                path: '/admin/pemilih',
-                icon: Users,
-                colorClasses: {
-                  enabledIconBg: 'bg-emerald-100 text-emerald-700 group-hover:bg-emerald-200',
-                  hoverBorder: 'hover:bg-emerald-50 hover:border-emerald-100',
-                }
-              },
-              {
-                key: 'kelola_scanner',
-                label: 'Kelola Scanner',
-                desc: 'Kelola akun petugas scanner',
-                path: '/admin/scanner',
-                icon: Zap,
-                colorClasses: {
-                  enabledIconBg: 'bg-purple-100 text-purple-700 group-hover:bg-purple-200',
-                  hoverBorder: 'hover:bg-purple-50 hover:border-purple-100',
-                }
-              },
-              {
-                key: 'kelola_helpdesk',
-                label: 'Saluran Helpdesk',
-                desc: `${ticketsCount} Tombol panduan keluhan aktif`,
-                path: '/admin/helpdesk',
-                icon: LifeBuoy,
-                colorClasses: {
-                  enabledIconBg: 'bg-amber-100 text-amber-700 group-hover:bg-amber-200',
-                  hoverBorder: 'hover:bg-amber-50 hover:border-amber-100',
-                }
-              },
-            ].sort((a, b) => {
-              const aEnabled = (btnSettings as any)[a.key] !== false;
-              const bEnabled = (btnSettings as any)[b.key] !== false;
-              if (aEnabled && !bEnabled) return -1;
-              if (!aEnabled && bEnabled) return 1;
-              return 0;
-            }).map((item) => {
-              const isEnabled = profile?.role === 'creator' || (btnSettings as any)[item.key] !== false;
-              return (
-                <button 
-                  key={item.path}
-                  onClick={() => navigate(item.path)}
-                  disabled={!isEnabled}
-                  className={`flex items-center justify-between p-4 rounded-xl border transition-all font-medium text-sm group text-left ${
-                    !isEnabled 
-                      ? 'bg-slate-50 border-slate-100 opacity-60 grayscale cursor-not-allowed text-slate-400' 
-                      : `border-slate-100 bg-slate-50 ${item.colorClasses.hoverBorder} text-slate-700 cursor-pointer`
-                  }`}
-                >
-                  <div className="flex items-center gap-3">
-                    <div className={`p-2 rounded-lg transition-colors ${!isEnabled ? 'bg-slate-200 text-slate-400' : item.colorClasses.enabledIconBg}`}>
-                      {isEnabled ? <item.icon className="w-4 h-4" /> : <Lock className="w-4 h-4" />}
+                return (
+                  <div key={cat.id} className="space-y-2">
+                    <div className="flex justify-between text-sm">
+                      <span className="font-semibold text-slate-700 flex items-center gap-2">
+                        <span className="text-base">{cat.icon}</span> {cat.name}
+                      </span>
+                      <span className="font-mono font-bold text-slate-900">
+                        {voteCount} <span className="text-xs text-slate-400 font-normal">/ {verifiedVoters} DPT Terverifikasi ({barPercentage}%)</span>
+                      </span>
                     </div>
-                    <div>
-                      <span className={`block font-bold truncate ${!isEnabled ? 'text-slate-400' : 'text-slate-800'}`}>{item.label}</span>
-                      <span className="text-[10px] text-slate-400 font-normal">{item.desc}</span>
+                    <div className="w-full bg-slate-100 h-4 rounded-lg overflow-hidden flex">
+                      <div 
+                        className="bg-indigo-600 h-full transition-all duration-1000 ease-out flex items-center justify-end pr-2 text-[9px] font-bold text-white shadow-inner" 
+                        style={{ width: `${Math.max(8, barPercentage)}%` }}
+                      >
+                        {barPercentage > 15 && `${barPercentage}%`}
+                      </div>
                     </div>
                   </div>
-                  {isEnabled && <ChevronRight className="w-4 h-4 text-slate-400 group-hover:translate-x-1 transition-transform" />}
-                </button>
-              );
-            })}
+                );
+              })}
+            </div>
+
+            <div className="pt-4 border-t border-slate-50">
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <h3 className="text-lg font-bold text-slate-900">Kontrol Akses Menu Admin</h3>
+                  <p className="text-xs text-slate-400">Status visibilitas fitur admin saat ini (Hanya dapat diubah langsung melalui database).</p>
+                </div>
+              </div>
+
+              <div className="overflow-hidden border border-slate-100 rounded-xl">
+                <table className="min-w-full divide-y divide-slate-100">
+                  <thead className="bg-slate-50">
+                    <tr>
+                      <th scope="col" className="px-4 py-3 text-left text-xs font-black text-slate-500 uppercase tracking-widest">
+                        Nama Menu
+                      </th>
+                      <th scope="col" className="px-4 py-3 text-right text-xs font-black text-slate-500 uppercase tracking-widest w-36">
+                        Status
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-slate-100">
+                    {[
+                      { key: 'gelombang_voting', label: 'Gelombang Voting', icon: Clock },
+                      { key: 'mode_vote', label: 'Mode Vote', icon: Settings },
+                      { key: 'kelola_kategori', label: 'Kelola Kategori', icon: Settings },
+                      { key: 'kelola_kandidat', label: 'Kelola Kandidat', icon: Layers },
+                      { key: 'konfirmasi_pemilih', label: 'Konfirmasi Pemilih', icon: ShieldCheck },
+                      { key: 'kelola_pemilih', label: 'Kelola Pemilih', icon: Users },
+                      { key: 'kelola_admin', label: 'Kelola Admin', icon: ShieldCheck },
+                      { key: 'kelola_bilik', label: 'Kelola Bilik Suara', icon: Monitor },
+                      { key: 'wafo', label: 'WAFO', icon: FileText },
+                      { key: 'countdown', label: 'Countdown', icon: Clock },
+                      { key: 'kelola_helpdesk', label: 'Helpdesk', icon: LifeBuoy },
+                      { key: 'visibilitas_user', label: 'Visibilitas User', icon: ShieldAlert },
+                      { key: 'hasil_voting', label: 'Hasil Voting', icon: BarChart3 },
+                      { key: 'audit_log', label: 'Audit Log', icon: FileText },
+                      { key: 'export_data', label: 'Export Data', icon: FileText },
+                      { key: 'maintenance', label: 'Maintenance', icon: Settings },
+                      { key: 'system_update', label: 'System Update', icon: Sparkles },
+                    ].sort((a, b) => {
+                      const aEnabled = (btnSettings as any)[a.key] !== false;
+                      const bEnabled = (btnSettings as any)[b.key] !== false;
+                      if (aEnabled && !bEnabled) return -1;
+                      if (!aEnabled && bEnabled) return 1;
+                      return 0;
+                    }).map((item) => {
+                      const isEnabled = (btnSettings as any)[item.key] !== false;
+                      return (
+                        <tr key={item.key} className="hover:bg-slate-50/50 transition-colors">
+                          <td className="px-4 py-2.5 whitespace-nowrap">
+                            <div className="flex items-center gap-3">
+                              <div className={`p-1.5 rounded-lg shrink-0 ${isEnabled ? 'bg-indigo-50 text-indigo-600' : 'bg-slate-100 text-slate-400'}`}>
+                                <item.icon className="w-4 h-4" />
+                              </div>
+                              <span className="text-xs font-bold text-slate-700">{item.label}</span>
+                            </div>
+                          </td>
+                          <td className="px-4 py-2.5 whitespace-nowrap text-right">
+                            <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${
+                              isEnabled 
+                                ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' 
+                                : 'bg-rose-50 text-rose-700 border border-rose-100'
+                            }`}>
+                              <span className={`w-1 h-1 rounded-full ${isEnabled ? 'bg-emerald-500' : 'bg-rose-500'}`}></span>
+                              {isEnabled ? 'Aktif' : 'Nonaktif'}
+                            </span>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
           </div>
 
-          <div className="border-t border-slate-100 pt-5 space-y-3">
-            <h4 className="text-xs font-extrabold text-slate-400 uppercase tracking-wider">Metrik Keamaan</h4>
-            <div className="flex justify-between items-center text-xs text-slate-500">
-              <span>Keutuhan Integritas Suara</span>
-              <span className="font-semibold text-emerald-600 font-mono">100% AMAN (RSA-254)</span>
+          {/* Quick Utilities Panel */}
+          <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm space-y-6">
+            <h3 className="text-lg font-bold text-slate-900">Akses Cepat Panel</h3>
+
+            <div className="grid grid-cols-1 gap-3">
+              {[
+                {
+                  key: 'konfirmasi_pemilih',
+                  label: 'Verifikasi Barcode',
+                  desc: 'Konfirmasi pendaftaran siswa',
+                  path: '/admin/konfirmasi',
+                  icon: CheckCircle2,
+                  colorClasses: {
+                    enabledIconBg: 'bg-indigo-100 text-indigo-700 group-hover:bg-indigo-200',
+                    hoverBorder: 'hover:bg-indigo-50 hover:border-indigo-100',
+                  }
+                },
+                {
+                  key: 'kelola_pemilih',
+                  label: 'Kelola Daftar Pemilih',
+                  desc: 'Tambah / hapus pemilih',
+                  path: '/admin/pemilih',
+                  icon: Users,
+                  colorClasses: {
+                    enabledIconBg: 'bg-emerald-100 text-emerald-700 group-hover:bg-emerald-200',
+                    hoverBorder: 'hover:bg-emerald-50 hover:border-emerald-100',
+                  }
+                },
+                {
+                  key: 'kelola_scanner',
+                  label: 'Kelola Scanner',
+                  desc: 'Kelola akun petugas scanner',
+                  path: '/admin/scanner',
+                  icon: Zap,
+                  colorClasses: {
+                    enabledIconBg: 'bg-purple-100 text-purple-700 group-hover:bg-purple-200',
+                    hoverBorder: 'hover:bg-purple-50 hover:border-purple-100',
+                  }
+                },
+                {
+                  key: 'kelola_helpdesk',
+                  label: 'Saluran Helpdesk',
+                  desc: `${ticketsCount} Tombol panduan keluhan aktif`,
+                  path: '/admin/helpdesk',
+                  icon: LifeBuoy,
+                  colorClasses: {
+                    enabledIconBg: 'bg-amber-100 text-amber-700 group-hover:bg-amber-200',
+                    hoverBorder: 'hover:bg-amber-50 hover:border-amber-100',
+                  }
+                },
+              ].sort((a, b) => {
+                const aEnabled = (btnSettings as any)[a.key] !== false;
+                const bEnabled = (btnSettings as any)[b.key] !== false;
+                if (aEnabled && !bEnabled) return -1;
+                if (!aEnabled && bEnabled) return 1;
+                return 0;
+              }).map((item) => {
+                const isEnabled = (btnSettings as any)[item.key] !== false;
+                return (
+                  <button 
+                    key={item.path}
+                    onClick={() => navigate(item.path)}
+                    disabled={!isEnabled}
+                    className={`flex items-center justify-between p-4 rounded-xl border transition-all font-medium text-sm group text-left ${
+                      !isEnabled 
+                        ? 'bg-slate-50 border-slate-100 opacity-60 grayscale cursor-not-allowed text-slate-400' 
+                        : `border-slate-100 bg-slate-50 ${item.colorClasses.hoverBorder} text-slate-700 cursor-pointer`
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className={`p-2 rounded-lg transition-colors ${!isEnabled ? 'bg-slate-200 text-slate-400' : item.colorClasses.enabledIconBg}`}>
+                        {isEnabled ? <item.icon className="w-4 h-4" /> : <Lock className="w-4 h-4" />}
+                      </div>
+                      <div>
+                        <span className={`block font-bold truncate ${!isEnabled ? 'text-slate-400' : 'text-slate-800'}`}>{item.label}</span>
+                        <span className="text-[10px] text-slate-400 font-normal">{item.desc}</span>
+                      </div>
+                    </div>
+                    {isEnabled && <ChevronRight className="w-4 h-4 text-slate-400 group-hover:translate-x-1 transition-transform" />}
+                  </button>
+                );
+              })}
             </div>
-            <div className="flex justify-between items-center text-xs text-slate-500">
-              <span>Waktu Sesi Administrator</span>
-              <span className="font-mono text-indigo-600">8 jam aktif</span>
+
+            <div className="border-t border-slate-100 pt-5 space-y-3">
+              <h4 className="text-xs font-extrabold text-slate-400 uppercase tracking-wider">Metrik Keamanan</h4>
+              <div className="flex justify-between items-center text-xs text-slate-500">
+                <span>Keutuhan Integritas Suara</span>
+                <span className="font-semibold text-emerald-600 font-mono">100% AMAN (RSA-254)</span>
+              </div>
+              <div className="flex justify-between items-center text-xs text-slate-500">
+                <span>Waktu Sesi Administrator</span>
+                <span className="font-mono text-indigo-600">8 jam aktif</span>
+              </div>
             </div>
           </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }
