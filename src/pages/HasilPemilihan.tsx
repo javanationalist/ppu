@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { 
   BarChart, RefreshCw, Users, 
-  Clock, AlertTriangle, MapPin, ArrowLeft, ShieldAlert, Vote
+  Clock, AlertTriangle, MapPin, ArrowLeft, ShieldAlert, Vote, Crown
 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
@@ -514,12 +514,17 @@ export default function HasilPemilihan() {
                       </div>
 
                       {/* Compact Legend Grid */}
-                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 pt-4 border-t border-slate-100 text-xs font-semibold">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 pt-4 border-t border-slate-100 text-xs font-semibold">
                         {cScores.map((cand) => (
-                          <div key={cand.id} className="flex items-center gap-2">
-                            <span className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: cand.color }}></span>
-                            <span className="text-slate-600 truncate">{cand.chairman}</span>
-                            <span className="text-slate-400 font-mono text-[10px] ml-auto shrink-0">{cand.percentage}%</span>
+                          <div key={cand.id} className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 border border-slate-100">
+                            <div className="flex items-center gap-2 min-w-0 pr-2">
+                              <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: cand.color }}></span>
+                              <span className="text-slate-700 truncate">{cand.chairman}</span>
+                            </div>
+                            <div className="flex items-baseline gap-1 shrink-0">
+                              <span className="text-slate-900 font-black font-mono text-xs">{cand.percentage.toFixed(1).replace('.', ',')}%</span>
+                              <span className="text-slate-400 text-[10px]">({cand.votesCount})</span>
+                            </div>
                           </div>
                         ))}
                       </div>
@@ -531,7 +536,7 @@ export default function HasilPemilihan() {
                 <div className="bg-white p-6 sm:p-8 rounded-2xl border border-slate-200/80 shadow-sm space-y-6">
                   <div className="border-b border-slate-100 pb-4">
                     <h3 className="text-lg font-extrabold text-slate-900 tracking-tight">Kandidat & Perolehan Suara</h3>
-                    <p className="text-xs text-slate-500 font-semibold mt-0.5">Urutan peringkat perolehan suara terbanyak saat ini</p>
+                    <p className="text-xs text-slate-500 font-semibold mt-0.5">Persentase dan total rekapitulasi perolehan suara sah</p>
                   </div>
 
                   {!isMpkType ? (
@@ -563,43 +568,104 @@ export default function HasilPemilihan() {
                       }
 
                       return (
-                        <div className="space-y-5">
+                        <div className="space-y-4">
                           {cScores.map((cand, index) => {
+                            const isWinner = index === 0 && cand.votesCount > 0;
                             const rankBadgeColor = index === 0 
-                              ? 'bg-amber-100 text-amber-800 border-amber-200' 
+                              ? 'bg-amber-500 text-white shadow-xs' 
                               : index === 1 
-                                ? 'bg-slate-100 text-slate-800 border-slate-200' 
-                                : 'bg-orange-50 text-orange-700 border-orange-100';
+                                ? 'bg-slate-700 text-white' 
+                                : index === 2
+                                  ? 'bg-amber-700 text-white'
+                                  : 'bg-slate-200 text-slate-700';
 
                             return (
-                              <div key={cand.id} className="p-5 rounded-2xl border border-slate-200/85 bg-slate-50/20 hover:bg-slate-50/70 transition-all space-y-4">
-                                <div className="flex items-center justify-between gap-4 flex-wrap sm:flex-nowrap">
-                                  <div className="flex items-center gap-3">
-                                    <div className={`w-8 h-8 rounded-xl border flex items-center justify-center font-mono font-extrabold text-sm shadow-sm ${rankBadgeColor}`}>
-                                      {index + 1}
-                                    </div>
-                                    <div>
-                                      <span className="text-[10px] font-mono font-black text-slate-400 block tracking-wider">
-                                        NO URUT {String(cand.number).padStart(2, '0')}
+                              <div 
+                                key={cand.id} 
+                                className={`p-5 sm:p-6 rounded-2xl border transition-all duration-200 relative ${
+                                  isWinner 
+                                    ? 'border-blue-200 bg-gradient-to-br from-blue-50/50 via-white to-indigo-50/30 shadow-xs ring-1 ring-blue-100' 
+                                    : 'border-slate-200/80 bg-white hover:border-slate-300'
+                                }`}
+                              >
+                                {/* Top Badge for Winner / Leader */}
+                                {isWinner && (
+                                  <div className="flex items-center gap-1.5 mb-3.5 text-xs font-black text-blue-700">
+                                    <Crown className="w-4 h-4 text-amber-500 fill-amber-400" />
+                                    <span>PEROLEHAN SUARA TERTINGGI</span>
+                                  </div>
+                                )}
+
+                                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                                  {/* Left: Identity (Number + Photo + Names) */}
+                                  <div className="flex items-center gap-3.5 sm:gap-4 min-w-0">
+                                    {/* Candidate Photo & Rank Badge */}
+                                    <div className="relative shrink-0">
+                                      {cand.photo_url ? (
+                                        <img 
+                                          src={cand.photo_url} 
+                                          alt={cand.chairman} 
+                                          className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl object-cover border border-slate-200 shadow-xs"
+                                          onError={(e) => { (e.currentTarget.style.display = 'none'); }}
+                                        />
+                                      ) : (
+                                        <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-400 shadow-xs">
+                                          <Vote className="w-6 h-6 text-slate-400" />
+                                        </div>
+                                      )}
+                                      <span className={`absolute -top-1.5 -left-1.5 w-6 h-6 rounded-lg flex items-center justify-center font-mono font-black text-[11px] shadow-sm ${rankBadgeColor}`}>
+                                        {index + 1}
                                       </span>
-                                      <h4 className="font-extrabold text-slate-800 text-base">{cand.chairman}</h4>
-                                      {cand.vice && <p className="text-xs text-slate-500 font-medium">Wakil: {cand.vice}</p>}
+                                    </div>
+
+                                    {/* Name & Details */}
+                                    <div className="min-w-0 space-y-0.5">
+                                      <div className="flex items-center gap-2">
+                                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest font-mono">
+                                          PASLON {String(cand.number).padStart(2, '0')}
+                                        </span>
+                                        <span className="text-[10px] font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-md">
+                                          No. {cand.number}
+                                        </span>
+                                      </div>
+                                      <h4 className="font-extrabold text-slate-900 text-base sm:text-lg tracking-tight leading-snug truncate">
+                                        {cand.chairman}
+                                      </h4>
+                                      {cand.vice ? (
+                                        <p className="text-xs text-slate-500 font-medium truncate">
+                                          Wakil: <span className="text-slate-700 font-semibold">{cand.vice}</span>
+                                        </p>
+                                      ) : (cand.candidate_class || cand.class_name) ? (
+                                        <p className="text-xs text-slate-500 font-medium">
+                                          Kelas: <span className="text-slate-700 font-semibold">{cand.candidate_class || cand.class_name}</span>
+                                        </p>
+                                      ) : null}
                                     </div>
                                   </div>
 
-                                  <div className="text-right shrink-0">
-                                    <span className="text-base font-black text-slate-900 block">{cand.votesCount} Suara</span>
-                                    <span className="text-xs font-black text-blue-600 bg-blue-50 border border-blue-100 px-3 py-1 rounded-lg inline-block mt-1 font-mono">
-                                      {cand.percentage}%
-                                    </span>
+                                  {/* Right: PRIMARY PERCENTAGE HIGHLIGHT & Secondary Votes Count */}
+                                  <div className="flex sm:flex-col items-baseline sm:items-end justify-between sm:justify-center shrink-0 pt-3 sm:pt-0 border-t sm:border-t-0 border-slate-100">
+                                    <div className="text-left sm:text-right">
+                                      <div className="flex items-baseline gap-0.5 sm:justify-end">
+                                        <span className="text-3xl sm:text-4xl font-black text-slate-900 tracking-tight leading-none font-sans">
+                                          {cand.percentage.toFixed(1).replace('.', ',')}
+                                        </span>
+                                        <span className="text-xl sm:text-2xl font-extrabold text-blue-600 tracking-tight leading-none">%</span>
+                                      </div>
+                                    </div>
+                                    <div className="text-right mt-1 sm:mt-1.5">
+                                      <span className="text-xs sm:text-sm font-semibold text-slate-500 flex items-center gap-1 sm:justify-end">
+                                        <span className="font-bold text-slate-700">{cand.votesCount.toLocaleString('id-ID')}</span> suara
+                                      </span>
+                                    </div>
                                   </div>
                                 </div>
 
-                                {/* Custom matching progress bar */}
-                                <div className="w-full bg-slate-100 h-3 rounded-full overflow-hidden">
+                                {/* Modern Progress Bar */}
+                                <div className="w-full bg-slate-100 h-2.5 sm:h-3 rounded-full overflow-hidden mt-4">
                                   <div 
-                                    className="h-full rounded-full transition-all duration-1000 ease-out shadow-inner"
-                                    style={{ width: `${cand.percentage}%`, backgroundColor: cand.color }}
+                                    className="h-full rounded-full transition-all duration-1000 ease-out shadow-xs"
+                                    style={{ width: `${cand.percentage}%`, backgroundColor: cand.color || '#2563EB' }}
                                   ></div>
                                 </div>
                               </div>
@@ -615,7 +681,7 @@ export default function HasilPemilihan() {
                         return (
                           <div className="text-center py-12 text-slate-400 border border-dashed border-slate-200 rounded-2xl">
                             <MapPin className="w-8 h-8 mx-auto text-blue-500 mb-2 animate-pulse" />
-                            <p className="text-xs font-bold uppercase tracking-wider text-slate-600">Dapil Belum Dipentukan</p>
+                            <p className="text-xs font-bold uppercase tracking-wider text-slate-600">Dapil Belum Ditentukan</p>
                           </div>
                         );
                       }
@@ -673,37 +739,77 @@ export default function HasilPemilihan() {
                                   {scoredClsCandidates.map((cand, index) => {
                                     const isWinner = index === 0 && cand.votesCount > 0;
                                     return (
-                                      <div key={cand.id} className={`p-4 rounded-xl border transition-all ${
-                                        isWinner 
-                                          ? 'border-emerald-100 bg-emerald-50/20' 
-                                          : 'border-slate-200 bg-slate-50/20'
-                                      }`}>
-                                        <div className="flex items-center justify-between gap-3 flex-wrap sm:flex-nowrap">
-                                          <div className="flex items-center gap-2.5">
-                                            <div className={`w-6 h-6 font-mono text-[10px] font-bold rounded-lg flex items-center justify-center ${
-                                              isWinner ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-200 text-slate-600'
-                                            }`}>
-                                              {index + 1}
-                                            </div>
-                                            <div>
-                                              <span className="block text-[9px] font-black text-slate-400 font-mono">
-                                                KANDIDAT {String(cand.number).padStart(2, '0')}
+                                      <div 
+                                        key={cand.id} 
+                                        className={`p-4 sm:p-5 rounded-2xl border transition-all duration-200 ${
+                                          isWinner 
+                                            ? 'border-emerald-200 bg-emerald-50/20 shadow-xs' 
+                                            : 'border-slate-200/80 bg-white hover:border-slate-300'
+                                        }`}
+                                      >
+                                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
+                                          <div className="flex items-center gap-3 min-w-0">
+                                            {/* Candidate Photo & Number */}
+                                            <div className="relative shrink-0">
+                                              {cand.photo_url ? (
+                                                <img 
+                                                  src={cand.photo_url} 
+                                                  alt={cand.chairman} 
+                                                  className="w-12 h-12 rounded-xl object-cover border border-slate-200 shadow-xs"
+                                                  onError={(e) => { (e.currentTarget.style.display = 'none'); }}
+                                                />
+                                              ) : (
+                                                <div className="w-12 h-12 rounded-xl bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-400">
+                                                  <Vote className="w-5 h-5 text-slate-400" />
+                                                </div>
+                                              )}
+                                              <span className={`absolute -top-1 -left-1 w-5 h-5 rounded-md flex items-center justify-center font-mono font-black text-[9px] ${
+                                                isWinner ? 'bg-emerald-600 text-white' : 'bg-slate-700 text-white'
+                                              }`}>
+                                                {index + 1}
                                               </span>
-                                              <span className="font-extrabold text-slate-800 text-sm">{cand.chairman}</span>
+                                            </div>
+
+                                            <div className="min-w-0 space-y-0.5">
+                                              <div className="flex items-center gap-2">
+                                                <span className="text-[9px] font-black text-slate-400 uppercase font-mono">
+                                                  KANDIDAT {String(cand.number).padStart(2, '0')}
+                                                </span>
+                                                {isWinner && (
+                                                  <span className="text-[9px] font-bold px-1.5 py-0.2 rounded bg-emerald-100 text-emerald-800">
+                                                    Teratas
+                                                  </span>
+                                                )}
+                                              </div>
+                                              <h4 className="font-extrabold text-slate-900 text-sm sm:text-base leading-snug truncate">
+                                                {cand.chairman}
+                                              </h4>
+                                              {cand.vice && (
+                                                <p className="text-xs text-slate-500">Wakil: {cand.vice}</p>
+                                              )}
                                             </div>
                                           </div>
 
-                                          <div className="text-right shrink-0">
-                                            <span className="text-sm font-black text-slate-900 block">{cand.votesCount} Suara</span>
-                                            <span className={`text-[10px] font-black font-mono px-2 py-0.5 rounded-md inline-block mt-0.5 ${
-                                              isWinner ? 'bg-emerald-100 text-emerald-700' : 'bg-blue-50 text-blue-700'
-                                            }`}>
-                                              {cand.percentage}%
-                                            </span>
+                                          {/* PRIMARY PERCENTAGE HIGHLIGHT & Secondary Votes Count */}
+                                          <div className="flex sm:flex-col items-baseline sm:items-end justify-between sm:justify-center shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-100">
+                                            <div className="text-left sm:text-right">
+                                              <div className="flex items-baseline gap-0.5 sm:justify-end">
+                                                <span className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight leading-none font-sans">
+                                                  {cand.percentage.toFixed(1).replace('.', ',')}
+                                                </span>
+                                                <span className="text-lg sm:text-xl font-extrabold text-emerald-600 tracking-tight leading-none">%</span>
+                                              </div>
+                                            </div>
+                                            <div className="text-right mt-0.5 sm:mt-1">
+                                              <span className="text-xs font-semibold text-slate-500 flex items-center gap-1 sm:justify-end">
+                                                <span className="font-bold text-slate-700">{cand.votesCount.toLocaleString('id-ID')}</span> suara
+                                              </span>
+                                            </div>
                                           </div>
                                         </div>
 
-                                        <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden mt-3">
+                                        {/* Progress Bar */}
+                                        <div className="w-full bg-slate-100 h-2 sm:h-2.5 rounded-full overflow-hidden mt-3">
                                           <div 
                                             className={`h-full rounded-full transition-all duration-1000 ${
                                               isWinner ? 'bg-emerald-500' : 'bg-blue-600'

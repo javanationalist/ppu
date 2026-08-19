@@ -1,12 +1,12 @@
 import { useEffect, useState } from 'react';
 import { 
   BarChart, RefreshCw, Users, ShieldCheck, 
-  Award, Clock, AlertTriangle, MapPin, ArrowLeft
+  Award, Clock, AlertTriangle, MapPin, ArrowLeft, Vote, Crown
 } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 import { getAllProfiles } from '../../lib/adminService';
 import { getCategories, getCandidates, getAllVotes, getDapils, getElectionStatistics, ElectionStatistics } from '../../lib/votingService';
-import { Profile, Category, Vote, Candidate, Dapil } from '../../types';
+import { Profile, Category, Vote as VoteType, Candidate, Dapil } from '../../types';
 import { M3ExpressiveLoadingIndicator } from '../../components/ui/M3ExpressiveLoadingIndicator';
 
 const COLORS = [
@@ -21,7 +21,7 @@ const COLORS = [
 export default function HasilAdmin() {
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
-  const [votes, setVotes] = useState<Vote[]>([]);
+  const [votes, setVotes] = useState<VoteType[]>([]);
   const [dapils, setDapils] = useState<Dapil[]>([]);
   const [candidatesMap, setCandidatesMap] = useState<Record<string, Candidate[]>>({});
   const [stats, setStats] = useState<ElectionStatistics | null>(null);
@@ -517,12 +517,17 @@ export default function HasilAdmin() {
 
                     {/* Custom Legend */}
                     <div className="flex flex-wrap justify-center gap-2 sm:gap-3">
-                      {chartData.map((entry, index) => (
-                        <div key={index} className="flex items-center gap-1.5 bg-slate-50 dark:bg-[#252525]/30 px-3 py-1.5 rounded-full border border-slate-100 dark:border-slate-800 text-[10px] sm:text-xs text-slate-600 dark:text-slate-300 font-medium">
-                          <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: COLORS[index % COLORS.length] }} />
-                          <span>{entry.name}: <span className="font-bold">{entry.value}</span> ({entry.percentage}%)</span>
-                        </div>
-                      ))}
+                      {chartData.map((entry, index) => {
+                        const pctNum = parseFloat(entry.percentage) || 0;
+                        return (
+                          <div key={index} className="flex items-center gap-2 bg-slate-50 dark:bg-[#252525]/40 px-3 py-1.5 rounded-full border border-slate-100 dark:border-slate-800 text-[11px] sm:text-xs text-slate-600 dark:text-slate-300 font-medium">
+                            <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: COLORS[index % COLORS.length] }} />
+                            <span className="truncate max-w-[120px] sm:max-w-[160px]">{entry.cand.chairman}</span>
+                            <span className="font-black text-slate-900 dark:text-white font-mono">{pctNum.toFixed(1).replace('.', ',')}%</span>
+                            <span className="text-slate-400 text-[10px]">({entry.value} suara)</span>
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
 
@@ -570,46 +575,111 @@ export default function HasilAdmin() {
                 <div className="bg-white dark:bg-[#1a1a1a] p-6 sm:p-8 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-xs space-y-6">
                   <div>
                     <h3 className="text-lg font-extrabold text-slate-800 dark:text-[#f5f5f5]">Daftar Perolehan Suara</h3>
-                    <p className="text-xs text-slate-400 mt-0.5">Kalkulasi perolehan suara setiap pasangan calon / perwakilan kelas</p>
+                    <p className="text-xs text-slate-400 mt-0.5">Persentase dan total rekapitulasi perolehan suara sah</p>
                   </div>
 
                   {!isMpkType ? (
                     // Regular list
                     <div className="space-y-4">
                       {chartData.map((cand, index) => {
-                        const placeColors = [
-                          'bg-amber-100 text-amber-800 border-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-900',
-                          'bg-slate-100 text-slate-800 border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700',
-                          'bg-orange-100 text-orange-850 border-orange-200 dark:bg-orange-950/40 dark:text-orange-300 dark:border-orange-900'
-                        ];
-                        const fallbackColor = 'bg-slate-50 text-slate-600 border-slate-100 dark:bg-[#252525]/30 dark:text-slate-400 dark:border-slate-800';
+                        const isWinner = index === 0 && cand.value > 0;
+                        const rankBadgeColor = index === 0 
+                          ? 'bg-amber-500 text-white shadow-xs' 
+                          : index === 1 
+                            ? 'bg-slate-700 text-white dark:bg-slate-600' 
+                            : index === 2
+                              ? 'bg-amber-700 text-white dark:bg-amber-800'
+                              : 'bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-300';
+
+                        const candPercentageNum = parseFloat(cand.percentage) || 0;
 
                         return (
-                          <div key={cand.cand.id} className="space-y-3 p-4 rounded-xl border border-slate-150/40 dark:border-slate-800 bg-slate-50/20 dark:bg-transparent hover:bg-slate-50/50 dark:hover:bg-[#252525]/20 transition-colors">
-                            <div className="flex items-center justify-between gap-3 flex-wrap sm:flex-nowrap">
-                              <div className="flex items-center gap-3">
-                                <div className={`w-6 h-6 rounded-full border flex items-center justify-center font-mono font-bold text-xs ${index < 3 ? placeColors[index] : fallbackColor}`}>
-                                  {index + 1}
-                                </div>
-                                <div>
-                                  <span className="text-slate-400 dark:text-slate-500 text-[10px] font-mono font-black block">
-                                    NO URUT {String(cand.cand.number).padStart(2, '0')}
+                          <div 
+                            key={cand.cand.id} 
+                            className={`p-5 sm:p-6 rounded-2xl border transition-all duration-200 relative ${
+                              isWinner 
+                                ? 'border-indigo-200 dark:border-indigo-900 bg-gradient-to-br from-indigo-50/40 via-white to-blue-50/20 dark:from-indigo-950/30 dark:via-[#1a1a1a] dark:to-blue-950/20 shadow-xs ring-1 ring-indigo-100 dark:ring-indigo-900/40' 
+                                : 'border-slate-200/80 dark:border-slate-800 bg-white dark:bg-[#1a1a1a] hover:border-slate-300 dark:hover:border-slate-700'
+                            }`}
+                          >
+                            {/* Top Banner for Leader */}
+                            {isWinner && (
+                              <div className="flex items-center gap-1.5 mb-3.5 text-xs font-black text-indigo-600 dark:text-indigo-400">
+                                <Crown className="w-4 h-4 text-amber-500 fill-amber-400" />
+                                <span>PEROLEHAN SUARA TERTINGGI</span>
+                              </div>
+                            )}
+
+                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                              {/* Left: Identity */}
+                              <div className="flex items-center gap-3.5 sm:gap-4 min-w-0">
+                                {/* Candidate Photo & Rank Badge */}
+                                <div className="relative shrink-0">
+                                  {cand.cand.photo_url ? (
+                                    <img 
+                                      src={cand.cand.photo_url} 
+                                      alt={cand.cand.chairman} 
+                                      className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl object-cover border border-slate-200 dark:border-slate-700 shadow-xs"
+                                      onError={(e) => { (e.currentTarget.style.display = 'none'); }}
+                                    />
+                                  ) : (
+                                    <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-slate-100 dark:bg-[#252525] border border-slate-200 dark:border-slate-800 flex items-center justify-center text-slate-400 dark:text-slate-500 shadow-xs">
+                                      <Vote className="w-6 h-6 text-slate-400 dark:text-slate-500" />
+                                    </div>
+                                  )}
+                                  <span className={`absolute -top-1.5 -left-1.5 w-6 h-6 rounded-lg flex items-center justify-center font-mono font-black text-[11px] shadow-sm ${rankBadgeColor}`}>
+                                    {index + 1}
                                   </span>
-                                  <span className="font-extrabold text-slate-850 dark:text-white">{cand.cand.chairman}</span>
-                                  {cand.cand.vice && <span className="text-xs text-slate-500 dark:text-slate-400 font-medium"> & {cand.cand.vice}</span>}
+                                </div>
+
+                                {/* Name & Details */}
+                                <div className="min-w-0 space-y-0.5">
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest font-mono">
+                                      PASLON {String(cand.cand.number).padStart(2, '0')}
+                                    </span>
+                                    <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-md">
+                                      No. {cand.cand.number}
+                                    </span>
+                                  </div>
+                                  <h4 className="font-extrabold text-slate-900 dark:text-white text-base sm:text-lg tracking-tight leading-snug truncate">
+                                    {cand.cand.chairman}
+                                  </h4>
+                                  {cand.cand.vice ? (
+                                    <p className="text-xs text-slate-500 dark:text-slate-400 font-medium truncate">
+                                      Wakil: <span className="text-slate-700 dark:text-slate-300 font-semibold">{cand.cand.vice}</span>
+                                    </p>
+                                  ) : (cand.cand.candidate_class || cand.cand.class_name) ? (
+                                    <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
+                                      Kelas: <span className="text-slate-700 dark:text-slate-300 font-semibold">{cand.cand.candidate_class || cand.cand.class_name}</span>
+                                    </p>
+                                  ) : null}
                                 </div>
                               </div>
 
-                              <div className="text-right shrink-0">
-                                <span className="text-lg font-black text-slate-900 dark:text-white block">{cand.value} Suara</span>
-                                <span className="text-xs font-black text-indigo-600 dark:text-indigo-400 font-mono bg-indigo-50 dark:bg-indigo-950/30 px-2.5 py-0.5 rounded-full">{cand.percentage}%</span>
+                              {/* Right: PRIMARY PERCENTAGE HIGHLIGHT & Secondary Votes Count */}
+                              <div className="flex sm:flex-col items-baseline sm:items-end justify-between sm:justify-center shrink-0 pt-3 sm:pt-0 border-t sm:border-t-0 border-slate-100 dark:border-slate-800/80">
+                                <div className="text-left sm:text-right">
+                                  <div className="flex items-baseline gap-0.5 sm:justify-end">
+                                    <span className="text-3xl sm:text-4xl font-black text-slate-900 dark:text-white tracking-tight leading-none font-sans">
+                                      {candPercentageNum.toFixed(1).replace('.', ',')}
+                                    </span>
+                                    <span className="text-xl sm:text-2xl font-extrabold text-indigo-600 dark:text-indigo-400 tracking-tight leading-none">%</span>
+                                  </div>
+                                </div>
+                                <div className="text-right mt-1 sm:mt-1.5">
+                                  <span className="text-xs sm:text-sm font-semibold text-slate-500 dark:text-slate-400 flex items-center gap-1 sm:justify-end">
+                                    <span className="font-bold text-slate-700 dark:text-slate-300">{cand.value.toLocaleString('id-ID')}</span> suara
+                                  </span>
+                                </div>
                               </div>
                             </div>
 
-                            <div className="w-full bg-slate-100 dark:bg-slate-800 h-3 rounded-full overflow-hidden">
+                            {/* Modern Progress Bar */}
+                            <div className="w-full bg-slate-100 dark:bg-slate-800 h-2.5 sm:h-3 rounded-full overflow-hidden mt-4">
                               <div
-                                className="bg-indigo-600 dark:bg-indigo-500 h-full rounded-full transition-all duration-1000 ease-out shadow-inner"
-                                style={{ width: `${cand.percentage}%` }}
+                                className="bg-indigo-600 dark:bg-indigo-500 h-full rounded-full transition-all duration-1000 ease-out shadow-xs"
+                                style={{ width: `${cand.percentage}%`, backgroundColor: COLORS[index % COLORS.length] }}
                               ></div>
                             </div>
                           </div>
@@ -631,7 +701,7 @@ export default function HasilAdmin() {
                       const classesWithCands = Object.keys(grouped).sort();
 
                       return (
-                        <div className="space-y-12 animate-fade-in">
+                        <div className="space-y-10 animate-fade-in">
                           {classesWithCands.map(clsName => {
                             const clsCandidates = grouped[clsName];
                             const clsCandIds = clsCandidates.map(c => c.id);
@@ -660,41 +730,83 @@ export default function HasilAdmin() {
                                 <div className="grid grid-cols-1 gap-4">
                                   {scoredClsCandidates.map((cand, index) => {
                                     const isWinner = index === 0 && cand.votesCount > 0;
+                                    const pctNum = parseFloat(cand.percentage) || 0;
+
                                     return (
-                                      <div key={cand.id} className={`p-4 rounded-xl border transition-all ${
-                                        isWinner
-                                          ? 'border-emerald-100 dark:border-emerald-950 bg-emerald-50/20 dark:bg-emerald-950/10'
-                                          : 'border-slate-50 dark:border-slate-850 bg-slate-50/20 dark:bg-transparent'
-                                      }`}>
-                                        <div className="flex items-center justify-between gap-3 flex-wrap sm:flex-nowrap">
-                                          <div className="flex items-center gap-2.5">
-                                            <div className={`w-5 h-5 font-mono text-[10px] font-bold rounded-lg flex items-center justify-center ${
-                                              isWinner ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-400' : 'bg-slate-200 text-slate-650 dark:bg-slate-800 dark:text-slate-400'
-                                            }`}>
-                                              {index + 1}
-                                            </div>
-                                            <div>
-                                              <span className="block text-[9px] font-black text-slate-400 dark:text-slate-500 font-mono">
-                                                KANDIDAT {String(cand.number).padStart(2, '0')}
+                                      <div 
+                                        key={cand.id} 
+                                        className={`p-4 sm:p-5 rounded-2xl border transition-all duration-200 ${
+                                          isWinner
+                                            ? 'border-emerald-200 dark:border-emerald-900/60 bg-emerald-50/20 dark:bg-emerald-950/20 shadow-xs'
+                                            : 'border-slate-200/80 dark:border-slate-800 bg-white dark:bg-[#1a1a1a] hover:border-slate-300 dark:hover:border-slate-700'
+                                        }`}
+                                      >
+                                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
+                                          <div className="flex items-center gap-3 min-w-0">
+                                            {/* Candidate Photo & Number */}
+                                            <div className="relative shrink-0">
+                                              {cand.photo_url ? (
+                                                <img 
+                                                  src={cand.photo_url} 
+                                                  alt={cand.chairman} 
+                                                  className="w-12 h-12 rounded-xl object-cover border border-slate-200 dark:border-slate-700 shadow-xs"
+                                                  onError={(e) => { (e.currentTarget.style.display = 'none'); }}
+                                                />
+                                              ) : (
+                                                <div className="w-12 h-12 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center text-slate-400">
+                                                  <Vote className="w-5 h-5 text-slate-400" />
+                                                </div>
+                                              )}
+                                              <span className={`absolute -top-1 -left-1 w-5 h-5 rounded-md flex items-center justify-center font-mono font-black text-[9px] ${
+                                                isWinner ? 'bg-emerald-600 text-white' : 'bg-slate-700 text-white'
+                                              }`}>
+                                                {index + 1}
                                               </span>
-                                              <span className="font-extrabold text-slate-800 dark:text-white text-sm leading-tight block">{cand.chairman}</span>
+                                            </div>
+
+                                            <div className="min-w-0 space-y-0.5">
+                                              <div className="flex items-center gap-2">
+                                                <span className="text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase font-mono">
+                                                  KANDIDAT {String(cand.number).padStart(2, '0')}
+                                                </span>
+                                                {isWinner && (
+                                                  <span className="text-[9px] font-bold px-1.5 py-0.2 rounded bg-emerald-100 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300">
+                                                    Teratas
+                                                  </span>
+                                                )}
+                                              </div>
+                                              <h4 className="font-extrabold text-slate-900 dark:text-white text-sm sm:text-base leading-snug truncate">
+                                                {cand.chairman}
+                                              </h4>
+                                              {cand.vice && (
+                                                <p className="text-xs text-slate-500 dark:text-slate-400">Wakil: {cand.vice}</p>
+                                              )}
                                             </div>
                                           </div>
 
-                                          <div className="text-right shrink-0">
-                                            <span className="text-sm font-black text-slate-900 dark:text-white block leading-tight">{cand.votesCount} Suara</span>
-                                            <span className={`text-[11px] font-black font-mono px-2 py-0.5 rounded-lg inline-block mt-0.5 ${
-                                              isWinner ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400' : 'bg-slate-100 dark:bg-[#252525]/30 text-indigo-600 dark:text-indigo-400'
-                                            }`}>
-                                              {cand.percentage}%
-                                            </span>
+                                          {/* PRIMARY PERCENTAGE HIGHLIGHT & Secondary Votes Count */}
+                                          <div className="flex sm:flex-col items-baseline sm:items-end justify-between sm:justify-center shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-100 dark:border-slate-800">
+                                            <div className="text-left sm:text-right">
+                                              <div className="flex items-baseline gap-0.5 sm:justify-end">
+                                                <span className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tight leading-none font-sans">
+                                                  {pctNum.toFixed(1).replace('.', ',')}
+                                                </span>
+                                                <span className="text-lg sm:text-xl font-extrabold text-emerald-600 dark:text-emerald-400 tracking-tight leading-none">%</span>
+                                              </div>
+                                            </div>
+                                            <div className="text-right mt-0.5 sm:mt-1">
+                                              <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 flex items-center gap-1 sm:justify-end">
+                                                <span className="font-bold text-slate-700 dark:text-slate-300">{cand.votesCount.toLocaleString('id-ID')}</span> suara
+                                              </span>
+                                            </div>
                                           </div>
                                         </div>
 
-                                        <div className="w-full bg-slate-100 dark:bg-slate-800 h-2.5 rounded-full overflow-hidden mt-3">
+                                        {/* Progress Bar */}
+                                        <div className="w-full bg-slate-100 dark:bg-slate-800 h-2 sm:h-2.5 rounded-full overflow-hidden mt-3">
                                           <div
                                             className={`h-full rounded-full transition-all duration-1000 ${
-                                              isWinner ? 'bg-emerald-500' : 'bg-indigo-600/80 dark:bg-indigo-500/80'
+                                              isWinner ? 'bg-emerald-500' : 'bg-indigo-600 dark:bg-indigo-500'
                                             }`}
                                             style={{ width: `${cand.percentage}%` }}
                                           ></div>
